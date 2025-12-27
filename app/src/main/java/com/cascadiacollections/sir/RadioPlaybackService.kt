@@ -1,17 +1,22 @@
 package com.cascadiacollections.sir
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.bluetooth.BluetoothHeadset
+import android.bluetooth.BluetoothProfile
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Build
-import android.util.Log
-import android.annotation.SuppressLint
 import android.support.v4.media.session.PlaybackStateCompat
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -33,10 +38,37 @@ class RadioPlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private var player: ExoPlayer? = null
+    private lateinit var audioManager: AudioManager
+    private var isNoisyReceiverRegistered = false
+    private var isRouteReceiverRegistered = false
+    private var pausedByNoisy = false
+    private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent?.action && player?.isPlaying == true) {
+                pausedByNoisy = true
+                player?.pause()
+            }
+        }
+    }
+    private val audioRouteRestoredReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                AudioManager.ACTION_HEADSET_PLUG -> {
+                    val state = intent.getIntExtra("state", 0)
+                    if (state == 1) resumeIfPausedByNoisy()
+                }
+                BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> {
+                    val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, BluetoothProfile.STATE_DISCONNECTED)
+                    if (state == BluetoothProfile.STATE_CONNECTED) resumeIfPausedByNoisy()
+                }
+            }
+        }
+    }
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val context = this
         player = ExoPlayer.Builder(context)
             .setAudioAttributes(
@@ -100,6 +132,31 @@ class RadioPlaybackService : MediaSessionService() {
             NOTIFICATION_ID,
             buildNotification(context)
         )
+
+        registerReceiver(
+            audioBecomingNoisyReceiver,
+            IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+        )
+        isNoisyReceiverRegistered = true
+        registerReceiver(
+            audioRouteRestoredReceiver,
+            IntentFilter().apply {
+                addAction(AudioManager.ACTION_HEADSET_PLUG)
+                addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
+            }
+        )
+        isRouteReceiverRegistered = true
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            pausedByNoisy = false
+            player?.pause()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
@@ -114,6 +171,14 @@ class RadioPlaybackService : MediaSessionService() {
         player?.run {
             release()
             player = null
+        }
+        if (isNoisyReceiverRegistered) {
+            unregisterReceiver(audioBecomingNoisyReceiver)
+            isNoisyReceiverRegistered = false
+        }
+        if (isRouteReceiverRegistered) {
+            unregisterReceiver(audioRouteRestoredReceiver)
+            isRouteReceiverRegistered = false
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
@@ -130,11 +195,20 @@ class RadioPlaybackService : MediaSessionService() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val stopIntent = PendingIntent.getService(
+            context,
+            0,
+            Intent(context, RadioPlaybackService::class.java).apply {
+                action = ACTION_STOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("Will Radio")
             .setContentText("Live stream")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(openAppIntent)
+            .setDeleteIntent(stopIntent)
             .setOngoing(player?.isPlaying == true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(MediaStyleNotificationHelper.MediaStyle(session).setShowActionsInCompactView(0))
@@ -189,11 +263,19 @@ class RadioPlaybackService : MediaSessionService() {
         }
     }
 
+    private fun resumeIfPausedByNoisy() {
+        if (pausedByNoisy) {
+            pausedByNoisy = false
+            player?.play()
+        }
+    }
+
     companion object {
         private const val TAG = "RadioPlaybackService"
         private const val STREAM_URL = "https://broadcast.shoutcheap.com/proxy/willradio/stream"
         private const val MEDIA_SESSION_ID = "will_radio_session"
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
+        private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
     }
 }

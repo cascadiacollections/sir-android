@@ -31,6 +31,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 
 class RadioPlaybackService : MediaSessionService() {
 
@@ -123,6 +125,27 @@ class RadioPlaybackService : MediaSessionService() {
 
         mediaSession = MediaSession.Builder(context, player!!)
             .setId(MEDIA_SESSION_ID)
+            .setCallback(object : MediaSession.Callback {
+                override fun onConnect(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo
+                ): MediaSession.ConnectionResult {
+                    // Only allow play/pause commands, no seeking for live radio
+                    val availableCommands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
+                        .remove(Player.COMMAND_SEEK_BACK)
+                        .remove(Player.COMMAND_SEEK_FORWARD)
+                        .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+                        .remove(Player.COMMAND_SEEK_TO_MEDIA_ITEM)
+                        .remove(Player.COMMAND_SEEK_TO_NEXT)
+                        .remove(Player.COMMAND_SEEK_TO_PREVIOUS)
+                        .remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                        .remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                        .build()
+                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                        .setAvailablePlayerCommands(availableCommands)
+                        .build()
+                }
+            })
             .build()
 
         createNotificationChannel()

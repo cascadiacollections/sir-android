@@ -31,8 +31,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
-import androidx.media3.session.SessionCommand
-import androidx.media3.session.SessionResult
 
 class RadioPlaybackService : MediaSessionService() {
 
@@ -68,7 +66,7 @@ class RadioPlaybackService : MediaSessionService() {
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager = getSystemService(AudioManager::class.java)
         val context = this
         player = ExoPlayer.Builder(context)
             .setAudioAttributes(
@@ -154,17 +152,21 @@ class RadioPlaybackService : MediaSessionService() {
             buildNotification(context)
         )
 
-        registerReceiver(
+        ContextCompat.registerReceiver(
+            this,
             audioBecomingNoisyReceiver,
-            IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+            IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+            ContextCompat.RECEIVER_NOT_EXPORTED
         )
         isNoisyReceiverRegistered = true
-        registerReceiver(
+        ContextCompat.registerReceiver(
+            this,
             audioRouteRestoredReceiver,
             IntentFilter().apply {
                 addAction(AudioManager.ACTION_HEADSET_PLUG)
                 addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
-            }
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED
         )
         isRouteReceiverRegistered = true
     }

@@ -15,13 +15,11 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
-import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.media.session.MediaButtonReceiver
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -149,12 +147,20 @@ class RadioPlaybackService : MediaSessionService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            pausedByNoisy = false
-            player?.pause()
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_STOP -> {
+                pausedByNoisy = false
+                player?.pause()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            ACTION_PLAY -> {
+                player?.play()
+            }
+            ACTION_PAUSE -> {
+                player?.pause()
+            }
         }
         return super.onStartCommand(intent, flags, startId)
     }
@@ -203,6 +209,22 @@ class RadioPlaybackService : MediaSessionService() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val pauseIntent = PendingIntent.getService(
+            context,
+            1,
+            Intent(context, RadioPlaybackService::class.java).apply {
+                action = ACTION_PAUSE
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val playIntent = PendingIntent.getService(
+            context,
+            2,
+            Intent(context, RadioPlaybackService::class.java).apply {
+                action = ACTION_PLAY
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("Will Radio")
             .setContentText("Live stream")
@@ -217,19 +239,13 @@ class RadioPlaybackService : MediaSessionService() {
                     NotificationCompat.Action.Builder(
                         android.R.drawable.ic_media_pause,
                         context.getString(R.string.pause),
-                        MediaButtonReceiver.buildMediaButtonPendingIntent(
-                            context,
-                            PlaybackStateCompat.ACTION_PAUSE
-                        )
+                        pauseIntent
                     ).build()
                 else
                     NotificationCompat.Action.Builder(
                         android.R.drawable.ic_media_play,
                         context.getString(R.string.play),
-                        MediaButtonReceiver.buildMediaButtonPendingIntent(
-                            context,
-                            PlaybackStateCompat.ACTION_PLAY
-                        )
+                        playIntent
                     ).build()
             )
             .build()
@@ -277,5 +293,7 @@ class RadioPlaybackService : MediaSessionService() {
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
         private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
+        private const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
+        private const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
     }
 }

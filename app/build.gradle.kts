@@ -5,9 +5,7 @@ plugins {
 
 android {
     namespace = "com.cascadiacollections.sir"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.cascadiacollections.sir"
@@ -21,7 +19,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -29,12 +28,16 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
     }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
@@ -50,7 +53,6 @@ dependencies {
     implementation(libs.media3.session)
     implementation(libs.media3.ui)
     implementation(libs.kotlinx.coroutines.guava)
-    implementation(libs.androidx.media)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

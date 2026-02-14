@@ -33,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.cascadiacollections.sir.ui.theme.SirTheme
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -80,6 +81,8 @@ fun RadioScreen(modifier: Modifier = Modifier) {
     var isConnected by rememberSaveable { mutableStateOf(false) }
     var isPlaying by rememberSaveable { mutableStateOf(false) }
     var isBuffering by rememberSaveable { mutableStateOf(false) }
+    var trackTitle by rememberSaveable { mutableStateOf<String?>(null) }
+    var artist by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(sessionToken) {
         context.ensureRadioServiceRunning()
@@ -91,6 +94,11 @@ fun RadioScreen(modifier: Modifier = Modifier) {
             isConnected = true
             isPlaying = newController.isActuallyPlaying()
             isBuffering = newController.playbackState == Player.STATE_BUFFERING
+            // Get initial metadata if available
+            newController.mediaMetadata.let { metadata ->
+                trackTitle = metadata.title?.toString()
+                artist = metadata.artist?.toString()
+            }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (error: Exception) {
@@ -113,6 +121,11 @@ fun RadioScreen(modifier: Modifier = Modifier) {
                 isPlaying = player.isActuallyPlaying()
                 isBuffering = player.playbackState == Player.STATE_BUFFERING
             }
+
+            override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                trackTitle = mediaMetadata.title?.toString()
+                artist = mediaMetadata.artist?.toString()
+            }
         }
         activeController.addListener(listener)
         onDispose {
@@ -124,7 +137,9 @@ fun RadioScreen(modifier: Modifier = Modifier) {
         modifier = modifier,
         isConnected = isConnected,
         isPlaying = isPlaying,
-        isBuffering = isBuffering
+        isBuffering = isBuffering,
+        trackTitle = trackTitle,
+        artist = artist
     ) {
         val activeController = controller
         if (activeController == null) {
@@ -146,6 +161,8 @@ private fun RadioUi(
     isConnected: Boolean,
     isPlaying: Boolean,
     isBuffering: Boolean,
+    trackTitle: String? = null,
+    artist: String? = null,
     onToggle: () -> Unit
 ) {
     Surface(
@@ -161,33 +178,48 @@ private fun RadioUi(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Show track title if available, otherwise show status
                 val title = when {
-                    !isConnected -> "Connecting to radio"
-                    isBuffering -> "Buffering willradio"
-                    isPlaying -> "Now playing willradio"
+                    !isConnected -> "Connecting to SIR"
+                    isBuffering -> "Buffering..."
+                    isPlaying && !trackTitle.isNullOrBlank() -> trackTitle
+                    isPlaying -> "Now playing"
                     else -> "Tap anywhere to play"
                 }
+                // Show artist if available, otherwise show contextual info
                 val subtitle = when {
                     !isConnected -> "Starting playback service"
                     isBuffering -> "Hang tight, stream is loading"
-                    isPlaying -> "Tap again to stop"
-                    else -> "Streaming via internet radio"
+                    isPlaying && !artist.isNullOrBlank() -> artist
+                    isPlaying -> "SIR • Live"
+                    else -> "SIR • Internet radio"
                 }
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.headlineMedium,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 12.dp)
+                    modifier = Modifier.padding(top = 12.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
+                // Show tap hint when playing
+                if (isPlaying) {
+                    Text(
+                        text = "Tap to stop",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 24.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Idle")
 @Composable
 fun RadioScreenPreview() {
     SirTheme {
@@ -196,6 +228,22 @@ fun RadioScreenPreview() {
             isConnected = true,
             isPlaying = false,
             isBuffering = false,
+            onToggle = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Playing with Metadata")
+@Composable
+fun RadioScreenPlayingPreview() {
+    SirTheme {
+        RadioUi(
+            modifier = Modifier.fillMaxSize(),
+            isConnected = true,
+            isPlaying = true,
+            isBuffering = false,
+            trackTitle = "Sweet Home Alabama",
+            artist = "Lynyrd Skynyrd",
             onToggle = {}
         )
     }

@@ -15,6 +15,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Only include necessary ABIs for audio playback (reduces APK size)
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+        }
     }
 
     buildTypes {
@@ -27,17 +32,43 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     buildFeatures {
         compose = true
+    }
+
+    // Optimize packaging
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/LICENSE*"
+            excludes += "/META-INF/NOTICE*"
+            excludes += "DebugProbesKt.bin"
+        }
+        // Use native libraries compression for smaller APK, faster load on Android 6+
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
 kotlin {
     jvmToolchain(17)
+
+    compilerOptions {
+        // Enable aggressive inlining for better performance
+        freeCompilerArgs.addAll(
+            "-Xno-call-assertions",      // Skip null checks on platform types (we trust Android APIs)
+            "-Xno-param-assertions",     // Skip parameter null checks
+            "-Xno-receiver-assertions",  // Skip receiver null checks
+        )
+    }
 }
 
 dependencies {
@@ -49,10 +80,15 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
+    // Media3 with OkHttp for optimized HTTP streaming
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
     implementation(libs.media3.ui)
+    implementation(libs.media3.datasource.okhttp)
+
     implementation(libs.kotlinx.coroutines.guava)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

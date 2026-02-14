@@ -10,25 +10,43 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -38,26 +56,82 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.await
+import kotlinx.coroutines.launch
 
 private const val RADIO_TAG = "RadioScreen"
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var castDeviceDetector: CastDeviceDetector
+    private lateinit var castFeatureManager: CastFeatureManager
+    private lateinit var settingsRepository: SettingsRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize Cast detection and feature management
+        castDeviceDetector = CastDeviceDetector(this)
+        castFeatureManager = CastFeatureManager(this)
+        settingsRepository = SettingsRepository(this)
+
+        // Only detect Cast devices if module not already installed
+        if (!castFeatureManager.isModuleInstalled()) {
+            lifecycle.addObserver(castDeviceDetector)
+        }
+
         enableEdgeToEdge()
         setContent {
             SirTheme {
-                RadioScreen(modifier = Modifier.fillMaxSize())
+                RadioScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    castDeviceDetector = castDeviceDetector,
+                    castFeatureManager = castFeatureManager,
+                    settingsRepository = settingsRepository
+                )
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        castDeviceDetector.release()
+        castFeatureManager.release()
     }
 }
 
 @Composable
-fun RadioScreen(modifier: Modifier = Modifier) {
+fun RadioScreen(
+    modifier: Modifier = Modifier,
+    castDeviceDetector: CastDeviceDetector? = null,
+    castFeatureManager: CastFeatureManager? = null,
+    settingsRepository: SettingsRepository? = null
+) {
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+
+    // Settings dialog state
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+
+    // Cast state
+    val castDevicesAvailable by castDeviceDetector?.castDevicesAvailable?.collectAsState()
+        ?: remember { mutableStateOf(false) }
+    val castModuleState by castFeatureManager?.moduleState?.collectAsState()
+        ?: remember { mutableStateOf(CastModuleState.NotInstalled) }
+
+    // Auto-download Cast module when devices detected
+    LaunchedEffect(castDevicesAvailable, castModuleState) {
+        if (castDevicesAvailable && castModuleState is CastModuleState.NotInstalled) {
+            // Check if user has enabled Chromecast in settings
+            val chromecastEnabled = settingsRepository?.chromecastEnabled?.first() ?: false
+            if (chromecastEnabled) {
+                castFeatureManager?.installCastModule()
+            }
+        }
+    }
 
     if (inspectionMode) {
         RadioUi(
@@ -65,7 +139,9 @@ fun RadioScreen(modifier: Modifier = Modifier) {
             isConnected = true,
             isPlaying = false,
             isBuffering = false,
-            onToggle = {}
+            showSettingsButton = true,
+            onToggle = {},
+            onSettingsClick = {}
         )
         return
     }
@@ -139,7 +215,9 @@ fun RadioScreen(modifier: Modifier = Modifier) {
         isPlaying = isPlaying,
         isBuffering = isBuffering,
         trackTitle = trackTitle,
-        artist = artist
+        artist = artist,
+        showSettingsButton = true,
+        onSettingsClick = { showSettings = true }
     ) {
         val activeController = controller
         if (activeController == null) {
@@ -153,6 +231,15 @@ fun RadioScreen(modifier: Modifier = Modifier) {
             activeController.play()
         }
     }
+
+    // Settings dialog
+    if (showSettings && settingsRepository != null && castFeatureManager != null) {
+        SettingsDialog(
+            settingsRepository = settingsRepository,
+            castFeatureManager = castFeatureManager,
+            onDismiss = { showSettings = false }
+        )
+    }
 }
 
 @Composable
@@ -163,6 +250,8 @@ private fun RadioUi(
     isBuffering: Boolean,
     trackTitle: String? = null,
     artist: String? = null,
+    showSettingsButton: Boolean = false,
+    onSettingsClick: () -> Unit = {},
     onToggle: () -> Unit
 ) {
     Surface(
@@ -174,10 +263,26 @@ private fun RadioUi(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
+                .padding(24.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Settings button in top right
+            if (showSettingsButton) {
+                IconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.settings),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 // Show track title if available, otherwise show status
                 val title = when {
                     !isConnected -> "Connecting to SIR"
@@ -228,6 +333,8 @@ fun RadioScreenPreview() {
             isConnected = true,
             isPlaying = false,
             isBuffering = false,
+            showSettingsButton = true,
+            onSettingsClick = {},
             onToggle = {}
         )
     }
@@ -244,9 +351,99 @@ fun RadioScreenPlayingPreview() {
             isBuffering = false,
             trackTitle = "Sweet Home Alabama",
             artist = "Lynyrd Skynyrd",
+            showSettingsButton = true,
+            onSettingsClick = {},
             onToggle = {}
         )
     }
+}
+
+@Composable
+private fun SettingsDialog(
+    settingsRepository: SettingsRepository,
+    castFeatureManager: CastFeatureManager,
+    onDismiss: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val chromecastEnabled by settingsRepository.chromecastEnabled.collectAsState(initial = false)
+    val castModuleState by castFeatureManager.moduleState.collectAsState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings)) },
+        text = {
+            Column {
+                // Chromecast toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.enable_chromecast),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        // Show status
+                        val statusText = when (castModuleState) {
+                            is CastModuleState.Installed -> stringResource(R.string.chromecast_enabled)
+                            is CastModuleState.Installing -> {
+                                val progress = (castModuleState as CastModuleState.Installing).progress
+                                "${stringResource(R.string.chromecast_downloading)} ${(progress * 100).toInt()}%"
+                            }
+                            is CastModuleState.Failed -> stringResource(R.string.chromecast_not_available)
+                            else -> null
+                        }
+                        if (statusText != null) {
+                            Text(
+                                text = statusText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    when (castModuleState) {
+                        is CastModuleState.Installing -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                        is CastModuleState.Installed -> {
+                            Switch(
+                                checked = true,
+                                onCheckedChange = null,
+                                enabled = false
+                            )
+                        }
+                        else -> {
+                            Switch(
+                                checked = chromecastEnabled,
+                                onCheckedChange = { enabled ->
+                                    scope.launch {
+                                        settingsRepository.setChromecastEnabled(enabled)
+                                        if (enabled) {
+                                            castFeatureManager.installCastModule()
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Done")
+            }
+        }
+    )
 }
 
 private fun Player.isActuallyPlaying(): Boolean {

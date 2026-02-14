@@ -3,4 +3,10 @@
     <string name="radio_error">Stream unavailable, retry shortly</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>
+    <string name="cast_feature_title">Chromecast</string>
+    <string name="settings">Settings</string>
+    <string name="enable_chromecast">Enable Chromecast</string>
+    <string name="chromecast_enabled">Chromecast enabled</string>
+    <string name="chromecast_downloading">Downloading Chromecast support…</string>
+    <string name="chromecast_not_available">Chromecast not available</string>
 </resources>

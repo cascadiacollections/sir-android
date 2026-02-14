@@ -9,11 +9,14 @@ A lightweight, battery-efficient internet radio app for Android, optimized for s
 - 🎧 **Smart audio handling** - Auto-pause on headphone disconnect, resume on reconnect
 - 🔋 **Battery optimized** - Minimal resource usage during playback
 - 📶 **Network resilient** - Handles network changes gracefully
+- 📺 **Chromecast support** - Cast to any Chromecast device (on-demand module)
+- 💻 **ChromeOS ready** - Resizable windows, keyboard/mouse support
 
 ## Optimizations
 
 ### Ultra-Lightweight APK
-- **< 2 MB release APK** - Fast download and install
+- **~2.5 MB release APK** - Fast download and install
+- **On-demand Chromecast module** (~750KB) - Only downloaded when needed
 - Aggressive R8/ProGuard optimizations with dead code elimination
 - ARM + x86_64 ABIs included (phones, tablets, and ChromeOS)
 - Compressed native libraries for faster app startup
@@ -43,13 +46,27 @@ A lightweight, battery-efficient internet radio app for Android, optimized for s
 - No seek controls (optimized for live streaming)
 - Targets **Android 7.0+** (API 24) with **Android 14** (API 36) SDK
 
+### Chromecast Support
+- **On-demand dynamic feature** - Cast module downloaded only when needed
+- **Battery-efficient detection** - Only scans for Cast devices on WiFi when app is visible
+- **Auto-download** - Automatically downloads Cast module when devices detected (if enabled)
+- **Manual enable** - Settings toggle to enable Chromecast support
+- Uses **default Google Cast receiver** - No custom receiver app required
+
+### ChromeOS Compatibility
+- **Resizable windows** - Proper desktop windowing support
+- **Keyboard/mouse ready** - No touchscreen required
+- **x86_64 ABI** - Native performance on Intel/AMD Chromebooks
+
 ## Tech Stack
 
 - **Kotlin** 2.0 with Compose UI
-- **Media3** 1.5.1 (ExoPlayer)
-- **OkHttp** for HTTP networking
+- **Media3** 1.5.1 (ExoPlayer + Cast)
+- **OkHttp** 4.12 for HTTP/2 networking with connection pooling
 - **Material 3** dynamic theming
 - **Coroutines** for async operations
+- **Play Feature Delivery** for on-demand modules
+- **DataStore** for preferences persistence
 
 ## Building
 

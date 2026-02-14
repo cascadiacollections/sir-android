@@ -42,6 +42,9 @@ android {
         compose = true
     }
 
+    // Dynamic feature modules
+    dynamicFeatures += setOf(":cast")
+
     // Optimize packaging
     packaging {
         resources {
@@ -101,6 +104,15 @@ dependencies {
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
 
+    // Cast device detection (lightweight - actual Cast player in dynamic module)
+    implementation(libs.mediarouter)
+
+    // Dynamic feature delivery for on-demand Cast module
+    implementation(libs.play.feature.delivery.ktx)
+
+    // Settings persistence
+    implementation(libs.datastore.preferences)
+
     implementation(libs.kotlinx.coroutines.guava)
 
     testImplementation(libs.junit)
@@ -110,4 +122,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // LeakCanary for memory leak detection (debug only - auto-installs, no code needed)
+    debugImplementation(libs.leakcanary.android)
 }

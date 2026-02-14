@@ -78,6 +78,16 @@ A lightweight, battery-efficient internet radio app for Android, optimized for s
 ./gradlew assembleRelease
 ```
 
+## Nightly Builds
+
+Development builds are automatically published on every commit to `main`:
+
+📦 **[Download Latest Nightly](../../releases/tag/nightly)**
+
+- Unsigned APK for sideloading
+- Replaced on each commit (no storage accumulation)
+- Includes latest features and fixes
+
 ## Requirements
 
 - Android 7.0 (API 24) or higher

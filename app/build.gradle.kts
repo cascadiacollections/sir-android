@@ -97,6 +97,10 @@ dependencies {
     implementation(libs.media3.session)
     implementation(libs.media3.datasource.okhttp)
 
+    // OkHttp with BOM for consistent versioning
+    implementation(platform(libs.okhttp.bom))
+    implementation(libs.okhttp)
+
     implementation(libs.kotlinx.coroutines.guava)
 
     testImplementation(libs.junit)

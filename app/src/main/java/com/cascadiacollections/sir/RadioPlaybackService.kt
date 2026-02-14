@@ -38,8 +38,12 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
 import okhttp3.ConnectionPool
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 class RadioPlaybackService : MediaSessionService() {
@@ -108,14 +112,35 @@ class RadioPlaybackService : MediaSessionService() {
         // - Connection pooling for instant reconnects on network switches
         // - HTTP/2 with HTTP/1.1 fallback for maximum compatibility
         // - Keep-alive for persistent streaming connection
+        // - DNS caching for faster reconnects
         val connectionPool = ConnectionPool(
             maxIdleConnections = 2,        // Keep 2 connections warm for fast reconnects
             keepAliveDuration = 5,         // 5 minute keep-alive
             timeUnit = TimeUnit.MINUTES
         )
 
+        // DNS caching to avoid repeated lookups on reconnect
+        val cachingDns = object : Dns {
+            private val cache = ConcurrentHashMap<String, Pair<List<InetAddress>, Long>>()
+            private val ttlMs = 5 * 60 * 1000L  // 5 minute TTL
+
+            override fun lookup(hostname: String): List<InetAddress> {
+                val now = System.currentTimeMillis()
+                val cached = cache[hostname]
+                if (cached != null && now - cached.second < ttlMs) {
+                    return cached.first
+                }
+                val addresses = Dns.SYSTEM.lookup(hostname)
+                    // Prefer IPv4 for faster connection on mobile networks
+                    .sortedBy { if (it is Inet4Address) 0 else 1 }
+                cache[hostname] = addresses to now
+                return addresses
+            }
+        }
+
         val okHttpClient = OkHttpClient.Builder()
             .connectionPool(connectionPool)
+            .dns(cachingDns)
             .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))  // Prefer HTTP/2
             .connectTimeout(10, TimeUnit.SECONDS)   // Faster connect timeout
             .readTimeout(30, TimeUnit.SECONDS)      // Longer read timeout for streaming

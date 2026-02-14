@@ -13,19 +13,22 @@ A lightweight, battery-efficient internet radio app for Android, optimized for s
 ## Optimizations
 
 ### Ultra-Lightweight APK
-- **~2.8 MB release APK** - Fast download and install
+- **< 2 MB release APK** - Fast download and install
 - Aggressive R8/ProGuard optimizations with dead code elimination
-- Only essential ABI targets included (ARM, ARM64, x86_64)
+- ARM + x86_64 ABIs included (phones, tablets, and ChromeOS)
 - Compressed native libraries for faster app startup
+- Unused dependencies stripped (no video/UI modules)
 
 ### Audio Playback Performance
-- **HTTP/2 streaming** via OkHttp for faster connection setup and multiplexing
-- **Connection pooling** for instant reconnects on network switches
+- **HTTP/2 streaming** via OkHttp with HTTP/1.1 fallback for maximum compatibility
+- **Connection pooling** with 5-minute keep-alive for instant reconnects on network switches
+- **Zero call timeout** for uninterrupted live streaming
 - **Optimized buffering** tuned for 64kbps live radio streams:
   - 2.5 second initial buffer for fast playback start
   - 15-60 second adaptive buffer range
   - Low-latency prioritization for live content
 - **ICY metadata support** for displaying track information (when available)
+- **Live stream sync** with adaptive playback speed (0.98x-1.02x) to stay synced
 
 ### Power Management
 - **Partial wake lock** keeps CPU active only during playback

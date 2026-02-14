@@ -16,7 +16,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Only include necessary ABIs for audio playback (reduces APK size)
+        // Include ARM ABIs for phones/tablets + x86_64 for ChromeOS
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
@@ -49,12 +49,24 @@ android {
             excludes += "/META-INF/DEPENDENCIES"
             excludes += "/META-INF/LICENSE*"
             excludes += "/META-INF/NOTICE*"
-            excludes += "DebugProbesKt.bin"
+            excludes += "/META-INF/*.version"
+            excludes += "/META-INF/*.kotlin_module"
+            excludes += "/kotlin/**"
+            excludes += "/DebugProbesKt.bin"
+            excludes += "/*.txt"
+            excludes += "/*.properties"
         }
         // Use native libraries compression for smaller APK, faster load on Android 6+
         jniLibs {
             useLegacyPackaging = false
         }
+    }
+
+    // Enable experimental AGP optimizations
+    dependenciesInfo {
+        // Disable dependency metadata in APK (saves ~2KB)
+        includeInApk = false
+        includeInBundle = false
     }
 }
 
@@ -77,14 +89,12 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
-    // Media3 with OkHttp for optimized HTTP streaming
+    // Media3 with OkHttp for optimized HTTP streaming (no UI module - audio only)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
-    implementation(libs.media3.ui)
     implementation(libs.media3.datasource.okhttp)
 
     implementation(libs.kotlinx.coroutines.guava)

@@ -37,7 +37,9 @@ import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import java.util.concurrent.TimeUnit
 
 class RadioPlaybackService : MediaSessionService() {
@@ -102,11 +104,23 @@ class RadioPlaybackService : MediaSessionService() {
             .setPrioritizeTimeOverSizeThresholds(true)  // Prioritize low latency
             .build()
 
-        // OkHttp client with connection pooling and HTTP/2 support
+        // OkHttp client optimized for live audio streaming
+        // - Connection pooling for instant reconnects on network switches
+        // - HTTP/2 with HTTP/1.1 fallback for maximum compatibility
+        // - Keep-alive for persistent streaming connection
+        val connectionPool = ConnectionPool(
+            maxIdleConnections = 2,        // Keep 2 connections warm for fast reconnects
+            keepAliveDuration = 5,         // 5 minute keep-alive
+            timeUnit = TimeUnit.MINUTES
+        )
+
         val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectionPool(connectionPool)
+            .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))  // Prefer HTTP/2
+            .connectTimeout(10, TimeUnit.SECONDS)   // Faster connect timeout
+            .readTimeout(30, TimeUnit.SECONDS)      // Longer read timeout for streaming
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .callTimeout(0, TimeUnit.SECONDS)       // No overall timeout for streaming
             .followRedirects(true)
             .followSslRedirects(true)
             .retryOnConnectionFailure(true)

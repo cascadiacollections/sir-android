@@ -40,6 +40,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     // Dynamic feature modules
@@ -123,6 +124,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // LeakCanary for memory leak detection (debug only - auto-installs, no code needed)
-    debugImplementation(libs.leakcanary.android)
+    // Note: LeakCanary removed due to incompatibility with dynamic feature modules
+    // See: https://github.com/square/leakcanary/issues/2169
 }

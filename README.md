@@ -1,12 +1,15 @@
 # SIR - Internet Radio for Android
 
-A lightweight, battery-efficient internet radio app for Android, optimized for streaming audio playback.
+A lightweight, battery-efficient internet radio app for Android, optimized for streaming audio
+playback.
 
 ## Features
 
 - 🎵 **One-tap playback** - Tap anywhere to start/stop streaming
 - 📱 **Media controls** - Full notification and lock screen controls
 - 🎧 **Smart audio handling** - Auto-pause on headphone disconnect, resume on reconnect
+- 😴 **Sleep timer** - Auto-stop playback after 15/30/60/90 minutes
+- 🎛️ **Equalizer presets** - Normal, Bass Boost, Vocal, and Treble modes
 - 🔋 **Battery optimized** - Minimal resource usage during playback
 - 📶 **Network resilient** - Handles network changes gracefully
 - 📺 **Chromecast support** - Cast to any Chromecast device (on-demand module)
@@ -15,6 +18,7 @@ A lightweight, battery-efficient internet radio app for Android, optimized for s
 ## Optimizations
 
 ### Ultra-Lightweight APK
+
 - **~2.5 MB release APK** - Fast download and install
 - **On-demand Chromecast module** (~750KB) - Only downloaded when needed
 - Aggressive R8/ProGuard optimizations with dead code elimination
@@ -23,6 +27,7 @@ A lightweight, battery-efficient internet radio app for Android, optimized for s
 - Unused dependencies stripped (no video/UI modules)
 
 ### Audio Playback Performance
+
 - **HTTP/2 streaming** via OkHttp with HTTP/1.1 fallback for maximum compatibility
 - **Connection pooling** with 5-minute keep-alive for instant reconnects on network switches
 - **Zero call timeout** for uninterrupted live streaming
@@ -34,12 +39,14 @@ A lightweight, battery-efficient internet radio app for Android, optimized for s
 - **Live stream sync** with adaptive playback speed (0.98x-1.02x) to stay synced
 
 ### Power Management
+
 - **Partial wake lock** keeps CPU active only during playback
 - **WiFi lock** prevents network power-saving during streaming
 - Automatic lock release when paused/stopped
 - Foreground service with efficient notification updates
 
 ### Modern Android Integration
+
 - Built with **Media3/ExoPlayer** for best-in-class audio playback
 - **MediaSession** support for system media controls
 - Notification actions with play/pause controls
@@ -47,6 +54,7 @@ A lightweight, battery-efficient internet radio app for Android, optimized for s
 - Targets **Android 7.0+** (API 24) with **Android 14** (API 36) SDK
 
 ### Chromecast Support
+
 - **On-demand dynamic feature** - Cast module downloaded only when needed
 - **Battery-efficient detection** - Only scans for Cast devices on WiFi when app is visible
 - **Auto-download** - Automatically downloads Cast module when devices detected (if enabled)
@@ -54,6 +62,7 @@ A lightweight, battery-efficient internet radio app for Android, optimized for s
 - Uses **default Google Cast receiver** - No custom receiver app required
 
 ### ChromeOS Compatibility
+
 - **Resizable windows** - Proper desktop windowing support
 - **Keyboard/mouse ready** - No touchscreen required
 - **x86_64 ABI** - Native performance on Intel/AMD Chromebooks
@@ -92,6 +101,28 @@ Development builds are automatically published on every commit to `main`:
 
 - Android 7.0 (API 24) or higher
 - Internet connection for streaming
+
+## Roadmap
+
+Future features planned for implementation:
+
+### 🚗 Android Auto Support
+
+- Hands-free voice control for car playback
+- `MediaBrowserService` integration for Auto compatibility
+- Simple play/pause interface optimized for driving
+
+### ⌚ Wear OS Companion
+
+- Lightweight Wear OS tile for quick play/pause
+- Minimal battery impact using Horologist library
+- Glanceable "Now Playing" information
+
+### 📱 Home Screen Widget
+
+- 1x1 or 2x1 widget with play/pause button
+- Current track display (when metadata available)
+- One-tap playback from home screen
 
 ## License
 

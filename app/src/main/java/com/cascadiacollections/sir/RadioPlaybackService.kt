@@ -14,8 +14,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.media.audiofx.Equalizer
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import androidx.annotation.OptIn
@@ -37,6 +40,12 @@ import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.OkHttpClient
@@ -64,6 +73,21 @@ class RadioPlaybackService : MediaSessionService() {
     private var currentArtist: String? = null
     private var currentStation: String? = null
 
+    // Sleep timer
+    private val sleepTimerHandler = Handler(Looper.getMainLooper())
+    private var sleepTimerRunnable: Runnable? = null
+
+    // Equalizer
+    private var equalizer: Equalizer? = null
+    private var currentEqualizerPreset: EqualizerPreset = EqualizerPreset.NORMAL
+
+    // Settings and coroutine scope
+    private lateinit var settingsRepository: SettingsRepository
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    // Current stream URL (may be custom in debug builds)
+    private var currentStreamUrl: String = DEFAULT_STREAM_URL
+
     private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent?.action && player?.isPlaying == true) {
@@ -79,8 +103,12 @@ class RadioPlaybackService : MediaSessionService() {
                     val state = intent.getIntExtra("state", 0)
                     if (state == 1) resumeIfPausedByNoisy()
                 }
+
                 BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> {
-                    val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, BluetoothProfile.STATE_DISCONNECTED)
+                    val state = intent.getIntExtra(
+                        BluetoothProfile.EXTRA_STATE,
+                        BluetoothProfile.STATE_DISCONNECTED
+                    )
                     if (state == BluetoothProfile.STATE_CONNECTED) resumeIfPausedByNoisy()
                 }
             }
@@ -92,6 +120,21 @@ class RadioPlaybackService : MediaSessionService() {
         super.onCreate()
         audioManager = getSystemService(AudioManager::class.java)
         val context = this
+
+        // Initialize settings repository
+        settingsRepository = SettingsRepository(this)
+
+        // Load custom stream URL in debug builds
+        serviceScope.launch {
+            if (BuildConfig.DEBUG) {
+                settingsRepository.customStreamUrl.first()?.let { customUrl ->
+                    currentStreamUrl = customUrl
+                    Log.d(TAG, "Using custom stream URL: $customUrl")
+                }
+            }
+            // Load and apply equalizer preset
+            currentEqualizerPreset = settingsRepository.equalizerPreset.first()
+        }
 
         // Initialize wake locks to prevent device sleep during playback
         initializeLocks()
@@ -153,10 +196,12 @@ class RadioPlaybackService : MediaSessionService() {
 
         // OkHttp data source for better HTTP performance (HTTP/2, connection reuse)
         val httpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
-            .setDefaultRequestProperties(mapOf(
-                "Icy-MetaData" to "1",  // Request ICY metadata
-                "User-Agent" to "SIR Android/${Build.VERSION.SDK_INT}"
-            ))
+            .setDefaultRequestProperties(
+                mapOf(
+                    "Icy-MetaData" to "1",  // Request ICY metadata
+                    "User-Agent" to "SIR Android/${Build.VERSION.SDK_INT}"
+                )
+            )
 
         // Bandwidth meter for adaptive streaming (though this stream is fixed bitrate)
         val bandwidthMeter = DefaultBandwidthMeter.Builder(context)
@@ -188,8 +233,8 @@ class RadioPlaybackService : MediaSessionService() {
             }
 
         val mediaItem = MediaItem.Builder()
-            .setUri(STREAM_URL)
-            .setMediaId(STREAM_URL)
+            .setUri(currentStreamUrl)
+            .setMediaId(currentStreamUrl)
             .setLiveConfiguration(
                 MediaItem.LiveConfiguration.Builder()
                     .setMaxPlaybackSpeed(1.02f)  // Slight speedup to catch up if behind
@@ -216,16 +261,17 @@ class RadioPlaybackService : MediaSessionService() {
                     controller: MediaSession.ControllerInfo
                 ): MediaSession.ConnectionResult {
                     // Only allow play/pause commands, no seeking for live radio
-                    val availableCommands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
-                        .remove(Player.COMMAND_SEEK_BACK)
-                        .remove(Player.COMMAND_SEEK_FORWARD)
-                        .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
-                        .remove(Player.COMMAND_SEEK_TO_MEDIA_ITEM)
-                        .remove(Player.COMMAND_SEEK_TO_NEXT)
-                        .remove(Player.COMMAND_SEEK_TO_PREVIOUS)
-                        .remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-                        .remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-                        .build()
+                    val availableCommands =
+                        MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
+                            .remove(Player.COMMAND_SEEK_BACK)
+                            .remove(Player.COMMAND_SEEK_FORWARD)
+                            .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+                            .remove(Player.COMMAND_SEEK_TO_MEDIA_ITEM)
+                            .remove(Player.COMMAND_SEEK_TO_NEXT)
+                            .remove(Player.COMMAND_SEEK_TO_PREVIOUS)
+                            .remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                            .remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                            .build()
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailablePlayerCommands(availableCommands)
                         .build()
@@ -293,6 +339,9 @@ class RadioPlaybackService : MediaSessionService() {
         // Now prepare the player
         player?.prepare()
 
+        // Initialize equalizer with the player's audio session
+        initializeEqualizer()
+
         createNotificationChannel()
         startForeground(
             NOTIFICATION_ID,
@@ -322,16 +371,29 @@ class RadioPlaybackService : MediaSessionService() {
         when (intent?.action) {
             ACTION_STOP -> {
                 pausedByNoisy = false
+                cancelSleepTimer()
                 player?.pause()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return START_NOT_STICKY
             }
+
             ACTION_PLAY -> {
                 player?.play()
             }
+
             ACTION_PAUSE -> {
                 player?.pause()
+            }
+
+            ACTION_SET_SLEEP_TIMER -> {
+                val minutes = intent.getIntExtra(EXTRA_SLEEP_TIMER_MINUTES, 0)
+                setSleepTimer(minutes)
+            }
+
+            ACTION_SET_EQUALIZER -> {
+                val presetOrdinal = intent.getIntExtra(EXTRA_EQUALIZER_PRESET, 0)
+                applyEqualizerPreset(EqualizerPreset.fromOrdinal(presetOrdinal))
             }
         }
         return super.onStartCommand(intent, flags, startId)
@@ -342,6 +404,15 @@ class RadioPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        // Cancel sleep timer
+        cancelSleepTimer()
+
+        // Release equalizer
+        releaseEqualizer()
+
+        // Cancel coroutine scope
+        serviceScope.cancel()
+
         releaseLocks()
         mediaSession?.run {
             release()
@@ -401,13 +472,17 @@ class RadioPlaybackService : MediaSessionService() {
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(currentTrackTitle ?: currentStation ?: DEFAULT_STATION_NAME)
             .setContentText(currentArtist ?: DEFAULT_STREAM_DESCRIPTION)
-            .setSubText(if (currentTrackTitle != null) currentStation ?: DEFAULT_STATION_NAME else null)
+            .setSubText(
+                if (currentTrackTitle != null) currentStation ?: DEFAULT_STATION_NAME else null
+            )
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(openAppIntent)
             .setDeleteIntent(stopIntent)
             .setOngoing(player?.isPlaying == true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setStyle(MediaStyleNotificationHelper.MediaStyle(session).setShowActionsInCompactView(0))
+            .setStyle(
+                MediaStyleNotificationHelper.MediaStyle(session).setShowActionsInCompactView(0)
+            )
             .addAction(
                 if (player?.isPlaying == true)
                     NotificationCompat.Action.Builder(
@@ -437,7 +512,10 @@ class RadioPlaybackService : MediaSessionService() {
             extras.putString(Notification.EXTRA_TEXT, contentText)
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
         ) {
             NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, notification)
         } else {
@@ -515,17 +593,183 @@ class RadioPlaybackService : MediaSessionService() {
         }
     }
 
+    // Sleep Timer methods
+    private fun setSleepTimer(minutes: Int) {
+        cancelSleepTimer()
+
+        if (minutes <= 0) {
+            Log.d(TAG, "Sleep timer disabled")
+            return
+        }
+
+        sleepTimerRunnable = Runnable {
+            Log.d(TAG, "Sleep timer triggered - stopping playback")
+            player?.pause()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
+
+        val delayMs = minutes * 60 * 1000L
+        sleepTimerHandler.postDelayed(sleepTimerRunnable!!, delayMs)
+        Log.d(TAG, "Sleep timer set for $minutes minutes")
+    }
+
+    private fun cancelSleepTimer() {
+        sleepTimerRunnable?.let {
+            sleepTimerHandler.removeCallbacks(it)
+            sleepTimerRunnable = null
+            Log.d(TAG, "Sleep timer cancelled")
+        }
+    }
+
+    // Equalizer methods
+    @OptIn(UnstableApi::class)
+    private fun initializeEqualizer() {
+        try {
+            val audioSessionId = player?.audioSessionId ?: return
+            if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
+                Log.w(TAG, "Audio session ID not set, skipping equalizer init")
+                return
+            }
+
+            equalizer = Equalizer(0, audioSessionId).apply {
+                enabled = true
+            }
+            applyEqualizerPreset(currentEqualizerPreset)
+            Log.d(TAG, "Equalizer initialized with session $audioSessionId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize equalizer", e)
+        }
+    }
+
+    private fun applyEqualizerPreset(preset: EqualizerPreset) {
+        currentEqualizerPreset = preset
+        val eq = equalizer ?: return
+
+        try {
+            val bandCount = eq.numberOfBands.toInt()
+            val minLevel = eq.bandLevelRange[0]
+            val maxLevel = eq.bandLevelRange[1]
+            val range = maxLevel - minLevel
+
+            // Apply preset based on type
+            when (preset) {
+                EqualizerPreset.NORMAL -> {
+                    // Flat response
+                    for (band in 0 until bandCount) {
+                        eq.setBandLevel(band.toShort(), 0)
+                    }
+                }
+
+                EqualizerPreset.BASS_BOOST -> {
+                    // Boost low frequencies, slight cut on highs
+                    val levels = calculateBassBoostLevels(bandCount, minLevel, maxLevel, range)
+                    for (band in 0 until bandCount) {
+                        eq.setBandLevel(band.toShort(), levels[band])
+                    }
+                }
+
+                EqualizerPreset.VOCAL -> {
+                    // Boost mids for voice clarity, cut bass
+                    val levels = calculateVocalLevels(bandCount, minLevel, maxLevel, range)
+                    for (band in 0 until bandCount) {
+                        eq.setBandLevel(band.toShort(), levels[band])
+                    }
+                }
+
+                EqualizerPreset.TREBLE -> {
+                    // Boost high frequencies
+                    val levels = calculateTrebleLevels(bandCount, minLevel, maxLevel, range)
+                    for (band in 0 until bandCount) {
+                        eq.setBandLevel(band.toShort(), levels[band])
+                    }
+                }
+            }
+
+            // Persist preference
+            serviceScope.launch {
+                settingsRepository.setEqualizerPreset(preset)
+            }
+
+            Log.d(TAG, "Applied equalizer preset: ${preset.label}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply equalizer preset", e)
+        }
+    }
+
+    private fun calculateBassBoostLevels(
+        bandCount: Int,
+        minLevel: Short,
+        maxLevel: Short,
+        range: Int
+    ): List<Short> {
+        // Bass boost: high on low bands, tapering to flat/slight cut on highs
+        return List(bandCount) { band ->
+            val position = band.toFloat() / (bandCount - 1)
+            val boost = ((1 - position) * 0.6f * range + minLevel).toInt().toShort()
+            boost.coerceIn(minLevel, maxLevel)
+        }
+    }
+
+    private fun calculateVocalLevels(
+        bandCount: Int,
+        minLevel: Short,
+        maxLevel: Short,
+        range: Int
+    ): List<Short> {
+        // Vocal: cut bass, boost mids, slight cut on highs
+        return List(bandCount) { band ->
+            val position = band.toFloat() / (bandCount - 1)
+            val level = when {
+                position < 0.3f -> (minLevel + range * 0.1f).toInt() // Cut bass
+                position < 0.7f -> (minLevel + range * 0.7f).toInt() // Boost mids
+                else -> (minLevel + range * 0.4f).toInt() // Slight boost highs
+            }.toShort()
+            level.coerceIn(minLevel, maxLevel)
+        }
+    }
+
+    private fun calculateTrebleLevels(
+        bandCount: Int,
+        minLevel: Short,
+        maxLevel: Short,
+        range: Int
+    ): List<Short> {
+        // Treble boost: flat on lows, boost highs
+        return List(bandCount) { band ->
+            val position = band.toFloat() / (bandCount - 1)
+            val boost = (position * 0.6f * range + minLevel).toInt().toShort()
+            boost.coerceIn(minLevel, maxLevel)
+        }
+    }
+
+    private fun releaseEqualizer() {
+        try {
+            equalizer?.release()
+            equalizer = null
+            Log.d(TAG, "Equalizer released")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing equalizer", e)
+        }
+    }
+
     companion object {
         private const val TAG = "RadioPlaybackService"
-        private const val STREAM_URL = "https://broadcast.shoutcheap.com/proxy/willradio/stream"
+        private const val DEFAULT_STREAM_URL =
+            "https://broadcast.shoutcheap.com/proxy/willradio/stream"
         private const val MEDIA_SESSION_ID = "will_radio_session"
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
         private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
         private const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
         private const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
+        const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"
+        const val ACTION_SET_EQUALIZER = "com.cascadiacollections.sir.action.SET_EQUALIZER"
+        const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
+        const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
         private const val DEFAULT_STATION_NAME = "SIR"
         private const val DEFAULT_STREAM_DESCRIPTION = "Live stream"
+
         // Stream's static metadata values (not real track info)
         private const val STREAM_STATIC_TITLE = "Will Radio Stream"
         private const val STREAM_STATIC_ARTIST = "Live Internet Radio"

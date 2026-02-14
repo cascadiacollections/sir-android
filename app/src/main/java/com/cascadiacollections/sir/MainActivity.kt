@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,16 +18,26 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -50,11 +61,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.cascadiacollections.sir.ui.theme.SirTheme
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.cascadiacollections.sir.ui.theme.SirTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.await
@@ -110,8 +121,8 @@ fun RadioScreen(
 ) {
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val scope = rememberCoroutineScope()
+    LocalLifecycleOwner.current
+    rememberCoroutineScope()
 
     // Settings dialog state
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -358,21 +369,156 @@ fun RadioScreenPlayingPreview() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsDialog(
     settingsRepository: SettingsRepository,
     castFeatureManager: CastFeatureManager,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val chromecastEnabled by settingsRepository.chromecastEnabled.collectAsState(initial = false)
     val castModuleState by castFeatureManager.moduleState.collectAsState()
+    val sleepTimerDuration by settingsRepository.sleepTimerDuration.collectAsState(initial = SleepTimerDuration.OFF)
+    val equalizerPreset by settingsRepository.equalizerPreset.collectAsState(initial = EqualizerPreset.NORMAL)
+    val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
+
+    // Dropdown expansion states
+    var sleepTimerExpanded by remember { mutableStateOf(false) }
+    var equalizerExpanded by remember { mutableStateOf(false) }
+    var customStreamText by remember { mutableStateOf(customStreamUrl ?: "") }
+
+    // Update custom stream text when flow changes
+    LaunchedEffect(customStreamUrl) {
+        customStreamText = customStreamUrl ?: ""
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings)) },
         text = {
-            Column {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                // Sleep Timer dropdown
+                Text(
+                    text = stringResource(R.string.sleep_timer),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                ExposedDropdownMenuBox(
+                    expanded = sleepTimerExpanded,
+                    onExpandedChange = { sleepTimerExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = sleepTimerDuration.label,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sleepTimerExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = sleepTimerExpanded,
+                        onDismissRequest = { sleepTimerExpanded = false }
+                    ) {
+                        SleepTimerDuration.entries.forEach { duration ->
+                            DropdownMenuItem(
+                                text = { Text(duration.label) },
+                                onClick = {
+                                    sleepTimerExpanded = false
+                                    scope.launch {
+                                        settingsRepository.setSleepTimerDuration(duration)
+                                        // Send to service
+                                        context.startService(
+                                            Intent(
+                                                context,
+                                                RadioPlaybackService::class.java
+                                            ).apply {
+                                                action = RadioPlaybackService.ACTION_SET_SLEEP_TIMER
+                                                putExtra(
+                                                    RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,
+                                                    duration.minutes
+                                                )
+                                            }
+                                        )
+                                        // Show toast
+                                        val message = if (duration == SleepTimerDuration.OFF) {
+                                            context.getString(R.string.sleep_timer_off)
+                                        } else {
+                                            context.getString(
+                                                R.string.sleep_timer_set,
+                                                duration.label
+                                            )
+                                        }
+                                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Equalizer dropdown
+                Text(
+                    text = stringResource(R.string.equalizer),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                ExposedDropdownMenuBox(
+                    expanded = equalizerExpanded,
+                    onExpandedChange = { equalizerExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = equalizerPreset.label,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = equalizerExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = equalizerExpanded,
+                        onDismissRequest = { equalizerExpanded = false }
+                    ) {
+                        EqualizerPreset.entries.forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(preset.label) },
+                                onClick = {
+                                    equalizerExpanded = false
+                                    scope.launch {
+                                        settingsRepository.setEqualizerPreset(preset)
+                                        // Send to service
+                                        context.startService(
+                                            Intent(
+                                                context,
+                                                RadioPlaybackService::class.java
+                                            ).apply {
+                                                action = RadioPlaybackService.ACTION_SET_EQUALIZER
+                                                putExtra(
+                                                    RadioPlaybackService.EXTRA_EQUALIZER_PRESET,
+                                                    preset.ordinal
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Chromecast toggle
                 Row(
                     modifier = Modifier
@@ -390,9 +536,11 @@ private fun SettingsDialog(
                         val statusText = when (castModuleState) {
                             is CastModuleState.Installed -> stringResource(R.string.chromecast_enabled)
                             is CastModuleState.Installing -> {
-                                val progress = (castModuleState as CastModuleState.Installing).progress
+                                val progress =
+                                    (castModuleState as CastModuleState.Installing).progress
                                 "${stringResource(R.string.chromecast_downloading)} ${(progress * 100).toInt()}%"
                             }
+
                             is CastModuleState.Failed -> stringResource(R.string.chromecast_not_available)
                             else -> null
                         }
@@ -414,6 +562,7 @@ private fun SettingsDialog(
                                 strokeWidth = 2.dp
                             )
                         }
+
                         is CastModuleState.Installed -> {
                             Switch(
                                 checked = true,
@@ -421,6 +570,7 @@ private fun SettingsDialog(
                                 enabled = false
                             )
                         }
+
                         else -> {
                             Switch(
                                 checked = chromecastEnabled,
@@ -433,6 +583,91 @@ private fun SettingsDialog(
                                     }
                                 }
                             )
+                        }
+                    }
+                }
+
+                // Debug-only: Custom Stream URL
+                if (BuildConfig.DEBUG) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Debug Options",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = stringResource(R.string.custom_stream_url),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    OutlinedTextField(
+                        value = customStreamText,
+                        onValueChange = { customStreamText = it },
+                        placeholder = { Text(stringResource(R.string.custom_stream_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (customStreamUrl != null) {
+                        Text(
+                            text = stringResource(R.string.custom_stream_active),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(
+                            onClick = {
+                                scope.launch {
+                                    settingsRepository.setCustomStreamUrl(null)
+                                    customStreamText = ""
+                                    Toast.makeText(
+                                        context,
+                                        "Reset to default stream",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            enabled = customStreamUrl != null
+                        ) {
+                            Text(stringResource(R.string.reset_to_default))
+                        }
+                        TextButton(
+                            onClick = {
+                                if (customStreamText.startsWith("http://") || customStreamText.startsWith(
+                                        "https://"
+                                    )
+                                ) {
+                                    scope.launch {
+                                        settingsRepository.setCustomStreamUrl(customStreamText)
+                                        Toast.makeText(
+                                            context,
+                                            "Custom stream saved. Restart app to apply.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "URL must start with http:// or https://",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            enabled = customStreamText.isNotBlank() && customStreamText != customStreamUrl
+                        ) {
+                            Text("Save")
                         }
                     }
                 }

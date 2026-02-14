@@ -9,4 +9,12 @@
     <string name="chromecast_enabled">Chromecast enabled</string>
     <string name="chromecast_downloading">Downloading Chromecast support…</string>
     <string name="chromecast_not_available">Chromecast not available</string>
+    <string name="sleep_timer">Sleep Timer</string>
+    <string name="sleep_timer_set">Sleep timer set for %1$s</string>
+    <string name="sleep_timer_off">Sleep timer off</string>
+    <string name="equalizer">Equalizer</string>
+    <string name="custom_stream_url">Custom Stream URL</string>
+    <string name="custom_stream_hint">Enter stream URL (http/https)</string>
+    <string name="custom_stream_active">Using custom stream</string>
+    <string name="reset_to_default">Reset to Default</string>
 </resources>

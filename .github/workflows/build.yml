@@ -31,7 +31,7 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Build APKs and Run Tests (Parallel)
-        run: ./gradlew assembleRelease assembleDebug testReleaseUnitTest --no-daemon --parallel --build-cache
+        run: ./gradlew assembleRelease assembleDebug testDebugUnitTest --no-daemon --parallel --build-cache
 
       # Upload artifacts for both PR review and release job
       - name: Upload APK Artifacts

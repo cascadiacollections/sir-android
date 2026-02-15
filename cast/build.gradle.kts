@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.dynamic.feature)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -15,6 +16,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+        vendor.set(JvmVendorSpec.ADOPTIUM)
     }
 }
 

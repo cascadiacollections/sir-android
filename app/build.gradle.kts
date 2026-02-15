@@ -75,7 +75,11 @@ android {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+        // Use Eclipse Adoptium Temurin - OSS JDK with long-term support
+        vendor.set(JvmVendorSpec.ADOPTIUM)
+    }
 
     compilerOptions {
         // Enable aggressive inlining for better performance

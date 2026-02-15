@@ -5,3 +5,17 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
 }
+
+// Configure Java toolchain for all subprojects
+subprojects {
+    plugins.withType<JavaBasePlugin>().configureEach {
+        extensions.configure<JavaPluginExtension> {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(17))
+                // Use Eclipse Adoptium Temurin - OSS JDK with enterprise-grade support
+                vendor.set(JvmVendorSpec.ADOPTIUM)
+            }
+        }
+    }
+}
+

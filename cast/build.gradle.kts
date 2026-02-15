@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.dynamic.feature)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -19,12 +18,7 @@ android {
     }
 }
 
-kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-        vendor.set(JvmVendorSpec.ADOPTIUM)
-    }
-}
+// Note: Kotlin toolchain inherited from :app base module (JDK 17 Adoptium Temurin)
 
 dependencies {
     // Base app module - provides Media3 common types

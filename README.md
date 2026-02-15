@@ -77,6 +77,21 @@ playback.
 - **Play Feature Delivery** for on-demand modules
 - **DataStore** for preferences persistence
 
+### Build Toolchain
+
+- **Eclipse Adoptium Temurin JDK 17** - OSS Java runtime with long-term support
+- **Gradle 9.1** with configuration cache for fast incremental builds
+- **Foojay Toolchain Resolver** - Auto-downloads Adoptium JDK if not present
+- **G1GC** with optimized pause times for responsive builds
+- **Kotlin JVM Toolchain** with explicit vendor specification for reproducible builds
+
+JVM optimizations applied:
+
+- `-XX:+UseG1GC` - Low-latency garbage collector
+- `-XX:MaxGCPauseMillis=200` - Target GC pause time
+- `-XX:+UseStringDeduplication` - Reduce memory for duplicate strings
+- `-XX:+ParallelRefProcEnabled` - Parallel reference processing
+
 ## Building
 
 ```bash

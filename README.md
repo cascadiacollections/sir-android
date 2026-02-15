@@ -117,6 +117,48 @@ Development builds are automatically published on every commit to `main`:
 - Android 7.0 (API 24) or higher
 - Internet connection for streaming
 
+## ⚙️ Build & Runtime Optimization
+
+### Baseline Profiles (Implemented ✅)
+
+Baseline profiles enable ahead-of-time (AOT) compilation on app install, reducing cold startup time by 15-30% on first launch.
+
+**What's Included:**
+- Manual baseline profile (`app/src/main/baseline-prof.txt`) with critical startup paths bundled in APK
+- `profileinstaller` library for AOT compilation on install  
+- Benchmark module (`benchmark/`) for measuring startup performance and generating device-specific profiles
+- Automated benchmarks for cold/warm/hot startup with different compilation modes
+
+**Running Benchmarks:**
+```bash
+# Measure startup performance on connected device
+./gradlew :benchmark:connectedBenchmarkAndroidTest
+
+# Generate device-specific baseline profile  
+./gradlew :benchmark:connectedBenchmarkAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.cascadiacollections.sir.benchmark.BaselineProfileGenerator
+
+# Results will be in: benchmark/build/outputs/managed_device_android_test_additional_output/
+```
+
+**How It Works:**
+1. Manual baseline profile defines critical hot paths (MainActivity, RadioPlaybackService, etc.)
+2. Profileinstaller library extracts and installs profile on app install
+3. Android Runtime (ART) uses profile for AOT compilation during install
+4. Benchmark module exercises user journeys to generate device-specific profiles
+5. Generated profiles can replace manual ones for production builds
+
+**Future Optimizations:**
+
+Consider these optimizations documented for future implementation:
+
+- **Remote build cache** - Share build artifacts across developers and CI
+- **Modularization** - Split into `:core`, `:playback`, `:ui` modules for better parallelization
+- **Kotlin 2.1+ K2 compiler** - Faster compilation with new compiler backend
+- **Java 21 toolchain** - When AGP adds support, upgrade from Java 17
+- **Per-ABI APK splits** - Reduce APK size by splitting ARM/x86 variants
+- **CI integration** - Monitor APK size, startup time, and memory usage in CI pipeline
+
 ## Roadmap
 
 Future features planned for implementation:

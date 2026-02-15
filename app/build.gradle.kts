@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 android {
@@ -117,6 +118,9 @@ dependencies {
 
     // Settings persistence
     implementation(libs.datastore.preferences)
+
+    // Baseline profile for AOT compilation and faster startup
+    implementation(libs.androidx.profileinstaller)
 
     implementation(libs.kotlinx.coroutines.guava)
 

@@ -1,0 +1,28 @@
+# Baseline Profile for SIR Internet Radio App
+# Generated manually with critical startup paths
+# Run benchmarks to generate device-specific profile:
+# ./gradlew :benchmark:connectedBenchmarkAndroidTest
+
+# MainActivity - App entry point and UI initialization
+HSPLcom/cascadiacollections/sir/MainActivity;-><init>()V
+HSPLcom/cascadiacollections/sir/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/cascadiacollections/sir/MainActivity;->setContent(Lkotlin/jvm/functions/Function2;)V
+
+# RadioPlaybackService - Core playback service initialization
+HSPLcom/cascadiacollections/sir/RadioPlaybackService;-><init>()V
+HSPLcom/cascadiacollections/sir/RadioPlaybackService;->onCreate()V
+HSPLcom/cascadiacollections/sir/RadioPlaybackService;->onStartCommand(Landroid/content/Intent;II)I
+HSPLcom/cascadiacollections/sir/RadioPlaybackService;->onBind(Landroid/content/Intent;)Landroid/os/IBinder;
+
+# SettingsRepository - Settings and preferences access
+HSPLcom/cascadiacollections/sir/SettingsRepository;-><init>(Landroid/content/Context;)V
+HSPLcom/cascadiacollections/sir/SettingsRepository;->getEqualizerMode()Lkotlinx/coroutines/flow/Flow;
+HSPLcom/cascadiacollections/sir/SettingsRepository;->getSleepTimer()Lkotlinx/coroutines/flow/Flow;
+
+# CastDeviceDetector - Cast device detection
+HSPLcom/cascadiacollections/sir/CastDeviceDetector;-><init>(Landroid/content/Context;)V
+HSPLcom/cascadiacollections/sir/CastDeviceDetector;->startScanning()V
+
+# CastFeatureManager - Cast feature management
+HSPLcom/cascadiacollections/sir/CastFeatureManager;-><init>(Landroid/content/Context;)V
+HSPLcom/cascadiacollections/sir/CastFeatureManager;->isCastEnabled()Z

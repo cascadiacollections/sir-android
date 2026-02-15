@@ -169,15 +169,13 @@ class RadioPlaybackService : MediaSessionService() {
 
             override fun lookup(hostname: String): List<InetAddress> {
                 val now = System.currentTimeMillis()
-                val cached = cache[hostname]
-                if (cached != null && now - cached.second < ttlMs) {
-                    return cached.first
-                }
-                val addresses = Dns.SYSTEM.lookup(hostname)
-                    // Prefer IPv4 for faster connection on mobile networks
-                    .sortedBy { if (it is Inet4Address) 0 else 1 }
-                cache[hostname] = addresses to now
-                return addresses
+                return cache[hostname]
+                    ?.takeIf { now - it.second < ttlMs }
+                    ?.first
+                    ?: Dns.SYSTEM.lookup(hostname)
+                        // Prefer IPv4 for faster connection on mobile networks (false sorts before true)
+                        .sortedBy { it !is Inet4Address }
+                        .also { cache[hostname] = it to now }
             }
         }
 
@@ -197,10 +195,10 @@ class RadioPlaybackService : MediaSessionService() {
         // OkHttp data source for better HTTP performance (HTTP/2, connection reuse)
         val httpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
             .setDefaultRequestProperties(
-                mapOf(
-                    "Icy-MetaData" to "1",  // Request ICY metadata
-                    "User-Agent" to "SIR Android/${Build.VERSION.SDK_INT}"
-                )
+                buildMap {
+                    put("Icy-MetaData", "1")  // Request ICY metadata
+                    put("User-Agent", "SIR Android/${Build.VERSION.SDK_INT}")
+                }
             )
 
         // Bandwidth meter for adaptive streaming (though this stream is fixed bitrate)
@@ -414,14 +412,10 @@ class RadioPlaybackService : MediaSessionService() {
         serviceScope.cancel()
 
         releaseLocks()
-        mediaSession?.run {
-            release()
-            mediaSession = null
-        }
-        player?.run {
-            release()
-            player = null
-        }
+        mediaSession?.also { it.release() }
+        mediaSession = null
+        player?.also { it.release() }
+        player = null
         if (isNoisyReceiverRegistered) {
             unregisterReceiver(audioBecomingNoisyReceiver)
             isNoisyReceiverRegistered = false
@@ -538,10 +532,9 @@ class RadioPlaybackService : MediaSessionService() {
     }
 
     private fun resumeIfPausedByNoisy() {
-        if (pausedByNoisy) {
-            pausedByNoisy = false
-            player?.play()
-        }
+        if (!pausedByNoisy) return
+        pausedByNoisy = false
+        player?.play()
     }
 
     @SuppressLint("WakelockTimeout")
@@ -564,32 +557,24 @@ class RadioPlaybackService : MediaSessionService() {
 
     @SuppressLint("WakelockTimeout")
     private fun acquireLocks() {
-        wakeLock?.let {
-            if (!it.isHeld) {
-                it.acquire()
-                Log.d(TAG, "Wake lock acquired")
-            }
+        wakeLock?.takeUnless { it.isHeld }?.run {
+            acquire()
+            Log.d(TAG, "Wake lock acquired")
         }
-        wifiLock?.let {
-            if (!it.isHeld) {
-                it.acquire()
-                Log.d(TAG, "WiFi lock acquired")
-            }
+        wifiLock?.takeUnless { it.isHeld }?.run {
+            acquire()
+            Log.d(TAG, "WiFi lock acquired")
         }
     }
 
     private fun releaseLocks() {
-        wakeLock?.let {
-            if (it.isHeld) {
-                it.release()
-                Log.d(TAG, "Wake lock released")
-            }
+        wakeLock?.takeIf { it.isHeld }?.run {
+            release()
+            Log.d(TAG, "Wake lock released")
         }
-        wifiLock?.let {
-            if (it.isHeld) {
-                it.release()
-                Log.d(TAG, "WiFi lock released")
-            }
+        wifiLock?.takeIf { it.isHeld }?.run {
+            release()
+            Log.d(TAG, "WiFi lock released")
         }
     }
 
@@ -615,11 +600,11 @@ class RadioPlaybackService : MediaSessionService() {
     }
 
     private fun cancelSleepTimer() {
-        sleepTimerRunnable?.let {
+        sleepTimerRunnable?.also {
             sleepTimerHandler.removeCallbacks(it)
-            sleepTimerRunnable = null
             Log.d(TAG, "Sleep timer cancelled")
         }
+        sleepTimerRunnable = null
     }
 
     // Equalizer methods
@@ -652,38 +637,43 @@ class RadioPlaybackService : MediaSessionService() {
             val maxLevel = eq.bandLevelRange[1]
             val range = maxLevel - minLevel
 
-            // Apply preset based on type
-            when (preset) {
-                EqualizerPreset.NORMAL -> {
-                    // Flat response
-                    for (band in 0 until bandCount) {
-                        eq.setBandLevel(band.toShort(), 0)
+            // Apply preset using unified curve function
+            val levels = when (preset) {
+                EqualizerPreset.NORMAL -> List(bandCount) { 0.toShort() }
+                EqualizerPreset.BASS_BOOST -> calculateEqualizerLevels(
+                    bandCount,
+                    minLevel,
+                    maxLevel,
+                    range
+                ) { pos ->
+                    (1 - pos) * 0.6f
+                }
+
+                EqualizerPreset.VOCAL -> calculateEqualizerLevels(
+                    bandCount,
+                    minLevel,
+                    maxLevel,
+                    range
+                ) { pos ->
+                    when {
+                        pos < 0.3f -> 0.1f  // Cut bass
+                        pos < 0.7f -> 0.7f  // Boost mids
+                        else -> 0.4f        // Slight boost highs
                     }
                 }
 
-                EqualizerPreset.BASS_BOOST -> {
-                    // Boost low frequencies, slight cut on highs
-                    val levels = calculateBassBoostLevels(bandCount, minLevel, maxLevel, range)
-                    for (band in 0 until bandCount) {
-                        eq.setBandLevel(band.toShort(), levels[band])
-                    }
+                EqualizerPreset.TREBLE -> calculateEqualizerLevels(
+                    bandCount,
+                    minLevel,
+                    maxLevel,
+                    range
+                ) { pos ->
+                    pos * 0.6f
                 }
+            }
 
-                EqualizerPreset.VOCAL -> {
-                    // Boost mids for voice clarity, cut bass
-                    val levels = calculateVocalLevels(bandCount, minLevel, maxLevel, range)
-                    for (band in 0 until bandCount) {
-                        eq.setBandLevel(band.toShort(), levels[band])
-                    }
-                }
-
-                EqualizerPreset.TREBLE -> {
-                    // Boost high frequencies
-                    val levels = calculateTrebleLevels(bandCount, minLevel, maxLevel, range)
-                    for (band in 0 until bandCount) {
-                        eq.setBandLevel(band.toShort(), levels[band])
-                    }
-                }
+            levels.forEachIndexed { band, level ->
+                eq.setBandLevel(band.toShort(), level)
             }
 
             // Persist preference
@@ -697,50 +687,19 @@ class RadioPlaybackService : MediaSessionService() {
         }
     }
 
-    private fun calculateBassBoostLevels(
+    /**
+     * Calculate equalizer band levels using a curve function.
+     * @param curve Function mapping band position (0.0..1.0) to level multiplier (0.0..1.0)
+     */
+    private inline fun calculateEqualizerLevels(
         bandCount: Int,
         minLevel: Short,
         maxLevel: Short,
-        range: Int
-    ): List<Short> {
-        // Bass boost: high on low bands, tapering to flat/slight cut on highs
-        return List(bandCount) { band ->
-            val position = band.toFloat() / (bandCount - 1)
-            val boost = ((1 - position) * 0.6f * range + minLevel).toInt().toShort()
-            boost.coerceIn(minLevel, maxLevel)
-        }
-    }
-
-    private fun calculateVocalLevels(
-        bandCount: Int,
-        minLevel: Short,
-        maxLevel: Short,
-        range: Int
-    ): List<Short> {
-        // Vocal: cut bass, boost mids, slight cut on highs
-        return List(bandCount) { band ->
-            val position = band.toFloat() / (bandCount - 1)
-            val level = when {
-                position < 0.3f -> (minLevel + range * 0.1f).toInt() // Cut bass
-                position < 0.7f -> (minLevel + range * 0.7f).toInt() // Boost mids
-                else -> (minLevel + range * 0.4f).toInt() // Slight boost highs
-            }.toShort()
-            level.coerceIn(minLevel, maxLevel)
-        }
-    }
-
-    private fun calculateTrebleLevels(
-        bandCount: Int,
-        minLevel: Short,
-        maxLevel: Short,
-        range: Int
-    ): List<Short> {
-        // Treble boost: flat on lows, boost highs
-        return List(bandCount) { band ->
-            val position = band.toFloat() / (bandCount - 1)
-            val boost = (position * 0.6f * range + minLevel).toInt().toShort()
-            boost.coerceIn(minLevel, maxLevel)
-        }
+        range: Int,
+        curve: (Float) -> Float
+    ): List<Short> = List(bandCount) { band ->
+        val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
+        (minLevel + range * curve(position)).toInt().toShort().coerceIn(minLevel, maxLevel)
     }
 
     private fun releaseEqualizer() {
@@ -755,23 +714,31 @@ class RadioPlaybackService : MediaSessionService() {
 
     companion object {
         private const val TAG = "RadioPlaybackService"
+
+        // Stream configuration
         private const val DEFAULT_STREAM_URL =
             "https://broadcast.shoutcheap.com/proxy/willradio/stream"
-        private const val MEDIA_SESSION_ID = "will_radio_session"
-        private const val CHANNEL_ID = "radio_playback_channel"
-        private const val NOTIFICATION_ID = 1001
-        private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
-        private const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
-        private const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
-        const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"
-        const val ACTION_SET_EQUALIZER = "com.cascadiacollections.sir.action.SET_EQUALIZER"
-        const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
-        const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
         private const val DEFAULT_STATION_NAME = "SIR"
         private const val DEFAULT_STREAM_DESCRIPTION = "Live stream"
 
         // Stream's static metadata values (not real track info)
         private const val STREAM_STATIC_TITLE = "Will Radio Stream"
         private const val STREAM_STATIC_ARTIST = "Live Internet Radio"
+
+        // Media session & notification
+        private const val MEDIA_SESSION_ID = "will_radio_session"
+        private const val CHANNEL_ID = "radio_playback_channel"
+        private const val NOTIFICATION_ID = 1001
+
+        // Intent actions
+        private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
+        private const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
+        private const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
+        const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"
+        const val ACTION_SET_EQUALIZER = "com.cascadiacollections.sir.action.SET_EQUALIZER"
+
+        // Intent extras
+        const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
+        const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
     }
 }

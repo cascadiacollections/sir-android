@@ -40,7 +40,7 @@ enum class EqualizerPreset(val label: String) {
 
     companion object {
         fun fromOrdinal(ordinal: Int): EqualizerPreset =
-            entries.getOrElse(ordinal) { NORMAL }
+            entries.getOrNull(ordinal) ?: NORMAL
     }
 }
 

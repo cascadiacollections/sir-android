@@ -56,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -121,8 +120,6 @@ fun RadioScreen(
 ) {
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
-    LocalLifecycleOwner.current
-    rememberCoroutineScope()
 
     // Settings dialog state
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -179,7 +176,7 @@ fun RadioScreen(
                 .await()
             controller = newController
             isConnected = true
-            isPlaying = newController.isActuallyPlaying()
+            isPlaying = newController.isActuallyPlaying
             isBuffering = newController.playbackState == Player.STATE_BUFFERING
             // Get initial metadata if available
             newController.mediaMetadata.let { metadata ->
@@ -205,7 +202,7 @@ fun RadioScreen(
         val activeController = controller ?: return@DisposableEffect onDispose {}
         val listener = object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
-                isPlaying = player.isActuallyPlaying()
+                isPlaying = player.isActuallyPlaying
                 isBuffering = player.playbackState == Player.STATE_BUFFERING
             }
 
@@ -298,16 +295,14 @@ private fun RadioUi(
                 val title = when {
                     !isConnected -> "Connecting to SIR"
                     isBuffering -> "Buffering..."
-                    isPlaying && !trackTitle.isNullOrBlank() -> trackTitle
-                    isPlaying -> "Now playing"
+                    isPlaying -> trackTitle?.takeIf { it.isNotBlank() } ?: "Now playing"
                     else -> "Tap anywhere to play"
                 }
                 // Show artist if available, otherwise show contextual info
                 val subtitle = when {
                     !isConnected -> "Starting playback service"
                     isBuffering -> "Hang tight, stream is loading"
-                    isPlaying && !artist.isNullOrBlank() -> artist
-                    isPlaying -> "SIR • Live"
+                    isPlaying -> artist?.takeIf { it.isNotBlank() } ?: "SIR • Live"
                     else -> "SIR • Internet radio"
                 }
                 Text(
@@ -681,9 +676,8 @@ private fun SettingsDialog(
     )
 }
 
-private fun Player.isActuallyPlaying(): Boolean {
-    return playWhenReady && playbackState == Player.STATE_READY
-}
+private val Player.isActuallyPlaying: Boolean
+    get() = playWhenReady && playbackState == Player.STATE_READY
 
 private fun Context.ensureRadioServiceRunning() {
     val intent = Intent(this, RadioPlaybackService::class.java)

@@ -13,17 +13,17 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * State of the Cast dynamic feature module
  */
-sealed class CastModuleState {
-    data object NotInstalled : CastModuleState()
-    data class Installing(val progress: Float) : CastModuleState()
-    data object Installed : CastModuleState()
-    data class Failed(val errorCode: Int) : CastModuleState()
+sealed interface CastModuleState {
+    data object NotInstalled : CastModuleState
+    data class Installing(val progress: Float) : CastModuleState
+    data object Installed : CastModuleState
+    data class Failed(val errorCode: Int) : CastModuleState
 }
 
 /**
  * Manages the Cast dynamic feature module installation and lifecycle.
  */
-class CastFeatureManager(private val context: Context) {
+class CastFeatureManager(context: Context) {
 
     private val splitInstallManager = SplitInstallManagerFactory.create(context)
 
@@ -45,21 +45,27 @@ class CastFeatureManager(private val context: Context) {
                 } else 0f
                 _moduleState.value = CastModuleState.Installing(progress)
             }
+
             SplitInstallSessionStatus.INSTALLING -> {
                 _moduleState.value = CastModuleState.Installing(1f)
             }
+
             SplitInstallSessionStatus.INSTALLED -> {
                 _moduleState.value = CastModuleState.Installed
                 Log.d(TAG, "Cast module installed successfully")
             }
+
             SplitInstallSessionStatus.FAILED -> {
                 _moduleState.value = CastModuleState.Failed(state.errorCode())
                 Log.e(TAG, "Cast module installation failed: ${state.errorCode()}")
             }
+
             SplitInstallSessionStatus.CANCELED -> {
                 _moduleState.value = CastModuleState.NotInstalled
             }
-            else -> { /* Ignore other states */ }
+
+            else -> { /* Ignore other states */
+            }
         }
     }
 

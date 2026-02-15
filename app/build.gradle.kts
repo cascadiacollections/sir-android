@@ -31,6 +31,16 @@ android {
                 "proguard-rules.pro"
             )
         }
+
+        // Benchmark build type for baseline profile generation
+        create("benchmark") {
+            initWith(buildTypes.getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            isDebuggable = false
+            // Disable obfuscation for profiling
+            proguardFiles("benchmark-rules.pro")
+        }
     }
 
     compileOptions {
@@ -117,6 +127,9 @@ dependencies {
 
     // Settings persistence
     implementation(libs.datastore.preferences)
+
+    // Baseline Profiles - enables AOT compilation for faster startup
+    implementation(libs.androidx.profileinstaller)
 
     implementation(libs.kotlinx.coroutines.guava)
 

@@ -26,3 +26,4 @@ dependencyResolutionManagement {
 rootProject.name = "sir"
 include(":app")
 include(":cast")
+include(":benchmark")

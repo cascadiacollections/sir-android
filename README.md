@@ -139,6 +139,119 @@ Future features planned for implementation:
 - Current track display (when metadata available)
 - One-tap playback from home screen
 
+### 🎨 UI/UX Enhancements
+
+- Album art extraction from stream metadata (when available)
+- Animated playback visualization (waveform or equalizer bars)
+- Dark/light theme toggle (currently follows system)
+- Playback history/recently played metadata
+
+### 🔊 Audio Features
+
+- Streaming quality selector (if multiple bitrates available)
+- Bluetooth metadata display (AVRCP track info)
+- Audio ducking during navigation/notifications
+- Normalization/loudness leveling
+
+### 📊 Analytics & Monitoring
+
+- Streaming quality metrics (buffering events, bitrate)
+- Crash reporting integration (Firebase Crashlytics or Sentry)
+- Anonymous usage analytics (opt-in)
+
+### 🌐 Network & Reliability
+
+- Offline detection with graceful degradation
+- Multiple stream URL failover support
+- Metered network warning/confirmation
+- VPN/proxy compatibility testing
+
+### 🔒 Security & Privacy
+
+- Certificate pinning for stream endpoints
+- Privacy-focused analytics (no PII collection)
+- Transparent data usage policy in-app
+
+### 🧪 Testing & Quality
+
+- Automated UI tests with Compose Testing
+- Stream playback integration tests
+- Performance benchmarking (startup time, memory usage)
+- Accessibility audit (TalkBack, large text, contrast)
+
+### 📦 Distribution
+
+- F-Droid publication (fully OSS build)
+- Play Store listing optimization
+- Beta testing channel via Play Console
+- APK size monitoring in CI
+
+### 🔧 Developer Experience
+
+- Detekt/ktlint for code style enforcement
+- Dependency update automation (Renovate/Dependabot)
+- Module documentation (KDoc)
+- Architecture Decision Records (ADRs)
+
+### ⚙️ Build & Runtime Optimization
+
+**Baseline Profiles (Implemented ✅)**
+
+- Manual baseline profile with critical startup paths bundled in APK
+- `profileinstaller` library enables AOT compilation on install
+- Benchmark module for measuring startup performance improvements
+- Run benchmarks: `./gradlew :benchmark:connectedBenchmarkAndroidTest`
+- Reduces cold startup time by 15-30% on first launch
+
+**Build Performance**
+
+- Remote build cache (Gradle Enterprise or GitHub Actions cache)
+- Build scan analysis for bottleneck identification
+- Modularization (`:core`, `:playback`, `:ui`) for parallel compilation
+- Kotlin Incremental Compilation tuning (`kotlin.incremental.useClasspathSnapshot`)
+
+**R8/ProGuard Enhancements**
+
+- Custom R8 rules for aggressive OkHttp shrinking
+- Art profile rewriting for optimal dex layout
+- Startup profile integration for class ordering
+- Regular R8 rule auditing for dead code
+
+**Gradle Modernization**
+
+- Migrate to Gradle Version Catalogs TOML for plugins (already using for dependencies)
+- Gradle 9.x Isolated Projects when stable
+- Configuration cache compatibility auditing
+- Build logic extraction to convention plugins
+
+**Runtime Performance**
+
+- Strict mode profiling in debug builds
+- Memory leak detection via LeakCanary (when dynamic feature compatible)
+- Frame timing analysis for Compose UI
+- TraceProcessor analysis for system trace debugging
+
+**JVM & Kotlin Evolution**
+
+- Kotlin 2.1+ K2 compiler stabilization monitoring
+- Java 21 toolchain when AGP supports
+- Kotlin/Native considerations for shared logic (future)
+- Context receivers adoption when stable
+
+**APK/AAB Optimization**
+
+- Per-ABI APK splits for Play Store (vs fat APK for sideloading)
+- On-demand asset delivery for future large assets
+- APK Analyzer CI integration for size regression detection
+- Texture compression format optimization (if adding visuals)
+
+**CI/CD Enhancements**
+
+- Parallel debug/release builds in GitHub Actions
+- Instrumented test runs on Firebase Test Lab
+- Automated Play Store deployment (Fastlane/Gradle Play Publisher)
+- Dependency vulnerability scanning (Dependabot/Snyk)
+
 ## License
 
 Copyright © 2026 Cascadia Collections. All rights reserved.

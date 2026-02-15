@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Required for Macrobenchmark to query and launch the target app -->
+    <queries>
+        <package android:name="com.cascadiacollections.sir" />
+    </queries>
+
+</manifest>
+

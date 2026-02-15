@@ -24,10 +24,10 @@ dependencies {
     // Base app module - provides Media3 common types
     implementation(project(":app"))
 
-    // Cast SDK - needs explicit media3-cast dependency
-    implementation("androidx.media3:media3-cast:1.5.1")
-    implementation("androidx.media3:media3-common:1.5.1")
-    implementation("com.google.android.gms:play-services-cast-framework:21.5.0")
+    // Cast SDK - use version catalog for consistent versioning
+    implementation(libs.media3.cast)
+    implementation(libs.media3.common)
+    implementation(libs.play.services.cast.framework)
     implementation(libs.mediarouter)
 
     // Coroutines

@@ -7,7 +7,7 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blue.svg?logo=kotlin)](https://kotlinlang.org)
 [![Latest Release](https://img.shields.io/github/v/release/cascadiacollections/sir-android?include_prereleases&label=nightly)](https://github.com/cascadiacollections/sir-android/releases/tag/nightly)
 [![APK Size](https://img.shields.io/badge/APK%20size-~2.5%20MB-success.svg)](https://github.com/cascadiacollections/sir-android/releases/tag/nightly)
-[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red.svg)](https://github.com/cascadiacollections/sir-android)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 *A lightweight, battery-efficient internet radio app for Android, optimized for streaming audio playback.*
 
@@ -276,5 +276,7 @@ Future features planned for implementation:
 
 ## 📄 License
 
-Copyright © 2026 Cascadia Collections. All rights reserved.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Copyright © 2026 Cascadia Collections
 

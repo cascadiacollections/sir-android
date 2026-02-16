@@ -79,6 +79,7 @@ playback.
 
 ### Build Toolchain
 
+- **[mise](https://mise.jdx.dev/)** - Dev tool manager; single `.mise.toml` drives local and CI Java versions
 - **Eclipse Adoptium Temurin JDK 17** - OSS Java runtime with long-term support
 - **Gradle 9.1** with configuration cache for fast incremental builds
 - **Foojay Toolchain Resolver** - Auto-downloads Adoptium JDK if not present
@@ -95,6 +96,10 @@ JVM optimizations applied:
 ## Building
 
 ```bash
+# Install mise (https://mise.jdx.dev/getting-started.html)
+# then install project tools:
+mise install
+
 # Debug build
 ./gradlew assembleDebug
 

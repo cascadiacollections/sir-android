@@ -1,9 +1,23 @@
+<div align="center">
+
 # SIR - Internet Radio for Android
 
-A lightweight, battery-efficient internet radio app for Android, optimized for streaming audio
-playback.
+[![Build Status](https://github.com/cascadiacollections/sir-android/workflows/Android%20CI/badge.svg)](https://github.com/cascadiacollections/sir-android/actions)
+[![API](https://img.shields.io/badge/API-24%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=24)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blue.svg?logo=kotlin)](https://kotlinlang.org)
+[![Latest Release](https://img.shields.io/github/v/release/cascadiacollections/sir-android?include_prereleases&label=nightly)](https://github.com/cascadiacollections/sir-android/releases/tag/nightly)
+[![APK Size](https://img.shields.io/badge/APK%20size-~2.5%20MB-success.svg)](https://github.com/cascadiacollections/sir-android/releases/tag/nightly)
+[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red.svg)](https://github.com/cascadiacollections/sir-android)
 
-## Features
+*A lightweight, battery-efficient internet radio app for Android, optimized for streaming audio playback.*
+
+[Features](#features) • [Download](#nightly-builds) • [Building](#building) • [Tech Stack](#tech-stack) • [Roadmap](#roadmap)
+
+</div>
+
+---
+
+## ✨ Features
 
 - 🎵 **One-tap playback** - Tap anywhere to start/stop streaming
 - 📱 **Media controls** - Full notification and lock screen controls
@@ -15,7 +29,7 @@ playback.
 - 📺 **Chromecast support** - Cast to any Chromecast device (on-demand module)
 - 💻 **ChromeOS ready** - Resizable windows, keyboard/mouse support
 
-## Optimizations
+## ⚡ Optimizations
 
 ### Ultra-Lightweight APK
 
@@ -67,7 +81,7 @@ playback.
 - **Keyboard/mouse ready** - No touchscreen required
 - **x86_64 ABI** - Native performance on Intel/AMD Chromebooks
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 - **Kotlin** 2.0 with Compose UI
 - **Media3** 1.5.1 (ExoPlayer + Cast)
@@ -92,7 +106,7 @@ JVM optimizations applied:
 - `-XX:+UseStringDeduplication` - Reduce memory for duplicate strings
 - `-XX:+ParallelRefProcEnabled` - Parallel reference processing
 
-## Building
+## 🔨 Building
 
 ```bash
 # Debug build
@@ -102,22 +116,28 @@ JVM optimizations applied:
 ./gradlew assembleRelease
 ```
 
-## Nightly Builds
+## 📦 Nightly Builds
 
-Development builds are automatically published on every commit to `main`:
+<div align="center">
 
-📦 **[Download Latest Nightly](../../releases/tag/nightly)**
+**Development builds are automatically published on every commit to `main`**
 
-- Unsigned APK for sideloading
-- Replaced on each commit (no storage accumulation)
-- Includes latest features and fixes
+[![Download Nightly](https://img.shields.io/badge/Download-Nightly%20Build-blue?style=for-the-badge&logo=android)](https://github.com/cascadiacollections/sir-android/releases/tag/nightly)
 
-## Requirements
+</div>
+
+**What's included:**
+- ✅ Unsigned APK for sideloading (~2.5 MB release build)
+- ✅ Debug variant with development tools (~16 MB)
+- ✅ Replaced on each commit (no storage accumulation)
+- ✅ Latest features and fixes
+
+## 📋 Requirements
 
 - Android 7.0 (API 24) or higher
 - Internet connection for streaming
 
-## Roadmap
+## 🗺️ Roadmap
 
 Future features planned for implementation:
 
@@ -252,7 +272,9 @@ Future features planned for implementation:
 - Automated Play Store deployment (Fastlane/Gradle Play Publisher)
 - Dependency vulnerability scanning (Dependabot/Snyk)
 
-## License
+---
+
+## 📄 License
 
 Copyright © 2026 Cascadia Collections. All rights reserved.
 

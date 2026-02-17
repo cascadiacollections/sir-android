@@ -9,10 +9,10 @@
         <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
         <option name="modules">
           <set>
-            <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/app" />
-            <option value="$PROJECT_DIR$/benchmark" />
-            <option value="$PROJECT_DIR$/cast" />
+            <option value="/var/home/bazzite/Development/sir-android" />
+            <option value="/var/home/bazzite/Development/sir-android/app" />
+            <option value="/var/home/bazzite/Development/sir-android/benchmark" />
+            <option value="/var/home/bazzite/Development/sir-android/cast" />
           </set>
         </option>
         <option name="resolveExternalAnnotations" value="true" />

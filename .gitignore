@@ -22,6 +22,12 @@ local.properties
 .gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
+caches/
+daemon/
+jdks/
+kotlin-profile/
+native/
+wrapper/
 
 # Android Studio
 *.hprof

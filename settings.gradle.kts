@@ -24,6 +24,9 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "sir"
+
+includeBuild("build-logic")
+
 include(":app")
 include(":cast")
 include(":benchmark")

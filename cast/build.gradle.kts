@@ -1,24 +1,10 @@
 plugins {
-    alias(libs.plugins.android.dynamic.feature)
+    id("sir.android.feature")
 }
 
 android {
     namespace = "com.cascadiacollections.sir.cast"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 24
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
 }
-
-// Note: Kotlin toolchain inherited from :app base module (JDK 17 Adoptium Temurin)
 
 dependencies {
     // Base app module - provides Media3 common types
@@ -33,4 +19,3 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.guava)
 }
-

@@ -1,20 +1,14 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.compose)
+    id("sir.android.app")
 }
 
 android {
     namespace = "com.cascadiacollections.sir"
-    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.cascadiacollections.sir"
-        minSdk = 24
-        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Include ARM ABIs for phones/tablets + x86_64 for ChromeOS
         ndk {
@@ -41,11 +35,6 @@ android {
             // Disable obfuscation for profiling
             proguardFiles("benchmark-rules.pro")
         }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 
     buildFeatures {
@@ -85,12 +74,6 @@ android {
 }
 
 kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-        // Use Eclipse Adoptium Temurin - OSS JDK with long-term support
-        vendor.set(JvmVendorSpec.ADOPTIUM)
-    }
-
     compilerOptions {
         // Enable aggressive inlining for better performance
         freeCompilerArgs.addAll(

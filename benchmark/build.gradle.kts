@@ -1,16 +1,16 @@
 @file:Suppress("UnstableApiUsage")
 
 plugins {
-    id("com.android.test")
+    alias(libs.plugins.android.test)
 }
 
 android {
     namespace = "com.cascadiacollections.sir.benchmark"
-    compileSdk = 36
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        minSdk = 24
-        targetSdk = 36
+        minSdk = libs.versions.minSdk.get().toInt()
+        targetSdk = libs.versions.targetSdk.get().toInt()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -36,7 +36,6 @@ android {
     experimentalProperties["android.experimental.self-instrumenting"] = true
 }
 
-
 dependencies {
     implementation(libs.androidx.junit)
     implementation(libs.androidx.espresso.core)
@@ -49,6 +48,3 @@ androidComponents {
         it.enable = it.buildType == "benchmark"
     }
 }
-
-
-

@@ -114,6 +114,7 @@ jobs:
             apks/debug/app-debug.apk
           prerelease: true
           make_latest: false
+        continue-on-error: true
 
       # Cleanup artifact to save storage (optional, artifacts auto-expire)
       - name: Delete Artifact

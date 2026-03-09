@@ -14,7 +14,7 @@ class AndroidDynamicFeatureConventionPlugin : Plugin<Project> {
             val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
             configure<DynamicFeatureExtension> {
-                compileSdkPreview = libs.findVersion("compileSdkPreview").get().requiredVersion
+                compileSdk = libs.findVersion("compileSdk").get().requiredVersion.toInt()
 
                 defaultConfig {
                     minSdk = libs.findVersion("minSdk").get().requiredVersion.toInt()

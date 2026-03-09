@@ -6,11 +6,11 @@ plugins {
 
 android {
     namespace = "com.cascadiacollections.sir.benchmark"
-    compileSdkPreview = libs.versions.compileSdkPreview.get()
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
         minSdk = libs.versions.minSdk.get().toInt()
-        targetSdkPreview = libs.versions.targetSdkPreview.get()
+        targetSdk = libs.versions.targetSdk.get().toInt()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

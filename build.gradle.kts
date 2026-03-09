@@ -11,7 +11,7 @@ subprojects {
     plugins.withType<JavaBasePlugin>().configureEach {
         extensions.configure<JavaPluginExtension> {
             toolchain {
-                languageVersion.set(JavaLanguageVersion.of(17))
+                languageVersion.set(JavaLanguageVersion.of(21))
                 // Use Eclipse Adoptium Temurin - OSS JDK with enterprise-grade support
                 vendor.set(JvmVendorSpec.ADOPTIUM)
             }

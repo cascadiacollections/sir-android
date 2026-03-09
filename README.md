@@ -4,7 +4,7 @@
 
 [![Build Status](https://github.com/cascadiacollections/sir-android/workflows/Android%20CI/badge.svg)](https://github.com/cascadiacollections/sir-android/actions)
 [![API](https://img.shields.io/badge/API-24%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=24)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-blue.svg?logo=kotlin)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-blue.svg?logo=kotlin)](https://kotlinlang.org)
 [![Latest Release](https://img.shields.io/github/v/release/cascadiacollections/sir-android?include_prereleases&label=nightly)](https://github.com/cascadiacollections/sir-android/releases/tag/nightly)
 [![APK Size](https://img.shields.io/badge/APK%20size-~2.5%20MB-success.svg)](https://github.com/cascadiacollections/sir-android/releases/tag/nightly)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -84,8 +84,8 @@
 ## 🛠️ Tech Stack
 
 - **Kotlin** 2.0 with Compose UI
-- **Media3** 1.5.1 (ExoPlayer + Cast)
-- **OkHttp** 4.12 for HTTP/2 networking with connection pooling
+- **Media3** 1.9.2 (ExoPlayer + Cast)
+- **OkHttp** 5.3 for HTTP/2 networking with connection pooling
 - **Material 3** dynamic theming
 - **Coroutines** for async operations
 - **Play Feature Delivery** for on-demand modules
@@ -94,8 +94,8 @@
 ### Build Toolchain
 
 - **[mise](https://mise.jdx.dev/)** - Dev tool manager; single `.mise.toml` drives local and CI Java versions
-- **Eclipse Adoptium Temurin JDK 17** - OSS Java runtime with long-term support
-- **Gradle 9.1** with configuration cache for fast incremental builds
+- **Eclipse Adoptium Temurin JDK 21** - OSS Java runtime with long-term support
+- **Gradle 9.4** with configuration cache for fast incremental builds
 - **Foojay Toolchain Resolver** - Auto-downloads Adoptium JDK if not present
 - **G1GC** with optimized pause times for responsive builds
 - **Kotlin JVM Toolchain** with explicit vendor specification for reproducible builds
@@ -259,7 +259,7 @@ Future features planned for implementation:
 **JVM & Kotlin Evolution**
 
 - Kotlin 2.1+ K2 compiler stabilization monitoring
-- Java 21 toolchain when AGP supports
+- ~~Java 21 toolchain when AGP supports~~ ✅
 - Kotlin/Native considerations for shared logic (future)
 - Context receivers adoption when stable
 

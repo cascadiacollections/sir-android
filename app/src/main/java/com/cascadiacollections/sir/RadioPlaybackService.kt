@@ -124,12 +124,15 @@ class RadioPlaybackService : MediaSessionService() {
         // Initialize settings repository
         settingsRepository = SettingsRepository(this)
 
-        // Load custom stream URL in debug builds
+        // Load settings asynchronously
         serviceScope.launch {
             if (BuildConfig.DEBUG) {
                 settingsRepository.customStreamUrl.first()?.let { customUrl ->
                     currentStreamUrl = customUrl
                     Log.d(TAG, "Using custom stream URL: $customUrl")
+                    // Re-set media item with the custom URL now that it's resolved
+                    player?.setMediaItem(buildMediaItem())
+                    player?.prepare()
                 }
             }
             // Load and apply equalizer preset
@@ -230,25 +233,7 @@ class RadioPlaybackService : MediaSessionService() {
                 playWhenReady = false  // Don't auto-play on creation
             }
 
-        val mediaItem = MediaItem.Builder()
-            .setUri(currentStreamUrl)
-            .setMediaId(currentStreamUrl)
-            .setLiveConfiguration(
-                MediaItem.LiveConfiguration.Builder()
-                    .setMaxPlaybackSpeed(1.02f)  // Slight speedup to catch up if behind
-                    .setMinPlaybackSpeed(0.98f)  // Slight slowdown if too far ahead
-                    .build()
-            )
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(DEFAULT_STATION_NAME)
-                    .setArtist(DEFAULT_STREAM_DESCRIPTION)
-                    .setIsPlayable(true)
-                    .build()
-            )
-            .build()
-
-        player?.setMediaItem(mediaItem)
+        player?.setMediaItem(buildMediaItem())
 
         // Create media session before adding listeners (to avoid null pointer in callbacks)
         mediaSession = MediaSession.Builder(context, player!!)
@@ -530,6 +515,24 @@ class RadioPlaybackService : MediaSessionService() {
             notificationManager?.createNotificationChannel(channel)
         }
     }
+
+    private fun buildMediaItem(): MediaItem = MediaItem.Builder()
+        .setUri(currentStreamUrl)
+        .setMediaId(currentStreamUrl)
+        .setLiveConfiguration(
+            MediaItem.LiveConfiguration.Builder()
+                .setMaxPlaybackSpeed(1.02f)  // Slight speedup to catch up if behind
+                .setMinPlaybackSpeed(0.98f)  // Slight slowdown if too far ahead
+                .build()
+        )
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(DEFAULT_STATION_NAME)
+                .setArtist(DEFAULT_STREAM_DESCRIPTION)
+                .setIsPlayable(true)
+                .build()
+        )
+        .build()
 
     private fun resumeIfPausedByNoisy() {
         if (!pausedByNoisy) return

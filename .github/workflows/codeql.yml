@@ -46,8 +46,6 @@ jobs:
           build-mode: ${{ matrix.build-mode }}
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
-      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build

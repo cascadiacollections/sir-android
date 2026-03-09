@@ -46,7 +46,7 @@ jobs:
           build-mode: ${{ matrix.build-mode }}
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Build
         run: ./gradlew assembleDebug --no-daemon

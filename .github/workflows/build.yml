@@ -98,7 +98,7 @@ jobs:
             | Variant | Description |
             |---------|-------------|
             | `app-release-unsigned.apk` | Optimized release build (~2.5 MB) |
-            | `app-debug.apk` | Debug build with LeakCanary (~16 MB) |
+            | `app-debug.apk` | Debug build with LeakCanary |
 
             ### Installation
             1. Download the APK for your use case

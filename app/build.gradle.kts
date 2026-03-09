@@ -126,6 +126,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // Note: LeakCanary removed due to incompatibility with dynamic feature modules
-    // See: https://github.com/square/leakcanary/issues/2169
+    // Memory leak detection in debug builds (runs in separate process to avoid dynamic feature conflicts)
+    debugImplementation(libs.leakcanary.android)
 }

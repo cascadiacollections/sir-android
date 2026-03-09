@@ -21,17 +21,24 @@
 #-renamesourcefileattribute SourceFile
 
 # ============================================
-# OkHttp Rules
+# OkHttp 5.x Rules
 # ============================================
+# OkHttp 5 ships its own R8/ProGuard rules via META-INF.
+# These suppress warnings for optional platform-specific TLS providers.
 -dontwarn okhttp3.**
 -dontwarn okio.**
--dontwarn javax.annotation.**
--keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
-
-# Keep OkHttp platform classes
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+
+# ============================================
+# Play Services Cast 22.x Rules
+# ============================================
+# New internal GMS classes referenced by Cast SDK but not present at compile time
+-dontwarn com.google.android.gms.common.api.ApiMetadata
+-dontwarn com.google.android.gms.common.api.ComplianceOptions$Builder
+-dontwarn com.google.android.gms.common.api.ComplianceOptions
+-dontwarn com.google.android.gms.common.wrappers.AttributionSourceWrapper
 
 # ============================================
 # Media3 / ExoPlayer Rules

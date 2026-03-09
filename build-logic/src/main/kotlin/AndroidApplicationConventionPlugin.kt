@@ -14,11 +14,11 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
             configure<ApplicationExtension> {
-                compileSdkPreview = libs.findVersion("compileSdkPreview").get().requiredVersion
+                compileSdk = libs.findVersion("compileSdk").get().requiredVersion.toInt()
 
                 defaultConfig {
                     minSdk = libs.findVersion("minSdk").get().requiredVersion.toInt()
-                    targetSdkPreview = libs.findVersion("targetSdkPreview").get().requiredVersion
+                    targetSdk = libs.findVersion("targetSdk").get().requiredVersion.toInt()
                     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                 }
 

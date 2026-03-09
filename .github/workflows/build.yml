@@ -30,6 +30,9 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      - name: Install Android SDK platform
+        run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "platforms;android-36"
+
       - name: Build APKs and Run Tests (Parallel)
         run: ./gradlew assembleRelease assembleDebug testDebugUnitTest --no-daemon --parallel --build-cache
 

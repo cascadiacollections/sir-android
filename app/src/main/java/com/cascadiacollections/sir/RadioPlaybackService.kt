@@ -690,21 +690,6 @@ class RadioPlaybackService : MediaSessionService() {
         }
     }
 
-    /**
-     * Calculate equalizer band levels using a curve function.
-     * @param curve Function mapping band position (0.0..1.0) to level multiplier (0.0..1.0)
-     */
-    private inline fun calculateEqualizerLevels(
-        bandCount: Int,
-        minLevel: Short,
-        maxLevel: Short,
-        range: Int,
-        curve: (Float) -> Float
-    ): List<Short> = List(bandCount) { band ->
-        val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
-        (minLevel + range * curve(position)).toInt().toShort().coerceIn(minLevel, maxLevel)
-    }
-
     private fun releaseEqualizer() {
         try {
             equalizer?.release()
@@ -744,4 +729,19 @@ class RadioPlaybackService : MediaSessionService() {
         const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
     }
+}
+
+/**
+ * Calculate equalizer band levels using a curve function.
+ * @param curve Function mapping band position (0.0..1.0) to level multiplier (0.0..1.0)
+ */
+internal fun calculateEqualizerLevels(
+    bandCount: Int,
+    minLevel: Short,
+    maxLevel: Short,
+    range: Int,
+    curve: (Float) -> Float
+): List<Short> = List(bandCount) { band ->
+    val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
+    (minLevel + range * curve(position)).toInt().toShort().coerceIn(minLevel, maxLevel)
 }

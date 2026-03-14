@@ -124,4 +124,68 @@ class EqualizerCalculationTest {
         // position should be 0f / coerceAtLeast(1) = 0f, so level = minLevel + 0 = 0
         assertEquals(0.toShort(), levels[0])
     }
+
+    @Test
+    fun `bandCount of 0 returns empty list`() {
+        val levels = calculateEqualizerLevels(
+            bandCount = 0,
+            minLevel = (-1500).toShort(),
+            maxLevel = 1500.toShort(),
+            range = 3000,
+            curve = { 0.5f }
+        )
+        assertTrue(levels.isEmpty())
+    }
+
+    @Test
+    fun `large band count produces correct size and clamped values`() {
+        val bandCount = 100
+        val minLevel: Short = (-1500).toShort()
+        val maxLevel: Short = 1500.toShort()
+        val levels = calculateEqualizerLevels(
+            bandCount = bandCount,
+            minLevel = minLevel,
+            maxLevel = maxLevel,
+            range = 3000,
+            curve = { pos -> pos }
+        )
+        assertEquals(bandCount, levels.size)
+        levels.forEach { level ->
+            assertTrue("Level $level must be >= $minLevel", level >= minLevel)
+            assertTrue("Level $level must be <= $maxLevel", level <= maxLevel)
+        }
+    }
+
+    @Test
+    fun `curve returning negative value is clamped to minLevel`() {
+        val minLevel: Short = 0.toShort()
+        val maxLevel: Short = 1000.toShort()
+        val levels = calculateEqualizerLevels(
+            bandCount = 5,
+            minLevel = minLevel,
+            maxLevel = maxLevel,
+            range = 1000,
+            curve = { -1.0f } // Negative multiplier should clamp to minLevel
+        )
+        levels.forEach { level ->
+            assertEquals("Negative curve should produce minLevel", minLevel, level)
+        }
+    }
+
+    @Test
+    fun `band positions span full 0 to 1 range for multi-band config`() {
+        val recordedPositions = mutableListOf<Float>()
+        calculateEqualizerLevels(
+            bandCount = 5,
+            minLevel = 0.toShort(),
+            maxLevel = 1000.toShort(),
+            range = 1000
+        ) { pos ->
+            recordedPositions += pos
+            0f
+        }
+        assertEquals(5, recordedPositions.size)
+        assertEquals(0f, recordedPositions.first(), 0.001f)
+        assertEquals(1f, recordedPositions.last(), 0.001f)
+    }
 }

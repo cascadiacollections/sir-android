@@ -134,7 +134,6 @@ class EqualizerCalculationTest {
             range = 3000,
             curve = { 0.5f }
         )
-        assertEquals(0, levels.size)
         assertTrue(levels.isEmpty())
     }
 

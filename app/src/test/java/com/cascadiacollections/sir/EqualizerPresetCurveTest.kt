@@ -33,7 +33,7 @@ class EqualizerPresetCurveTest {
     }
 
     @Test
-    fun `bass boost curve produces strictly non-increasing levels`() {
+    fun `bass boost curve produces non-increasing levels`() {
         val levels = bassBoostLevels()
         for (i in 1 until levels.size) {
             assertTrue(
@@ -76,7 +76,7 @@ class EqualizerPresetCurveTest {
     }
 
     @Test
-    fun `treble curve produces strictly non-decreasing levels`() {
+    fun `treble curve produces non-decreasing levels`() {
         val levels = trebleLevels()
         for (i in 1 until levels.size) {
             assertTrue(

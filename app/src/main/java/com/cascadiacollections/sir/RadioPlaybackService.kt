@@ -549,13 +549,22 @@ class RadioPlaybackService : MediaSessionService() {
             "SIR::PlaybackWakeLock"
         )
 
-        // WiFi lock to prevent WiFi from going into low-power mode
+        // WiFi lock to prevent WiFi from going into low-power mode.
+        // WIFI_MODE_FULL_LOW_LATENCY (API 29+) reduces buffering on Pixel 10's WiFi 7 chipset;
+        // fall back to WIFI_MODE_FULL_HIGH_PERF on older devices.
         val wifiManager = applicationContext.getSystemService(WifiManager::class.java)
-        @Suppress("DEPRECATION")
-        wifiLock = wifiManager.createWifiLock(
-            WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-            "SIR::PlaybackWifiLock"
-        )
+        wifiLock = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            wifiManager.createWifiLock(
+                WifiManager.WIFI_MODE_FULL_LOW_LATENCY,
+                "SIR::PlaybackWifiLock"
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            wifiManager.createWifiLock(
+                WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+                "SIR::PlaybackWifiLock"
+            )
+        }
     }
 
     @SuppressLint("WakelockTimeout")

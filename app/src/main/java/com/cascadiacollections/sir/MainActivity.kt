@@ -54,6 +54,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
@@ -139,6 +141,11 @@ fun RadioScreen(
                 castFeatureManager?.installCastModule()
             }
         }
+    }
+
+    // Predictive back gesture: dismiss settings dialog with system back animation (API 33+)
+    BackHandler(enabled = showSettings) {
+        showSettings = false
     }
 
     if (inspectionMode) {
@@ -262,6 +269,11 @@ private fun RadioUi(
     onSettingsClick: () -> Unit = {},
     onToggle: () -> Unit
 ) {
+    // Widen margins on medium/expanded screens (Pixel 10 Pro Fold, tablets) so the
+    // centered content doesn't span the full display width at ≥ 600dp.
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val horizontalPadding = if (screenWidthDp >= 600) 72.dp else 24.dp
+
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -271,7 +283,7 @@ private fun RadioUi(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(horizontal = horizontalPadding, vertical = 24.dp)
         ) {
             // Settings button in top right
             if (showSettingsButton) {

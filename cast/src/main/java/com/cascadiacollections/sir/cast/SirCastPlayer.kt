@@ -1,13 +1,11 @@
 package com.cascadiacollections.sir.cast
 
 import android.content.Context
-import androidx.media3.cast.CastPlayer
+import androidx.media3.cast.RemoteCastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import com.google.android.gms.cast.framework.CastContext
 
 /**
  * Manages CastPlayer lifecycle and provides seamless switching between
@@ -16,29 +14,26 @@ import com.google.android.gms.cast.framework.CastContext
 @UnstableApi
 class SirCastPlayer(context: Context) : SessionAvailabilityListener {
 
-    private var castContext: CastContext? = null
-    private var castPlayer: CastPlayer? = null
+    private var castPlayer: RemoteCastPlayer? = null
 
-    private var onCastSessionStarted: ((CastPlayer) -> Unit)? = null
+    private var onCastSessionStarted: ((RemoteCastPlayer) -> Unit)? = null
     private var onCastSessionEnded: (() -> Unit)? = null
 
     init {
         try {
-            castContext = CastContext.getSharedInstance(context)
-            castPlayer = CastPlayer(castContext!!).apply {
+            castPlayer = RemoteCastPlayer.Builder(context).build().apply {
                 setSessionAvailabilityListener(this@SirCastPlayer)
             }
         } catch (e: Exception) {
             // Cast not available on this device
-            castContext = null
             castPlayer = null
         }
     }
 
     /**
-     * Get the CastPlayer if a cast session is available
+     * Get the RemoteCastPlayer if a cast session is available
      */
-    fun getCastPlayer(): CastPlayer? = castPlayer
+    fun getCastPlayer(): RemoteCastPlayer? = castPlayer
 
     /**
      * Check if currently casting
@@ -49,7 +44,7 @@ class SirCastPlayer(context: Context) : SessionAvailabilityListener {
      * Set callbacks for cast session state changes
      */
     fun setSessionCallbacks(
-        onStarted: (CastPlayer) -> Unit,
+        onStarted: (RemoteCastPlayer) -> Unit,
         onEnded: () -> Unit
     ) {
         onCastSessionStarted = onStarted
@@ -107,7 +102,6 @@ class SirCastPlayer(context: Context) : SessionAvailabilityListener {
         castPlayer?.setSessionAvailabilityListener(null)
         castPlayer?.release()
         castPlayer = null
-        castContext = null
     }
 }
 

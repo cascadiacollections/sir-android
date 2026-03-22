@@ -17,11 +17,14 @@ android {
 
     signingConfigs {
         create("release") {
-            val alias = System.getenv("KEY_ALIAS") ?: keystoreProperties["keyAlias"]?.toString()
-            val keyPwd = System.getenv("KEY_PASSWORD") ?: keystoreProperties["keyPassword"]?.toString()
-            val storePath = System.getenv("KEYSTORE_PATH")?.let { file(it) }
+            val alias = System.getenv("KEY_ALIAS")?.takeIf { it.isNotBlank() }
+                ?: keystoreProperties["keyAlias"]?.toString()
+            val keyPwd = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+                ?: keystoreProperties["keyPassword"]?.toString()
+            val storePath = System.getenv("KEYSTORE_PATH")?.takeIf { it.isNotBlank() }?.let { file(it) }
                 ?: keystoreProperties["storeFile"]?.toString()?.let { rootProject.file(it) }
-            val storePwd = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProperties["storePassword"]?.toString()
+            val storePwd = System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+                ?: keystoreProperties["storePassword"]?.toString()
             if (alias != null && keyPwd != null && storePath != null && storePwd != null) {
                 keyAlias = alias
                 keyPassword = keyPwd

@@ -12,6 +12,11 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
 
+// Load local.properties for machine-specific overrides (gitignored)
+val localProperties = Properties()
+rootProject.file("local.properties").takeIf { it.exists() }
+    ?.inputStream()?.use { localProperties.load(it) }
+
 android {
     namespace = "com.cascadiacollections.sir"
 

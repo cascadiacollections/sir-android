@@ -1,0 +1,26 @@
+# sir-android developer recipes
+
+# Build debug APK
+build:
+    ./gradlew assembleDebug --no-daemon
+
+# Run unit tests
+test:
+    ./gradlew testDebugUnitTest --no-daemon
+
+# Install debug build on connected device.
+# If android.device.serial is set in local.properties, targets that device;
+# otherwise lets AGP pick (works when only one device is connected).
+install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    serial=$(grep -m1 '^android.device.serial=' local.properties 2>/dev/null \
+        | cut -d= -f2 | tr -d '[:space:]' || true)
+    if [[ -n "$serial" ]]; then
+        ANDROID_SERIAL="$serial" ./gradlew installDebug --no-daemon
+    else
+        ./gradlew installDebug --no-daemon
+    fi
+
+# Build + install in one step
+deploy: build install

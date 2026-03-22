@@ -230,6 +230,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .setLoadControl(loadControl)
             .setBandwidthMeter(bandwidthMeter)
             .setMediaSourceFactory(mediaSourceFactory)
+            .setSeekBackIncrementMs(SEEK_BACK_INCREMENT_MS)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -254,10 +255,9 @@ class RadioPlaybackService : MediaLibraryService() {
                     session: MediaSession,
                     controller: MediaSession.ControllerInfo
                 ): MediaSession.ConnectionResult {
-                    // Only allow play/pause commands, no seeking for live radio
+                    // Allow play/pause/seek-back; disable other seeking for live radio
                     val availableCommands =
                         MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
-                            .remove(Player.COMMAND_SEEK_BACK)
                             .remove(Player.COMMAND_SEEK_FORWARD)
                             .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
                             .remove(Player.COMMAND_SEEK_TO_MEDIA_ITEM)
@@ -430,6 +430,10 @@ class RadioPlaybackService : MediaLibraryService() {
                 player?.pause()
             }
 
+            ACTION_SEEK_BACK -> {
+                player?.seekBack()
+            }
+
             ACTION_SET_SLEEP_TIMER -> {
                 val minutes = intent.getIntExtra(EXTRA_SLEEP_TIMER_MINUTES, 0)
                 setSleepTimer(minutes)
@@ -515,6 +519,14 @@ class RadioPlaybackService : MediaLibraryService() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val seekBackIntent = PendingIntent.getService(
+            context,
+            3,
+            Intent(context, RadioPlaybackService::class.java).apply {
+                action = ACTION_SEEK_BACK
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
             .setContentText(currentArtist ?: getString(R.string.stream_description))
@@ -527,7 +539,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .setOngoing(player?.isPlaying == true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(
-                MediaStyleNotificationHelper.MediaStyle(session).setShowActionsInCompactView(0)
+                MediaStyleNotificationHelper.MediaStyle(session).setShowActionsInCompactView(0, 1)
             )
             .addAction(
                 if (player?.isPlaying == true)
@@ -542,6 +554,13 @@ class RadioPlaybackService : MediaLibraryService() {
                         context.getString(R.string.play),
                         playIntent
                     ).build()
+            )
+            .addAction(
+                NotificationCompat.Action.Builder(
+                    android.R.drawable.ic_media_rew,
+                    context.getString(R.string.seek_back_30),
+                    seekBackIntent
+                ).build()
             )
             .build()
     }
@@ -811,11 +830,13 @@ class RadioPlaybackService : MediaLibraryService() {
         private const val BROWSE_ROOT_ID = "sir_root"
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
+        private const val SEEK_BACK_INCREMENT_MS = 30_000L
 
         // Intent actions
         private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
         const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
         private const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
+        const val ACTION_SEEK_BACK = "com.cascadiacollections.sir.action.SEEK_BACK"
         const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"
         const val ACTION_SET_EQUALIZER = "com.cascadiacollections.sir.action.SET_EQUALIZER"
 

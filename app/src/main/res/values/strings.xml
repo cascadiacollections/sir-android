@@ -69,4 +69,5 @@
     <string name="station_name">SIR</string>
     <string name="stream_description">Live stream</string>
     <string name="stream_quality">Stream Quality</string>
+    <string name="seek_back_30">Replay 30s</string>
 </resources>

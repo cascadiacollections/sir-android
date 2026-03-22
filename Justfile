@@ -17,9 +17,9 @@ install:
     serial=$(grep -m1 '^android.device.serial=' local.properties 2>/dev/null \
         | cut -d= -f2 | tr -d '[:space:]' || true)
     if [[ -n "$serial" ]]; then
-        ANDROID_SERIAL="$serial" ./gradlew installDebug --no-daemon
+        ANDROID_SERIAL="$serial" ./gradlew :app:installDebug --no-daemon
     else
-        ./gradlew installDebug --no-daemon
+        ./gradlew :app:installDebug --no-daemon
     fi
 
 # Build + install in one step

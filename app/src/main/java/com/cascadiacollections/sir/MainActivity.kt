@@ -6,17 +6,17 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,23 +31,28 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +65,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -69,6 +73,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -324,7 +329,7 @@ fun RadioScreen(
         AlertDialog(
             onDismissRequest = { showMeteredWarning = false; meteredWarningDismissed = true },
             title = { Text(stringResource(R.string.metered_network_title)) },
-            text  = { Text(stringResource(R.string.metered_network_message)) },
+            text = { Text(stringResource(R.string.metered_network_message)) },
             confirmButton = {
                 TextButton(onClick = { showMeteredWarning = false; meteredWarningDismissed = true }) {
                     Text(stringResource(R.string.metered_network_dismiss))
@@ -334,6 +339,7 @@ fun RadioScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RadioUi(
     modifier: Modifier,
@@ -353,42 +359,56 @@ private fun RadioUi(
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val horizontalPadding = if (screenWidthDp >= 600) 72.dp else 24.dp
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Surface(
+    val title = when {
+        !isConnected           -> stringResource(R.string.title_connecting)
+        isError && isBuffering -> stringResource(R.string.stream_reconnecting)
+        isError                -> stringResource(R.string.title_stream_error)
+        isBuffering            -> stringResource(R.string.title_buffering)
+        isPlaying              -> trackTitle?.takeIf { it.isNotBlank() }
+                                      ?: stringResource(R.string.now_playing)
+        else                   -> stringResource(R.string.station_name)
+    }
+    val subtitle = when {
+        !isConnected           -> stringResource(R.string.subtitle_connecting)
+        isError && isBuffering -> stringResource(R.string.subtitle_reconnecting)
+        isError                -> stringResource(R.string.stream_error)
+        isBuffering            -> stringResource(R.string.subtitle_buffering)
+        isPlaying              -> artist?.takeIf { it.isNotBlank() }
+                                      ?: stringResource(R.string.subtitle_live)
+        else                   -> stringResource(R.string.subtitle_idle)
+    }
+
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            if (showSettingsButton) {
+                TopAppBar(
+                    title = {},
+                    actions = {
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.settings),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
+                )
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable { onToggle() },
-            color = MaterialTheme.colorScheme.background
+                .padding(paddingValues)
+                .padding(horizontal = horizontalPadding, vertical = 24.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = horizontalPadding, vertical = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                // Show track title if available, otherwise show status
-                val title = when {
-                    !isConnected          -> stringResource(R.string.title_connecting)
-                    isError && isBuffering -> stringResource(R.string.stream_reconnecting)
-                    isError               -> stringResource(R.string.title_stream_error)
-                    isBuffering           -> stringResource(R.string.title_buffering)
-                    isPlaying             -> trackTitle?.takeIf { it.isNotBlank() }
-                                                ?: stringResource(R.string.now_playing)
-                    else                  -> stringResource(R.string.tap_to_play)
-                }
-                // Show artist if available, otherwise show contextual info
-                val subtitle = when {
-                    !isConnected          -> stringResource(R.string.subtitle_connecting)
-                    isError && isBuffering -> stringResource(R.string.subtitle_reconnecting)
-                    isError               -> stringResource(R.string.stream_error)
-                    isBuffering           -> stringResource(R.string.subtitle_buffering)
-                    isPlaying             -> artist?.takeIf { it.isNotBlank() }
-                                                ?: stringResource(R.string.subtitle_live)
-                    else                  -> stringResource(R.string.subtitle_idle)
-                }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineMedium,
@@ -400,13 +420,16 @@ private fun RadioUi(
                     modifier = Modifier.padding(top = 12.dp),
                     textAlign = TextAlign.Center
                 )
-                // Show tap hint when playing
-                if (isPlaying) {
-                    Text(
-                        text = stringResource(R.string.tap_to_stop),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 24.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Spacer(modifier = Modifier.height(32.dp))
+                LargeFloatingActionButton(
+                    onClick = onToggle,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
+                        modifier = Modifier.size(36.dp)
                     )
                 }
                 if (sleepTimerLabel != null) {
@@ -419,22 +442,8 @@ private fun RadioUi(
                 }
             }
         }
-        // Settings button rendered after Surface — sibling gets click priority via z-order
-        if (showSettingsButton) {
-            IconButton(
-                onClick = onSettingsClick,
-                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(R.string.settings),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
-}  // end Surface + outer Box
-}  // end RadioUi
+}
 
 @Preview(showBackground = true, name = "Idle")
 @Composable
@@ -694,7 +703,7 @@ private fun SettingsDialog(
                     onClick = {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
-                            android.net.Uri.parse(context.getString(R.string.privacy_policy_url))
+                            Uri.parse(context.getString(R.string.privacy_policy_url))
                         )
                         context.startActivity(intent)
                     },

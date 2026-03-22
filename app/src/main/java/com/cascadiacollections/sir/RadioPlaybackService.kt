@@ -37,11 +37,14 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import androidx.media3.session.CommandButton
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaStyleNotificationHelper
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -266,9 +269,29 @@ class RadioPlaybackService : MediaLibraryService() {
                             .remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
                             .remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
                             .build()
+                    val availableSessionCommands =
+                        MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+                            .add(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
+                            .build()
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailablePlayerCommands(availableCommands)
+                        .setAvailableSessionCommands(availableSessionCommands)
                         .build()
+                }
+
+                override fun onCustomCommand(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    customCommand: SessionCommand,
+                    args: android.os.Bundle
+                ): ListenableFuture<SessionResult> {
+                    if (customCommand.customAction == ACTION_SEEK_BACK) {
+                        player?.let { p ->
+                            p.seekTo((p.currentPosition - SEEK_BACK_INCREMENT_MS).coerceAtLeast(0))
+                        }
+                        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                    }
+                    return super.onCustomCommand(session, controller, customCommand, args)
                 }
 
                 // Android Auto browsing: single root → single playable stream item
@@ -314,6 +337,18 @@ class RadioPlaybackService : MediaLibraryService() {
             })
             .setId(MEDIA_SESSION_ID)
             .build()
+            .also { session ->
+                // Register seek-back as a CommandButton so it appears in the
+                // Android 13+ system media player chip (not just expanded notification)
+                session.setCustomLayout(
+                    ImmutableList.of(
+                        CommandButton.Builder()
+                            .setDisplayName(getString(R.string.seek_back_30))
+                            .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
+                            .build()
+                    )
+                )
+            }
 
         // Now add listeners after mediaSession is created
         player?.addListener(object : Player.Listener {

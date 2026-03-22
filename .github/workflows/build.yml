@@ -67,11 +67,27 @@ jobs:
           path: app/build/outputs/bundle/release/app-release.aab
           retention-days: 1
 
-  # Create nightly release on push to main
-  release:
+  # Skip nightly release if SHA hasn't changed since last nightly
+  check-nightly:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - name: Compare SHA to last nightly
+        id: check
+        run: |
+          LAST=$(gh release view nightly --repo ${{ github.repository }} --json targetCommitish -q .targetCommitish 2>/dev/null || echo "none")
+          echo "changed=$([ "$LAST" != "${{ github.sha }}" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Create nightly release on push to main
+  release:
+    needs: [build, check-nightly]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-nightly.outputs.changed == 'true'
 
     permissions:
       contents: write

@@ -33,10 +33,23 @@ jobs:
       - name: Install Android SDK platform
         run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "platforms;android-36"
 
-      - name: Build APKs and Run Tests (Parallel)
-        run: ./gradlew assembleRelease assembleDebug testDebugUnitTest --no-daemon --parallel --build-cache
+      - name: Decode keystore
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > /tmp/release.jks
+          echo "KEYSTORE_PATH=/tmp/release.jks" >> $GITHUB_ENV
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
-      # Upload artifacts for both PR review and release job
+      - name: Build APKs, AAB and Run Tests (Parallel)
+        run: ./gradlew assembleRelease assembleDebug bundleRelease testDebugUnitTest --no-daemon --parallel --build-cache
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      # Upload APK artifacts (legacy sideload support)
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -44,6 +57,14 @@ jobs:
           path: |
             app/build/outputs/apk/release/app-release-unsigned.apk
             app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 1
+
+      # Upload AAB artifact (Play Store distribution)
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: aab-${{ github.sha }}
+          path: app/build/outputs/bundle/release/app-release.aab
           retention-days: 1
 
   # Create nightly release on push to main
@@ -65,8 +86,14 @@ jobs:
           name: apks-${{ github.sha }}
           path: apks
 
+      - name: Download AAB Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: aab-${{ github.sha }}
+          path: aab
+
       - name: List downloaded artifacts
-        run: find apks -type f -name "*.apk"
+        run: find apks aab -type f
 
       - name: Get short SHA
         id: sha
@@ -100,6 +127,7 @@ jobs:
             ### Downloads
             | Variant | Description |
             |---------|-------------|
+            | `app-release.aab` | Signed AAB for Play Store (requires signing secrets) |
             | `app-release-unsigned.apk` | Optimized release build (~2.5 MB) |
             | `app-debug.apk` | Debug build with LeakCanary |
 
@@ -108,20 +136,44 @@ jobs:
             2. Enable "Install from unknown sources" on your device
             3. Install the APK
 
-            ⚠️ **Note:** These are unsigned development builds for testing purposes.
+            ⚠️ **Note:** APKs are unsigned unless signing secrets are configured. AAB is for Play Store upload only.
 
             ---
             _This release is automatically replaced on each commit to main._
           files: |
             apks/release/app-release-unsigned.apk
             apks/debug/app-debug.apk
+            aab/app-release.aab
           prerelease: true
           make_latest: false
         continue-on-error: true
 
-      # Cleanup artifact to save storage (optional, artifacts auto-expire)
-      - name: Delete Artifact
+      # Cleanup artifacts to save storage
+      - name: Delete Artifacts
         uses: geekyeggo/delete-artifact@v6
         with:
-          name: apks-${{ github.sha }}
+          name: |
+            apks-${{ github.sha }}
+            aab-${{ github.sha }}
 
+  # Deploy signed AAB to Play Store internal test track on push to main
+  deploy-internal:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+
+    steps:
+      - name: Download AAB Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: aab-${{ github.sha }}
+          path: aab
+
+      - name: Upload to Play Store internal track
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.cascadiacollections.sir
+          releaseFiles: aab/app-release.aab
+          track: internal
+          status: completed

@@ -1,10 +1,35 @@
+import java.util.Properties
+
 plugins {
     id("sir.android.app")
     alias(libs.plugins.kotlin.compose)
 }
 
+// Load keystore.properties for local development (CI uses env vars instead)
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(keystorePropertiesFile.inputStream())
+}
+
 android {
     namespace = "com.cascadiacollections.sir"
+
+    signingConfigs {
+        create("release") {
+            val alias = System.getenv("KEY_ALIAS") ?: keystoreProperties["keyAlias"]?.toString()
+            val keyPwd = System.getenv("KEY_PASSWORD") ?: keystoreProperties["keyPassword"]?.toString()
+            val storePath = System.getenv("KEYSTORE_PATH")?.let { file(it) }
+                ?: keystoreProperties["storeFile"]?.toString()?.let { rootProject.file(it) }
+            val storePwd = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProperties["storePassword"]?.toString()
+            if (alias != null && keyPwd != null && storePath != null && storePwd != null) {
+                keyAlias = alias
+                keyPassword = keyPwd
+                storeFile = storePath
+                storePassword = storePwd
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.cascadiacollections.sir"
@@ -21,6 +46,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -112,6 +138,9 @@ dependencies {
 
     // Settings persistence
     implementation(libs.datastore.preferences)
+
+    // Splash screen
+    implementation(libs.androidx.splashscreen)
 
     // Baseline Profiles - enables AOT compilation for faster startup
     implementation(libs.androidx.profileinstaller)

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">sir</string>
+    <string name="app_name">SIR</string>
     <string name="radio_error">Stream unavailable, retry shortly</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>

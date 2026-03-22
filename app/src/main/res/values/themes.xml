@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.Sir" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.Sir.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Sir</item>
+    </style>
 </resources>

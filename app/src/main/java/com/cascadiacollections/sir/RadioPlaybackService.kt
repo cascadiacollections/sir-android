@@ -344,7 +344,15 @@ class RadioPlaybackService : MediaSessionService() {
             audioRouteRestoredReceiver,
             IntentFilter().apply {
                 addAction(AudioManager.ACTION_HEADSET_PLUG)
-                addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
+                // BLUETOOTH_CONNECT permission required on API 31+; skip action if not granted
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                    ContextCompat.checkSelfPermission(
+                        this@RadioPlaybackService,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
+                }
             },
             ContextCompat.RECEIVER_NOT_EXPORTED
         )

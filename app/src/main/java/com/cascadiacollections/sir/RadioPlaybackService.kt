@@ -344,6 +344,7 @@ class RadioPlaybackService : MediaLibraryService() {
                     ImmutableList.of(
                         CommandButton.Builder()
                             .setDisplayName(getString(R.string.seek_back_30))
+                            .setIconResId(android.R.drawable.ic_media_rew)
                             .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
                             .build()
                     )

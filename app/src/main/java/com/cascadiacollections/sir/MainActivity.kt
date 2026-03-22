@@ -191,16 +191,16 @@ fun RadioScreen(
         ActivityResultContracts.RequestMultiplePermissions()
     ) {}
     LaunchedEffect(Unit) {
-        val toRequest = buildList {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED
-            ) add(Manifest.permission.POST_NOTIFICATIONS)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT)
-                    != PackageManager.PERMISSION_GRANTED
-            ) add(Manifest.permission.BLUETOOTH_CONNECT)
-        }
+        val toRequest = listOfNotNull(
+            Manifest.permission.POST_NOTIFICATIONS.takeIf {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+            },
+            Manifest.permission.BLUETOOTH_CONNECT.takeIf {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+            }
+        )
         toRequest.takeIf { it.isNotEmpty() }?.let { permissionLauncher.launch(it.toTypedArray()) }
     }
 

@@ -37,9 +37,14 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -55,9 +60,9 @@ import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
-class RadioPlaybackService : MediaSessionService() {
+class RadioPlaybackService : MediaLibraryService() {
 
-    private var mediaSession: MediaSession? = null
+    private var mediaSession: MediaLibrarySession? = null
     private var player: ExoPlayer? = null
     private lateinit var audioManager: AudioManager
     private var isNoisyReceiverRegistered = false
@@ -243,10 +248,8 @@ class RadioPlaybackService : MediaSessionService() {
 
         exoPlayer.setMediaItem(buildMediaItem())
 
-        // Create media session before adding listeners (to avoid null pointer in callbacks)
-        mediaSession = MediaSession.Builder(context, exoPlayer)
-            .setId(MEDIA_SESSION_ID)
-            .setCallback(object : MediaSession.Callback {
+        // Create media library session before adding listeners (to avoid null pointer in callbacks)
+        mediaSession = MediaLibrarySession.Builder(context, exoPlayer, object : MediaLibrarySession.Callback {
                 override fun onConnect(
                     session: MediaSession,
                     controller: MediaSession.ControllerInfo
@@ -267,7 +270,49 @@ class RadioPlaybackService : MediaSessionService() {
                         .setAvailablePlayerCommands(availableCommands)
                         .build()
                 }
+
+                // Android Auto browsing: single root → single playable stream item
+                override fun onGetLibraryRoot(
+                    session: MediaLibrarySession,
+                    browser: MediaSession.ControllerInfo,
+                    params: MediaLibraryService.LibraryParams?
+                ): ListenableFuture<LibraryResult<MediaItem>> =
+                    Futures.immediateFuture(
+                        LibraryResult.ofItem(
+                            MediaItem.Builder()
+                                .setMediaId(BROWSE_ROOT_ID)
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setIsBrowsable(true)
+                                        .setIsPlayable(false)
+                                        .setTitle(getString(R.string.station_name))
+                                        .build()
+                                )
+                                .build(),
+                            params
+                        )
+                    )
+
+                override fun onGetChildren(
+                    session: MediaLibrarySession,
+                    browser: MediaSession.ControllerInfo,
+                    parentId: String,
+                    page: Int,
+                    pageSize: Int,
+                    params: MediaLibraryService.LibraryParams?
+                ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
+                    if (parentId == BROWSE_ROOT_ID) {
+                        Futures.immediateFuture(
+                            LibraryResult.ofItemList(
+                                ImmutableList.of(buildMediaItem()),
+                                params
+                            )
+                        )
+                    } else {
+                        Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.of(), params))
+                    }
             })
+            .setId(MEDIA_SESSION_ID)
             .build()
 
         // Now add listeners after mediaSession is created
@@ -404,7 +449,7 @@ class RadioPlaybackService : MediaSessionService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
         return mediaSession
     }
 
@@ -763,6 +808,7 @@ class RadioPlaybackService : MediaSessionService() {
 
         // Media session & notification
         private const val MEDIA_SESSION_ID = "will_radio_session"
+        private const val BROWSE_ROOT_ID = "sir_root"
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
 

@@ -380,6 +380,7 @@ class RadioPlaybackService : MediaLibraryService() {
                         NOTIFICATION_ID,
                         buildNotification(context)
                     )
+                    scheduleSeekBackReveal()
                 } else {
                     releaseLocks()
                     stopForeground(STOP_FOREGROUND_DETACH)
@@ -521,7 +522,8 @@ class RadioPlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
-        // Cancel sleep timer
+        // Cancel pending callbacks
+        seekBackRevealRunnable?.let { sleepTimerHandler.removeCallbacks(it) }
         cancelSleepTimer()
 
         // Release equalizer
@@ -687,6 +689,22 @@ class RadioPlaybackService : MediaLibraryService() {
         p.stop()
         p.prepare()
         if (wasPlaying) p.play()
+    }
+
+    private var seekBackRevealRunnable: Runnable? = null
+
+    /** Post a delayed check to reveal "Replay 30s" once enough data is buffered. */
+    private fun scheduleSeekBackReveal() {
+        seekBackRevealRunnable?.let { sleepTimerHandler.removeCallbacks(it) }
+        val seekBytes = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
+        if (replayBuffer.canSeekBack(seekBytes)) {
+            updateCustomLayout()
+            return
+        }
+        val runnable = Runnable { updateCustomLayout() }
+        seekBackRevealRunnable = runnable
+        // Check shortly after 30s of buffering; add 2s margin for network jitter
+        sleepTimerHandler.postDelayed(runnable, SEEK_BACK_INCREMENT_MS + 2_000)
     }
 
     private fun updateCustomLayout() {

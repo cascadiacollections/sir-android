@@ -201,7 +201,7 @@ fun RadioScreen(
                     != PackageManager.PERMISSION_GRANTED
             ) add(Manifest.permission.BLUETOOTH_CONNECT)
         }
-        if (toRequest.isNotEmpty()) permissionLauncher.launch(toRequest.toTypedArray())
+        toRequest.takeIf { it.isNotEmpty() }?.let { permissionLauncher.launch(it.toTypedArray()) }
     }
 
     // Metered network warning (one-time per session)

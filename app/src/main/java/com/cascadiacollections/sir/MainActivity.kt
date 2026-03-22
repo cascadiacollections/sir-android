@@ -353,35 +353,22 @@ private fun RadioUi(
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val horizontalPadding = if (screenWidthDp >= 600) 72.dp else 24.dp
 
-    Surface(
-        modifier = modifier
-            .fillMaxSize()
-            .clickable { onToggle() },
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Box(
+    Box(modifier = modifier.fillMaxSize()) {
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = horizontalPadding, vertical = 24.dp)
+                .clickable { onToggle() },
+            color = MaterialTheme.colorScheme.background
         ) {
-            // Settings button in top right
-            if (showSettingsButton) {
-                IconButton(
-                    onClick = onSettingsClick,
-                    modifier = Modifier.align(Alignment.TopEnd)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = stringResource(R.string.settings),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = horizontalPadding, vertical = 24.dp)
             ) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                 // Show track title if available, otherwise show status
                 val title = when {
                     !isConnected          -> stringResource(R.string.title_connecting)
@@ -432,8 +419,22 @@ private fun RadioUi(
                 }
             }
         }
+        // Settings button rendered after Surface — sibling gets click priority via z-order
+        if (showSettingsButton) {
+            IconButton(
+                onClick = onSettingsClick,
+                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.settings),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
-}
+}  // end Surface + outer Box
+}  // end RadioUi
 
 @Preview(showBackground = true, name = "Idle")
 @Composable
@@ -685,6 +686,21 @@ private fun SettingsDialog(
                             )
                         }
                     }
+                }
+
+                // Privacy Policy
+                HorizontalDivider()
+                TextButton(
+                    onClick = {
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            android.net.Uri.parse(context.getString(R.string.privacy_policy_url))
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.privacy_policy))
                 }
 
                 // Debug-only: Custom Stream URL

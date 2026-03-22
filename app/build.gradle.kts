@@ -36,8 +36,8 @@ android {
 
     defaultConfig {
         applicationId = "com.cascadiacollections.sir"
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.1.1"
 
         // Include ARM ABIs for phones/tablets + x86_64 for ChromeOS
         ndk {

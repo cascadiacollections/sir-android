@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">SIR</string>
+    <string name="station_name">SIR</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="live">Live</string>
+    <string name="connecting">Connecting…</string>
+    <string name="stream_description">Live stream</string>
+</resources>

@@ -597,37 +597,15 @@ class RadioPlaybackService : MediaLibraryService() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val timeShiftAction = when (playbackMode) {
-            PlaybackMode.Live -> {
-                val seekBackIntent = PendingIntent.getService(
-                    context, 3,
-                    Intent(context, RadioPlaybackService::class.java).apply {
-                        action = ACTION_SEEK_BACK
-                    },
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                NotificationCompat.Action.Builder(
-                    android.R.drawable.ic_media_rew,
-                    context.getString(R.string.seek_back_30),
-                    seekBackIntent
-                ).build()
-            }
-            PlaybackMode.TimeShifted -> {
-                val goLiveIntent = PendingIntent.getService(
-                    context, 4,
-                    Intent(context, RadioPlaybackService::class.java).apply {
-                        action = ACTION_GO_LIVE
-                    },
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                NotificationCompat.Action.Builder(
-                    android.R.drawable.ic_media_ff,
-                    context.getString(R.string.go_live),
-                    goLiveIntent
-                ).build()
-            }
-        }
-        return NotificationCompat.Builder(context, CHANNEL_ID)
+        val seekBackIntent = PendingIntent.getService(
+            context, 3,
+            Intent(context, RadioPlaybackService::class.java).apply {
+                action = ACTION_SEEK_BACK
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val compactActions = if (playbackMode is PlaybackMode.TimeShifted) intArrayOf(0, 1, 2) else intArrayOf(0, 1)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
             .setContentText(currentArtist ?: getString(R.string.stream_description))
             .setSubText(
@@ -639,7 +617,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .setOngoing(player?.isPlaying == true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(
-                MediaStyleNotificationHelper.MediaStyle(session).setShowActionsInCompactView(0, 1)
+                MediaStyleNotificationHelper.MediaStyle(session).setShowActionsInCompactView(*compactActions)
             )
             .addAction(
                 if (player?.isPlaying == true)
@@ -655,25 +633,52 @@ class RadioPlaybackService : MediaLibraryService() {
                         playIntent
                     ).build()
             )
-            .addAction(timeShiftAction)
-            .build()
+            .addAction(
+                NotificationCompat.Action.Builder(
+                    android.R.drawable.ic_media_rew,
+                    context.getString(R.string.seek_back_30),
+                    seekBackIntent
+                ).build()
+            )
+
+        if (playbackMode is PlaybackMode.TimeShifted) {
+            val goLiveIntent = PendingIntent.getService(
+                context, 4,
+                Intent(context, RadioPlaybackService::class.java).apply {
+                    action = ACTION_GO_LIVE
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(
+                NotificationCompat.Action.Builder(
+                    android.R.drawable.ic_media_ff,
+                    context.getString(R.string.go_live),
+                    goLiveIntent
+                ).build()
+            )
+        }
+
+        return builder.build()
     }
 
     private fun updateCustomLayout() {
         val session = mediaSession ?: return
-        val button = when (playbackMode) {
-            PlaybackMode.Live -> CommandButton.Builder()
-                .setDisplayName(getString(R.string.seek_back_30))
-                .setIconResId(android.R.drawable.ic_media_rew)
-                .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
-                .build()
-            PlaybackMode.TimeShifted -> CommandButton.Builder()
+        val seekBackButton = CommandButton.Builder()
+            .setDisplayName(getString(R.string.seek_back_30))
+            .setIconResId(android.R.drawable.ic_media_rew)
+            .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
+            .build()
+        val buttons = if (playbackMode is PlaybackMode.TimeShifted) {
+            val liveButton = CommandButton.Builder()
                 .setDisplayName(getString(R.string.go_live))
                 .setIconResId(android.R.drawable.ic_media_ff)
                 .setSessionCommand(SessionCommand(ACTION_GO_LIVE, android.os.Bundle.EMPTY))
                 .build()
+            ImmutableList.of(seekBackButton, liveButton)
+        } else {
+            ImmutableList.of(seekBackButton)
         }
-        session.setCustomLayout(ImmutableList.of(button))
+        session.setCustomLayout(buttons)
         updateNotificationSafe()
     }
 

@@ -64,8 +64,7 @@ class CastFeatureManager(context: Context) {
                 _moduleState.value = CastModuleState.NotInstalled
             }
 
-            else -> { /* Ignore other states */
-            }
+            else -> Unit
         }
     }
 
@@ -77,7 +76,7 @@ class CastFeatureManager(context: Context) {
      * Check if the cast module is already installed
      */
     fun isModuleInstalled(): Boolean {
-        return splitInstallManager.installedModules.contains(CAST_MODULE_NAME)
+        return CAST_MODULE_NAME in splitInstallManager.installedModules
     }
 
     /**

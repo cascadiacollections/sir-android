@@ -214,7 +214,7 @@ class RadioPlaybackService : MediaSessionService() {
             .setDataSourceFactory(httpDataSourceFactory)
 
         // Create optimized ExoPlayer
-        player = ExoPlayer.Builder(context)
+        val exoPlayer = ExoPlayer.Builder(context)
             .setLoadControl(loadControl)
             .setBandwidthMeter(bandwidthMeter)
             .setMediaSourceFactory(mediaSourceFactory)
@@ -232,11 +232,12 @@ class RadioPlaybackService : MediaSessionService() {
                 repeatMode = Player.REPEAT_MODE_OFF  // Live stream doesn't repeat
                 playWhenReady = false  // Don't auto-play on creation
             }
+        player = exoPlayer
 
-        player?.setMediaItem(buildMediaItem())
+        exoPlayer.setMediaItem(buildMediaItem())
 
         // Create media session before adding listeners (to avoid null pointer in callbacks)
-        mediaSession = MediaSession.Builder(context, player!!)
+        mediaSession = MediaSession.Builder(context, exoPlayer)
             .setId(MEDIA_SESSION_ID)
             .setCallback(object : MediaSession.Callback {
                 override fun onConnect(
@@ -305,7 +306,7 @@ class RadioPlaybackService : MediaSessionService() {
                 if (!isStaticMetadata) {
                     // Real track info - could be "Artist - Title" format
                     currentTrackTitle = streamTitle
-                    currentArtist = if (artist != STREAM_STATIC_ARTIST) artist else null
+                    currentArtist = artist?.takeIf { it != STREAM_STATIC_ARTIST }
                     updateNotificationSafe()
                 } else if (!station.isNullOrBlank() && currentStation != station) {
                     // Station name changed, update notification
@@ -397,9 +398,9 @@ class RadioPlaybackService : MediaSessionService() {
         serviceScope.cancel()
 
         releaseLocks()
-        mediaSession?.also { it.release() }
+        mediaSession?.release()
         mediaSession = null
-        player?.also { it.release() }
+        player?.release()
         player = null
         if (isNoisyReceiverRegistered) {
             unregisterReceiver(audioBecomingNoisyReceiver)
@@ -449,10 +450,10 @@ class RadioPlaybackService : MediaSessionService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(currentTrackTitle ?: currentStation ?: DEFAULT_STATION_NAME)
-            .setContentText(currentArtist ?: DEFAULT_STREAM_DESCRIPTION)
+            .setContentTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
+            .setContentText(currentArtist ?: getString(R.string.stream_description))
             .setSubText(
-                if (currentTrackTitle != null) currentStation ?: DEFAULT_STATION_NAME else null
+                if (currentTrackTitle != null) currentStation ?: getString(R.string.station_name) else null
             )
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(openAppIntent)
@@ -480,13 +481,13 @@ class RadioPlaybackService : MediaSessionService() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun updateNotificationSafe(contentText: String = DEFAULT_STREAM_DESCRIPTION) {
+    private fun updateNotificationSafe(contentText: String = getString(R.string.stream_description)) {
         if (mediaSession == null) return
         updateNotification(contentText)
     }
 
     @SuppressLint("MissingPermission")
-    private fun updateNotification(contentText: String = DEFAULT_STREAM_DESCRIPTION) {
+    private fun updateNotification(contentText: String = getString(R.string.stream_description)) {
         val notification = buildNotification(this).apply {
             extras.putString(Notification.EXTRA_TEXT, contentText)
         }
@@ -506,10 +507,10 @@ class RadioPlaybackService : MediaSessionService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Radio Playback",
+                getString(R.string.notification_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Notifications for radio playback"
+                description = getString(R.string.notification_channel_description)
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager?.createNotificationChannel(channel)
@@ -527,8 +528,8 @@ class RadioPlaybackService : MediaSessionService() {
         )
         .setMediaMetadata(
             MediaMetadata.Builder()
-                .setTitle(DEFAULT_STATION_NAME)
-                .setArtist(DEFAULT_STREAM_DESCRIPTION)
+                .setTitle(getString(R.string.station_name))
+                .setArtist(getString(R.string.stream_description))
                 .setIsPlayable(true)
                 .build()
         )
@@ -599,15 +600,18 @@ class RadioPlaybackService : MediaSessionService() {
             return
         }
 
-        sleepTimerRunnable = Runnable {
+        val runnable = Runnable {
             Log.d(TAG, "Sleep timer triggered - stopping playback")
+            serviceScope.launch { settingsRepository.setSleepTimerFiresAt(0L) }
             player?.pause()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
+        sleepTimerRunnable = runnable
 
         val delayMs = minutes * 60 * 1000L
-        sleepTimerHandler.postDelayed(sleepTimerRunnable!!, delayMs)
+        sleepTimerHandler.postDelayed(runnable, delayMs)
+        serviceScope.launch { settingsRepository.setSleepTimerFiresAt(System.currentTimeMillis() + delayMs) }
         Log.d(TAG, "Sleep timer set for $minutes minutes")
     }
 
@@ -617,6 +621,7 @@ class RadioPlaybackService : MediaSessionService() {
             Log.d(TAG, "Sleep timer cancelled")
         }
         sleepTimerRunnable = null
+        serviceScope.launch { settingsRepository.setSleepTimerFiresAt(0L) }
     }
 
     // Equalizer methods

@@ -50,14 +50,11 @@ class CastDeviceDetector(
     }
 
     private fun checkForCastDevices(router: MediaRouter) {
-        router.routes
-            .any { it.matchesSelector(routeSelector) && !it.isDefault }
-            .takeIf { it && !_castDevicesAvailable.value }
-            ?.let {
-                _castDevicesAvailable.value = true
-                // Stop scanning once devices are found to save battery
-                stopScanning()
-            }
+        val hasCastDevices = router.routes.any { it.matchesSelector(routeSelector) && !it.isDefault }
+        if (hasCastDevices && !_castDevicesAvailable.value) {
+            _castDevicesAvailable.value = true
+            stopScanning() // Stop scanning once devices are found to save battery
+        }
     }
 
     override fun onResume(owner: LifecycleOwner) {
@@ -100,13 +97,8 @@ class CastDeviceDetector(
     }
 
     private fun isOnWifi(): Boolean {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-                ?: return false
-
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
+        val capabilities = cm.getNetworkCapabilities(cm.activeNetwork ?: return false) ?: return false
         return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
     }
 

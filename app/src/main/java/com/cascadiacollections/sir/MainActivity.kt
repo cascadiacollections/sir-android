@@ -3,6 +3,7 @@ package com.cascadiacollections.sir
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -59,15 +60,18 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.cascadiacollections.sir.ui.theme.SirTheme
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
@@ -172,8 +176,36 @@ fun RadioScreen(
     var isConnected by rememberSaveable { mutableStateOf(false) }
     var isPlaying by rememberSaveable { mutableStateOf(false) }
     var isBuffering by rememberSaveable { mutableStateOf(false) }
+    var isError by rememberSaveable { mutableStateOf(false) }
     var trackTitle by rememberSaveable { mutableStateOf<String?>(null) }
     var artist by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Metered network warning (one-time per session)
+    var showMeteredWarning by rememberSaveable { mutableStateOf(false) }
+    var meteredWarningDismissed by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!meteredWarningDismissed) {
+            val cm = context.getSystemService(ConnectivityManager::class.java)
+            if (cm?.isActiveNetworkMetered == true) showMeteredWarning = true
+        }
+    }
+
+    // Sleep timer countdown label
+    val sleepTimerFiresAt by settingsRepository?.sleepTimerFiresAt?.collectAsState(0L)
+        ?: remember { mutableStateOf(0L) }
+    var sleepTimerLabel by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(sleepTimerFiresAt) {
+        while (true) {
+            val remaining = sleepTimerFiresAt - System.currentTimeMillis()
+            sleepTimerLabel = if (remaining > 0)
+                context.getString(
+                    R.string.sleep_timer_countdown,
+                    (remaining / 60_000).toInt().coerceAtLeast(1)
+                ) else null
+            if (sleepTimerFiresAt <= 0L) break
+            delay(30_000L)
+        }
+    }
 
     LaunchedEffect(sessionToken) {
         context.ensureRadioServiceRunning()
@@ -185,10 +217,10 @@ fun RadioScreen(
             isConnected = true
             isPlaying = newController.isActuallyPlaying
             isBuffering = newController.playbackState == Player.STATE_BUFFERING
-            // Get initial metadata if available
-            newController.mediaMetadata.let { metadata ->
-                trackTitle = metadata.title?.toString()
-                artist = metadata.artist?.toString()
+            // Seed from any metadata already in the session
+            newController.mediaMetadata.also {
+                trackTitle = it.title?.toString()
+                artist = it.artist?.toString()
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
@@ -211,6 +243,11 @@ fun RadioScreen(
             override fun onEvents(player: Player, events: Player.Events) {
                 isPlaying = player.isActuallyPlaying
                 isBuffering = player.playbackState == Player.STATE_BUFFERING
+                if (player.playbackState == Player.STATE_READY) isError = false
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                isError = true
             }
 
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
@@ -229,8 +266,10 @@ fun RadioScreen(
         isConnected = isConnected,
         isPlaying = isPlaying,
         isBuffering = isBuffering,
+        isError = isError,
         trackTitle = trackTitle,
         artist = artist,
+        sleepTimerLabel = sleepTimerLabel,
         showSettingsButton = true,
         onSettingsClick = { showSettings = true }
     ) {
@@ -255,6 +294,20 @@ fun RadioScreen(
             onDismiss = { showSettings = false }
         )
     }
+
+    // Metered network warning dialog (shown once per session on cellular)
+    if (showMeteredWarning) {
+        AlertDialog(
+            onDismissRequest = { showMeteredWarning = false; meteredWarningDismissed = true },
+            title = { Text(stringResource(R.string.metered_network_title)) },
+            text  = { Text(stringResource(R.string.metered_network_message)) },
+            confirmButton = {
+                TextButton(onClick = { showMeteredWarning = false; meteredWarningDismissed = true }) {
+                    Text(stringResource(R.string.metered_network_dismiss))
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -263,8 +316,10 @@ private fun RadioUi(
     isConnected: Boolean,
     isPlaying: Boolean,
     isBuffering: Boolean,
+    isError: Boolean = false,
     trackTitle: String? = null,
     artist: String? = null,
+    sleepTimerLabel: String? = null,
     showSettingsButton: Boolean = false,
     onSettingsClick: () -> Unit = {},
     onToggle: () -> Unit
@@ -305,35 +360,49 @@ private fun RadioUi(
             ) {
                 // Show track title if available, otherwise show status
                 val title = when {
-                    !isConnected -> "Connecting to SIR"
-                    isBuffering -> "Buffering..."
-                    isPlaying -> trackTitle?.takeIf { it.isNotBlank() } ?: "Now playing"
-                    else -> "Tap anywhere to play"
+                    !isConnected          -> stringResource(R.string.title_connecting)
+                    isError && isBuffering -> stringResource(R.string.stream_reconnecting)
+                    isError               -> stringResource(R.string.title_stream_error)
+                    isBuffering           -> stringResource(R.string.title_buffering)
+                    isPlaying             -> trackTitle?.takeIf { it.isNotBlank() }
+                                                ?: stringResource(R.string.now_playing)
+                    else                  -> stringResource(R.string.tap_to_play)
                 }
                 // Show artist if available, otherwise show contextual info
                 val subtitle = when {
-                    !isConnected -> "Starting playback service"
-                    isBuffering -> "Hang tight, stream is loading"
-                    isPlaying -> artist?.takeIf { it.isNotBlank() } ?: "SIR • Live"
-                    else -> "SIR • Internet radio"
+                    !isConnected          -> stringResource(R.string.subtitle_connecting)
+                    isError && isBuffering -> stringResource(R.string.subtitle_reconnecting)
+                    isError               -> stringResource(R.string.stream_error)
+                    isBuffering           -> stringResource(R.string.subtitle_buffering)
+                    isPlaying             -> artist?.takeIf { it.isNotBlank() }
+                                                ?: stringResource(R.string.subtitle_live)
+                    else                  -> stringResource(R.string.subtitle_idle)
                 }
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineMedium,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 12.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
                 // Show tap hint when playing
                 if (isPlaying) {
                     Text(
-                        text = "Tap to stop",
+                        text = stringResource(R.string.tap_to_stop),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 24.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (sleepTimerLabel != null) {
+                    Text(
+                        text = sleepTimerLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -601,7 +670,7 @@ private fun SettingsDialog(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Debug Options",
+                        text = stringResource(R.string.debug_options),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -641,7 +710,7 @@ private fun SettingsDialog(
                                     customStreamText = ""
                                     Toast.makeText(
                                         context,
-                                        "Reset to default stream",
+                                        context.getString(R.string.custom_stream_reset),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -660,21 +729,21 @@ private fun SettingsDialog(
                                         settingsRepository.setCustomStreamUrl(customStreamText)
                                         Toast.makeText(
                                             context,
-                                            "Custom stream saved. Restart app to apply.",
+                                            context.getString(R.string.custom_stream_saved),
                                             Toast.LENGTH_LONG
                                         ).show()
                                     }
                                 } else {
                                     Toast.makeText(
                                         context,
-                                        "URL must start with http:// or https://",
+                                        context.getString(R.string.custom_stream_invalid),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
                             },
                             enabled = customStreamText.isNotBlank() && customStreamText != customStreamUrl
                         ) {
-                            Text("Save")
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
@@ -682,7 +751,7 @@ private fun SettingsDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Done")
+                Text(stringResource(R.string.done))
             }
         }
     )

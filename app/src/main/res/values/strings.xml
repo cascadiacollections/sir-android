@@ -17,4 +17,42 @@
     <string name="custom_stream_hint">Enter stream URL (http/https)</string>
     <string name="custom_stream_active">Using custom stream</string>
     <string name="reset_to_default">Reset to Default</string>
+    <string name="stream_reconnecting">Reconnecting…</string>
+    <string name="stream_error">Stream unavailable — tap to retry</string>
+    <string name="metered_network_title">Mobile Data</string>
+    <string name="metered_network_message">You\'re on a metered connection. Streaming will use mobile data.</string>
+    <string name="metered_network_dismiss">Got it</string>
+
+    <!-- Main UI: titles -->
+    <string name="title_connecting">Connecting to SIR</string>
+    <string name="title_stream_error">Stream error</string>
+    <string name="title_buffering">Buffering…</string>
+    <string name="now_playing">Now playing</string>
+    <string name="tap_to_play">Tap anywhere to play</string>
+
+    <!-- Main UI: subtitles -->
+    <string name="subtitle_connecting">Starting playback service</string>
+    <string name="subtitle_reconnecting">Attempting to reconnect</string>
+    <string name="subtitle_buffering">Hang tight, stream is loading</string>
+    <string name="subtitle_live">SIR • Live</string>
+    <string name="subtitle_idle">SIR • Internet radio</string>
+
+    <!-- Main UI: hints / labels -->
+    <string name="tap_to_stop">Tap to stop</string>
+    <!-- %1$d = minutes remaining -->
+    <string name="sleep_timer_countdown">Sleep in %1$dm</string>
+
+    <!-- Settings dialog -->
+    <string name="done">Done</string>
+    <string name="save">Save</string>
+    <string name="debug_options">Debug Options</string>
+    <string name="custom_stream_saved">Custom stream saved. Restart app to apply.</string>
+    <string name="custom_stream_invalid">URL must start with http:// or https://</string>
+    <string name="custom_stream_reset">Reset to default stream</string>
+
+    <!-- Notification / Service -->
+    <string name="notification_channel_name">Radio Playback</string>
+    <string name="notification_channel_description">Notifications for radio playback</string>
+    <string name="station_name">SIR</string>
+    <string name="stream_description">Live stream</string>
 </resources>

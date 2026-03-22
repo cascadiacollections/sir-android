@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -51,6 +52,7 @@ class SettingsRepository(private val context: Context) {
 
     private val chromecastEnabledKey = booleanPreferencesKey("chromecast_enabled")
     private val sleepTimerMinutesKey = intPreferencesKey("sleep_timer_minutes")
+    private val sleepTimerFiresAtKey = longPreferencesKey("sleep_timer_fires_at")
     private val equalizerPresetKey = intPreferencesKey("equalizer_preset")
     private val customStreamUrlKey = stringPreferencesKey("custom_stream_url")
 
@@ -83,6 +85,23 @@ class SettingsRepository(private val context: Context) {
     suspend fun setSleepTimerDuration(duration: SleepTimerDuration) {
         context.dataStore.edit { preferences ->
             preferences[sleepTimerMinutesKey] = duration.minutes
+        }
+    }
+
+    /**
+     * Flow of the epoch-millis timestamp when the sleep timer will fire (0 = no timer active)
+     */
+    val sleepTimerFiresAt: Flow<Long> = context.dataStore.data.map { prefs ->
+        prefs[sleepTimerFiresAtKey] ?: 0L
+    }
+
+    /**
+     * Persist when the sleep timer will fire; pass 0 or negative to clear
+     */
+    suspend fun setSleepTimerFiresAt(epochMillis: Long) {
+        context.dataStore.edit { prefs ->
+            if (epochMillis <= 0L) prefs.remove(sleepTimerFiresAtKey)
+            else prefs[sleepTimerFiresAtKey] = epochMillis
         }
     }
 

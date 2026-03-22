@@ -12,12 +12,13 @@ class AndroidDynamicFeatureConventionPlugin : Plugin<Project> {
             pluginManager.apply("com.android.dynamic-feature")
 
             val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
+            fun version(alias: String) = libs.findVersion(alias).get().requiredVersion.toInt()
 
             configure<DynamicFeatureExtension> {
-                compileSdk = libs.findVersion("compileSdk").get().requiredVersion.toInt()
+                compileSdk = version("compileSdk")
 
                 defaultConfig {
-                    minSdk = libs.findVersion("minSdk").get().requiredVersion.toInt()
+                    minSdk = version("minSdk")
                     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                 }
 

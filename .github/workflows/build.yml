@@ -78,7 +78,7 @@ jobs:
       - name: Compare SHA to last nightly
         id: check
         run: |
-          LAST=$(gh release view nightly --repo ${{ github.repository }} --json targetCommitish -q .targetCommitish 2>/dev/null || echo "none")
+          LAST=$(gh release view nightly-build --repo ${{ github.repository }} --json targetCommitish -q .targetCommitish 2>/dev/null || echo "none")
           echo "changed=$([ "$LAST" != "${{ github.sha }}" ] && echo true || echo false)" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -89,13 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-nightly.outputs.changed == 'true'
 
-    permissions:
-      contents: write
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
       - name: Download APK Artifacts
         uses: actions/download-artifact@v8
         with:
@@ -119,19 +113,11 @@ jobs:
         id: date
         run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-      # Delete previous nightly release to save storage
-      - name: Delete previous nightly release
-        uses: dev-drprasad/delete-tag-and-release@v1.1
-        with:
-          tag_name: nightly
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          delete_release: true
-        continue-on-error: true
-
-      - name: Create nightly release
+      - name: Update nightly release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: nightly
+          tag_name: nightly-build
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
           name: "Nightly Build (${{ steps.date.outputs.date }})"
           body: |
             ## 🌙 Nightly Build

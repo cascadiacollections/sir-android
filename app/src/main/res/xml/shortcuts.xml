@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="play"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:shortcutShortLabel="@string/play"
+        android:shortcutLongLabel="@string/shortcut_play_long">
+        <intent
+            android:action="com.cascadiacollections.sir.SHORTCUT_PLAY"
+            android:targetPackage="com.cascadiacollections.sir"
+            android:targetClass="com.cascadiacollections.sir.MainActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+</shortcuts>

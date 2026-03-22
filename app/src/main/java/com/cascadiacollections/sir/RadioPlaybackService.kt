@@ -126,14 +126,21 @@ class RadioPlaybackService : MediaSessionService() {
 
         // Load settings asynchronously
         serviceScope.launch {
+            // Apply saved stream quality (before custom URL override so debug URL wins)
+            val savedQuality = settingsRepository.streamQuality.first()
+            if (savedQuality != StreamQuality.HIGH) {
+                currentStreamUrl = savedQuality.url
+            }
             if (BuildConfig.DEBUG) {
                 settingsRepository.customStreamUrl.first()?.let { customUrl ->
                     currentStreamUrl = customUrl
                     Log.d(TAG, "Using custom stream URL: $customUrl")
-                    // Re-set media item with the custom URL now that it's resolved
-                    player?.setMediaItem(buildMediaItem())
-                    player?.prepare()
                 }
+            }
+            // Re-set media item if URL changed
+            if (currentStreamUrl != DEFAULT_STREAM_URL) {
+                player?.setMediaItem(buildMediaItem())
+                player?.prepare()
             }
             // Load and apply equalizer preset
             currentEqualizerPreset = settingsRepository.equalizerPreset.first()
@@ -386,6 +393,12 @@ class RadioPlaybackService : MediaSessionService() {
             ACTION_SET_EQUALIZER -> {
                 val presetOrdinal = intent.getIntExtra(EXTRA_EQUALIZER_PRESET, 0)
                 applyEqualizerPreset(EqualizerPreset.fromOrdinal(presetOrdinal))
+            }
+
+            ACTION_SET_STREAM_QUALITY -> {
+                val qualityOrdinal = intent.getIntExtra(EXTRA_STREAM_QUALITY, 0)
+                val quality = StreamQuality.fromOrdinal(qualityOrdinal)
+                applyStreamQuality(quality)
             }
         }
         return super.onStartCommand(intent, flags, startId)
@@ -712,6 +725,19 @@ class RadioPlaybackService : MediaSessionService() {
         }
     }
 
+    private fun applyStreamQuality(quality: StreamQuality) {
+        val newUrl = quality.url
+        if (newUrl == currentStreamUrl) return
+        currentStreamUrl = newUrl
+        val wasPlaying = player?.isPlaying == true
+        player?.stop()
+        player?.setMediaItem(buildMediaItem())
+        player?.prepare()
+        if (wasPlaying) player?.play()
+        serviceScope.launch { settingsRepository.setStreamQuality(quality) }
+        Log.d(TAG, "Stream quality changed to ${quality.label}: $newUrl")
+    }
+
     private fun releaseEqualizer() {
         try {
             equalizer?.release()
@@ -742,7 +768,7 @@ class RadioPlaybackService : MediaSessionService() {
 
         // Intent actions
         private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
-        private const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
+        const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
         private const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
         const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"
         const val ACTION_SET_EQUALIZER = "com.cascadiacollections.sir.action.SET_EQUALIZER"
@@ -750,6 +776,8 @@ class RadioPlaybackService : MediaSessionService() {
         // Intent extras
         const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
+        const val ACTION_SET_STREAM_QUALITY = "com.cascadiacollections.sir.action.SET_STREAM_QUALITY"
+        const val EXTRA_STREAM_QUALITY = "stream_quality_ordinal"
     }
 }
 

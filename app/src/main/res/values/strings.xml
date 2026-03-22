@@ -52,9 +52,21 @@
     <string name="custom_stream_invalid">URL must start with http:// or https://</string>
     <string name="custom_stream_reset">Reset to default stream</string>
 
+    <!-- History -->
+    <string name="history">Now Playing History</string>
+    <string name="history_empty">Nothing played yet this session</string>
+
+    <!-- Share -->
+    <string name="share">Share</string>
+    <string name="share_now_playing">Now playing on SIR: %1$s</string>
+
+    <!-- App shortcuts -->
+    <string name="shortcut_play_long">Play SIR Radio</string>
+
     <!-- Notification / Service -->
     <string name="notification_channel_name">Radio Playback</string>
     <string name="notification_channel_description">Notifications for radio playback</string>
     <string name="station_name">SIR</string>
     <string name="stream_description">Live stream</string>
+    <string name="stream_quality">Stream Quality</string>
 </resources>

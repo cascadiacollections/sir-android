@@ -31,6 +31,21 @@ enum class SleepTimerDuration(val minutes: Int, val label: String) {
 }
 
 /**
+ * Stream quality options — URLs point to the same SHOUTcast mount; the server
+ * auto-selects the highest available bitrate for /stream. Add alternate mount
+ * paths here if the station exposes them (e.g., /stream_lo for 64kbps).
+ */
+enum class StreamQuality(val label: String, val url: String) {
+    HIGH("High (default)", "https://broadcast.shoutcheap.com/proxy/willradio/stream"),
+    MEDIUM("Medium", "https://broadcast.shoutcheap.com/proxy/willradio/stream"),
+    LOW("Low", "https://broadcast.shoutcheap.com/proxy/willradio/stream");
+
+    companion object {
+        fun fromOrdinal(ordinal: Int): StreamQuality = entries.getOrNull(ordinal) ?: HIGH
+    }
+}
+
+/**
  * Audio equalizer presets
  */
 enum class EqualizerPreset(val label: String) {
@@ -50,11 +65,20 @@ enum class EqualizerPreset(val label: String) {
  */
 class SettingsRepository(private val context: Context) {
 
+    private val streamQualityKey = intPreferencesKey("stream_quality")
     private val chromecastEnabledKey = booleanPreferencesKey("chromecast_enabled")
     private val sleepTimerMinutesKey = intPreferencesKey("sleep_timer_minutes")
     private val sleepTimerFiresAtKey = longPreferencesKey("sleep_timer_fires_at")
     private val equalizerPresetKey = intPreferencesKey("equalizer_preset")
     private val customStreamUrlKey = stringPreferencesKey("custom_stream_url")
+
+    val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
+        StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
+    }
+
+    suspend fun setStreamQuality(quality: StreamQuality) {
+        context.dataStore.edit { prefs -> prefs[streamQualityKey] = quality.ordinal }
+    }
 
     /**
      * Flow of Chromecast enabled preference
@@ -118,6 +142,40 @@ class SettingsRepository(private val context: Context) {
     suspend fun setEqualizerPreset(preset: EqualizerPreset) {
         context.dataStore.edit { preferences ->
             preferences[equalizerPresetKey] = preset.ordinal
+        }
+    }
+
+    // Now-playing history (pipe-delimited: timestamp|title|artist, one per line, newest first)
+    private val nowPlayingHistoryKey = stringPreferencesKey("now_playing_history")
+
+    data class HistoryEntry(val timestamp: Long, val title: String, val artist: String?)
+
+    val nowPlayingHistory: Flow<List<HistoryEntry>> = context.dataStore.data.map { prefs ->
+        prefs[nowPlayingHistoryKey]
+            ?.splitToSequence('\n')
+            ?.mapNotNull { line ->
+                val parts = line.split('|', limit = 3)
+                val ts = parts.getOrNull(0)?.toLongOrNull() ?: return@mapNotNull null
+                val title = parts.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                HistoryEntry(ts, title, parts.getOrNull(2)?.takeIf { it.isNotBlank() })
+            }
+            ?.toList()
+            ?: emptyList()
+    }
+
+    suspend fun addHistoryEntry(title: String, artist: String?) {
+        if (title.isBlank()) return
+        context.dataStore.edit { prefs ->
+            val existing = prefs[nowPlayingHistoryKey]
+                ?.split('\n')?.toMutableList() ?: mutableListOf()
+            // Deduplicate consecutive identical tracks
+            val newLine = "${System.currentTimeMillis()}|$title|${artist.orEmpty()}"
+            val lastTitle = existing.firstOrNull()?.split('|')?.getOrNull(1)
+            if (lastTitle != title) {
+                existing.add(0, newLine)
+                if (existing.size > 50) existing.subList(50, existing.size).clear()
+                prefs[nowPlayingHistoryKey] = existing.joinToString("\n")
+            }
         }
     }
 

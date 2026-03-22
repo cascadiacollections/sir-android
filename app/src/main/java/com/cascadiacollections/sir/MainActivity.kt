@@ -17,6 +17,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,9 +38,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -46,6 +55,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -53,6 +63,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -65,6 +76,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -87,6 +100,7 @@ import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
 
 private const val RADIO_TAG = "RadioScreen"
+private const val ACTION_SHORTCUT_PLAY = "com.cascadiacollections.sir.SHORTCUT_PLAY"
 
 class MainActivity : ComponentActivity() {
 
@@ -106,6 +120,16 @@ class MainActivity : ComponentActivity() {
         // Only detect Cast devices if module not already installed
         if (!castFeatureManager.isModuleInstalled()) {
             lifecycle.addObserver(castDeviceDetector)
+        }
+
+        // Handle home-screen shortcut: start playback immediately
+        if (intent?.action == ACTION_SHORTCUT_PLAY) {
+            ContextCompat.startForegroundService(
+                this,
+                Intent(this, RadioPlaybackService::class.java).apply {
+                    action = RadioPlaybackService.ACTION_PLAY
+                }
+            )
         }
 
         enableEdgeToEdge()
@@ -128,6 +152,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RadioScreen(
     modifier: Modifier = Modifier,
@@ -137,9 +162,11 @@ fun RadioScreen(
 ) {
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
+    val scope = rememberCoroutineScope()
 
     // Settings dialog state
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showHistory by rememberSaveable { mutableStateOf(false) }
 
     // Cast state
     val castDevicesAvailable by castDeviceDetector?.castDevicesAvailable?.collectAsState()
@@ -282,6 +309,9 @@ fun RadioScreen(
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
                 trackTitle = mediaMetadata.title?.toString()
                 artist = mediaMetadata.artist?.toString()
+                trackTitle?.let { title ->
+                    scope.launch { settingsRepository?.addHistoryEntry(title, artist) }
+                }
             }
         }
         activeController.addListener(listener)
@@ -300,7 +330,8 @@ fun RadioScreen(
         artist = artist,
         sleepTimerLabel = sleepTimerLabel,
         showSettingsButton = true,
-        onSettingsClick = { showSettings = true }
+        onSettingsClick = { showSettings = true },
+        onHistoryClick = { showHistory = true }
     ) {
         val activeController = controller
         if (activeController == null) {
@@ -312,6 +343,49 @@ fun RadioScreen(
         } else {
             context.ensureRadioServiceRunning()
             activeController.play()
+        }
+    }
+
+    // History bottom sheet
+    if (showHistory && settingsRepository != null) {
+        val history by settingsRepository.nowPlayingHistory.collectAsState(emptyList())
+        ModalBottomSheet(
+            onDismissRequest = { showHistory = false },
+            sheetState = rememberModalBottomSheetState()
+        ) {
+            Text(
+                text = stringResource(R.string.history),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            if (history.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.history_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 32.dp)
+                ) {
+                    history.forEach { entry ->
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            Text(entry.title, style = MaterialTheme.typography.bodyLarge)
+                            if (entry.artist != null) {
+                                Text(
+                                    entry.artist,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        HorizontalDivider()
+                    }
+                }
+            }
         }
     }
 
@@ -352,6 +426,7 @@ private fun RadioUi(
     sleepTimerLabel: String? = null,
     showSettingsButton: Boolean = false,
     onSettingsClick: () -> Unit = {},
+    onHistoryClick: () -> Unit = {},
     onToggle: () -> Unit
 ) {
     // Widen margins on medium/expanded screens (Pixel 10 Pro Fold, tablets) so the
@@ -378,6 +453,7 @@ private fun RadioUi(
         else                   -> stringResource(R.string.subtitle_idle)
     }
 
+    val context = LocalContext.current
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -385,6 +461,31 @@ private fun RadioUi(
                 TopAppBar(
                     title = {},
                     actions = {
+                        IconButton(onClick = onHistoryClick) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = stringResource(R.string.history),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (isPlaying && trackTitle != null) {
+                            IconButton(onClick = {
+                                val shareText = listOfNotNull(trackTitle, artist).joinToString(" — ")
+                                context.startActivity(Intent.createChooser(
+                                    Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT,
+                                            context.getString(R.string.share_now_playing, shareText))
+                                    }, null
+                                ))
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = stringResource(R.string.share),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                         IconButton(onClick = onSettingsClick) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
@@ -426,11 +527,42 @@ private fun RadioUi(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
-                        modifier = Modifier.size(36.dp)
-                    )
+                    if (isPlaying) {
+                        val barColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        val transition = rememberInfiniteTransition(label = "eq")
+                        val h1 by transition.animateFloat(
+                            initialValue = 0.3f, targetValue = 1.0f,
+                            animationSpec = infiniteRepeatable(tween(400, easing = LinearEasing), RepeatMode.Reverse),
+                            label = "h1"
+                        )
+                        val h2 by transition.animateFloat(
+                            initialValue = 0.8f, targetValue = 0.25f,
+                            animationSpec = infiniteRepeatable(tween(600, easing = LinearEasing), RepeatMode.Reverse),
+                            label = "h2"
+                        )
+                        val h3 by transition.animateFloat(
+                            initialValue = 0.5f, targetValue = 0.95f,
+                            animationSpec = infiniteRepeatable(tween(500, easing = LinearEasing), RepeatMode.Reverse),
+                            label = "h3"
+                        )
+                        Canvas(modifier = Modifier.size(36.dp)) {
+                            val bw = size.width / 7f
+                            listOf(h1, h2, h3).forEachIndexed { i, h ->
+                                val bh = size.height * h
+                                drawRect(
+                                    color = barColor,
+                                    topLeft = Offset(bw * (1 + i * 2.5f), size.height - bh),
+                                    size = Size(bw, bh)
+                                )
+                            }
+                        }
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = stringResource(R.string.play),
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
                 if (sleepTimerLabel != null) {
                     Text(
@@ -492,11 +624,13 @@ private fun SettingsDialog(
     val castModuleState by castFeatureManager.moduleState.collectAsState()
     val sleepTimerDuration by settingsRepository.sleepTimerDuration.collectAsState(initial = SleepTimerDuration.OFF)
     val equalizerPreset by settingsRepository.equalizerPreset.collectAsState(initial = EqualizerPreset.NORMAL)
+    val streamQuality by settingsRepository.streamQuality.collectAsState(initial = StreamQuality.HIGH)
     val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
 
     // Dropdown expansion states
     var sleepTimerExpanded by remember { mutableStateOf(false) }
     var equalizerExpanded by remember { mutableStateOf(false) }
+    var qualityExpanded by remember { mutableStateOf(false) }
     var customStreamText by remember { mutableStateOf(customStreamUrl ?: "") }
 
     // Update custom stream text when flow changes
@@ -619,6 +753,49 @@ private fun SettingsDialog(
                                             }
                                         )
                                     }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Stream quality dropdown
+                Text(
+                    text = stringResource(R.string.stream_quality),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                ExposedDropdownMenuBox(
+                    expanded = qualityExpanded,
+                    onExpandedChange = { qualityExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = streamQuality.label,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = qualityExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = qualityExpanded,
+                        onDismissRequest = { qualityExpanded = false }
+                    ) {
+                        StreamQuality.entries.forEach { quality ->
+                            DropdownMenuItem(
+                                text = { Text(quality.label) },
+                                onClick = {
+                                    qualityExpanded = false
+                                    context.startService(
+                                        Intent(context, RadioPlaybackService::class.java).apply {
+                                            action = RadioPlaybackService.ACTION_SET_STREAM_QUALITY
+                                            putExtra(RadioPlaybackService.EXTRA_STREAM_QUALITY, quality.ordinal)
+                                        }
+                                    )
                                 }
                             )
                         }

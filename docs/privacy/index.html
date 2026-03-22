@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — SIR</title>
+  <style>
+    :root {
+      --primary: #6650A4;
+      --surface: #FFFBFE;
+      --on-surface: #1C1B1F;
+      --on-surface-variant: #49454F;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--surface);
+      color: var(--on-surface);
+      line-height: 1.7;
+    }
+
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 2rem 1.5rem;
+    }
+
+    header a {
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+
+    header a:hover { color: #fff; }
+
+    header h1 {
+      margin-top: 0.75rem;
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 2rem 0 0.5rem;
+      color: var(--primary);
+    }
+
+    p {
+      font-size: 0.95rem;
+      color: var(--on-surface-variant);
+      margin-bottom: 0.75rem;
+    }
+
+    .effective {
+      font-size: 0.8rem;
+      color: var(--on-surface-variant);
+      margin-top: 0.25rem;
+    }
+
+    footer {
+      border-top: 1px solid #E7E0EC;
+      padding: 1.5rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--on-surface-variant);
+    }
+
+    footer a { color: var(--primary); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/sir-android/">← Back to SIR</a>
+  <h1>Privacy Policy</h1>
+  <p class="effective">Effective date: March 22, 2026</p>
+</header>
+
+<main>
+  <p>
+    SIR ("the app") is a live internet radio player for Android developed by Cascadia Collections.
+    This privacy policy explains what information the app accesses and how it is used.
+  </p>
+
+  <h2>Information We Do Not Collect</h2>
+  <p>
+    SIR does not collect, store, transmit, or share any personal information. The app does not
+    require account registration and has no backend server of its own.
+  </p>
+
+  <h2>Network Access</h2>
+  <p>
+    The app makes outbound network requests solely to stream audio from the configured radio
+    endpoint. No user data is included in these requests beyond standard HTTP headers (such as
+    a User-Agent string identifying the app and Android version).
+  </p>
+
+  <h2>Local Storage</h2>
+  <p>
+    The app stores user preferences (sleep timer duration, equalizer preset, Chromecast toggle,
+    and optional custom stream URL) locally on your device using Android's DataStore API.
+    This data never leaves your device.
+  </p>
+
+  <h2>Permissions</h2>
+  <p>The app requests the following Android permissions:</p>
+  <p>
+    <strong>INTERNET</strong> — required to stream audio over the network.<br />
+    <strong>FOREGROUND_SERVICE / FOREGROUND_SERVICE_MEDIA_PLAYBACK</strong> — required to keep
+    audio playing while the app is in the background.<br />
+    <strong>WAKE_LOCK</strong> — prevents the CPU from sleeping during playback.<br />
+    <strong>ACCESS_NETWORK_STATE</strong> — used to detect metered connections and warn before
+    streaming over cellular data.<br />
+    <strong>POST_NOTIFICATIONS</strong> (Android 13+) — used to show the playback notification.<br />
+    <strong>BLUETOOTH_CONNECT</strong> (Android 12+) — used to resume playback when a Bluetooth
+    headset reconnects.
+  </p>
+
+  <h2>Third-Party Services</h2>
+  <p>
+    The app does not integrate any analytics, advertising, or crash-reporting SDKs. Chromecast
+    support is provided via Google's Cast SDK, which is installed as an optional on-demand module.
+    If Chromecast is enabled, Google's standard Cast privacy policy applies to that feature.
+  </p>
+
+  <h2>Changes to This Policy</h2>
+  <p>
+    Any future changes to this privacy policy will be reflected on this page with an updated
+    effective date.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    Questions about this policy can be directed to the project's
+    <a href="https://github.com/cascadiacollections/sir-android/issues" style="color: var(--primary);">GitHub issue tracker</a>.
+  </p>
+</main>
+
+<footer>
+  <a href="/sir-android/">SIR Home</a> &nbsp;·&nbsp;
+  <a href="https://github.com/cascadiacollections/sir-android">GitHub</a>
+</footer>
+
+</body>
+</html>

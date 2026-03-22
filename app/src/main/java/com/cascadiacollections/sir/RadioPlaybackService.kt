@@ -485,6 +485,17 @@ class RadioPlaybackService : MediaLibraryService() {
     }
 
     @OptIn(UnstableApi::class)
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        // Keep our custom notification (with seek-back action) instead of Media3's default
+        val notification = buildNotification(this)
+        if (player?.isPlaying == true || startInForegroundRequired) {
+            startForeground(NOTIFICATION_ID, notification)
+        } else {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, notification)
+        }
+    }
+
+    @OptIn(UnstableApi::class)
     private fun buildNotification(context: Context): Notification {
         val session = mediaSession ?: throw IllegalStateException("MediaSession is null")
         val openAppIntent = PendingIntent.getActivity(

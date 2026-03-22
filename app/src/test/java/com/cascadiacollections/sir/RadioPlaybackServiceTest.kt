@@ -16,6 +16,9 @@ class RadioPlaybackServiceTest {
         assertTrue(
             RadioPlaybackService.ACTION_SET_EQUALIZER.startsWith(prefix)
         )
+        assertTrue(
+            RadioPlaybackService.ACTION_SEEK_BACK.startsWith(prefix)
+        )
     }
 
     @Test
@@ -33,14 +36,17 @@ class RadioPlaybackServiceTest {
     fun `action constants have descriptive suffixes`() {
         assertTrue(RadioPlaybackService.ACTION_SET_SLEEP_TIMER.endsWith("SET_SLEEP_TIMER"))
         assertTrue(RadioPlaybackService.ACTION_SET_EQUALIZER.endsWith("SET_EQUALIZER"))
+        assertTrue(RadioPlaybackService.ACTION_SEEK_BACK.endsWith("SEEK_BACK"))
     }
 
     @Test
     fun `action constants are distinct`() {
-        assertNotEquals(
+        val actions = setOf(
             RadioPlaybackService.ACTION_SET_SLEEP_TIMER,
-            RadioPlaybackService.ACTION_SET_EQUALIZER
+            RadioPlaybackService.ACTION_SET_EQUALIZER,
+            RadioPlaybackService.ACTION_SEEK_BACK
         )
+        assertEquals(3, actions.size)
     }
 
     @Test
@@ -55,7 +61,8 @@ class RadioPlaybackServiceTest {
     fun `action and extra key constants do not overlap`() {
         val actions = setOf(
             RadioPlaybackService.ACTION_SET_SLEEP_TIMER,
-            RadioPlaybackService.ACTION_SET_EQUALIZER
+            RadioPlaybackService.ACTION_SET_EQUALIZER,
+            RadioPlaybackService.ACTION_SEEK_BACK
         )
         val extras = setOf(
             RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,

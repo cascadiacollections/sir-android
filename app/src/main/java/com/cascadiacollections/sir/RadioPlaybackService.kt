@@ -96,6 +96,11 @@ class RadioPlaybackService : MediaLibraryService() {
     // Current stream URL (may be custom in debug builds)
     private var currentStreamUrl: String = DEFAULT_STREAM_URL
 
+    // DVR time-shift buffer
+    private val replayBuffer = CircularByteBuffer(REPLAY_BUFFER_SIZE)
+    private var playbackMode: PlaybackMode = PlaybackMode.Live
+    private var timeShiftDataSourceFactory: TimeShiftDataSource.Factory? = null
+
     private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent?.action && player?.isPlaying == true) {
@@ -224,9 +229,13 @@ class RadioPlaybackService : MediaLibraryService() {
             .setResetOnNetworkTypeChange(true)
             .build()
 
-        // Media source factory with OkHttp data source
+        // Time-shift data source wraps OkHttp for DVR-style replay
+        val timeShiftFactory = TimeShiftDataSource.Factory(httpDataSourceFactory, replayBuffer)
+        timeShiftDataSourceFactory = timeShiftFactory
+
+        // Media source factory with time-shift data source
         val mediaSourceFactory = DefaultMediaSourceFactory(context)
-            .setDataSourceFactory(httpDataSourceFactory)
+            .setDataSourceFactory(timeShiftFactory)
 
         // Create optimized ExoPlayer
         val exoPlayer = ExoPlayer.Builder(context)
@@ -272,6 +281,7 @@ class RadioPlaybackService : MediaLibraryService() {
                     val availableSessionCommands =
                         MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                             .add(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
+                            .add(SessionCommand(ACTION_GO_LIVE, android.os.Bundle.EMPTY))
                             .build()
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailablePlayerCommands(availableCommands)
@@ -285,11 +295,20 @@ class RadioPlaybackService : MediaLibraryService() {
                     customCommand: SessionCommand,
                     args: android.os.Bundle
                 ): ListenableFuture<SessionResult> {
-                    if (customCommand.customAction == ACTION_SEEK_BACK) {
-                        player?.let { p ->
-                            p.seekTo((p.currentPosition - SEEK_BACK_INCREMENT_MS).coerceAtLeast(0))
+                    when (customCommand.customAction) {
+                        ACTION_SEEK_BACK -> {
+                            val bytesToSeek = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
+                            timeShiftDataSourceFactory?.lastCreated?.seekBack(bytesToSeek)
+                            playbackMode = PlaybackMode.TimeShifted
+                            updateCustomLayout()
+                            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                         }
-                        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                        ACTION_GO_LIVE -> {
+                            timeShiftDataSourceFactory?.lastCreated?.goLive()
+                            playbackMode = PlaybackMode.Live
+                            updateCustomLayout()
+                            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                        }
                     }
                     return super.onCustomCommand(session, controller, customCommand, args)
                 }
@@ -467,7 +486,16 @@ class RadioPlaybackService : MediaLibraryService() {
             }
 
             ACTION_SEEK_BACK -> {
-                player?.seekBack()
+                val bytesToSeek = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
+                timeShiftDataSourceFactory?.lastCreated?.seekBack(bytesToSeek)
+                playbackMode = PlaybackMode.TimeShifted
+                updateCustomLayout()
+            }
+
+            ACTION_GO_LIVE -> {
+                timeShiftDataSourceFactory?.lastCreated?.goLive()
+                playbackMode = PlaybackMode.Live
+                updateCustomLayout()
             }
 
             ACTION_SET_SLEEP_TIMER -> {
@@ -499,6 +527,9 @@ class RadioPlaybackService : MediaLibraryService() {
 
         // Release equalizer
         releaseEqualizer()
+
+        // Clear replay buffer
+        replayBuffer.clear()
 
         // Cancel coroutine scope
         serviceScope.cancel()
@@ -566,14 +597,36 @@ class RadioPlaybackService : MediaLibraryService() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val seekBackIntent = PendingIntent.getService(
-            context,
-            3,
-            Intent(context, RadioPlaybackService::class.java).apply {
-                action = ACTION_SEEK_BACK
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val timeShiftAction = when (playbackMode) {
+            PlaybackMode.Live -> {
+                val seekBackIntent = PendingIntent.getService(
+                    context, 3,
+                    Intent(context, RadioPlaybackService::class.java).apply {
+                        action = ACTION_SEEK_BACK
+                    },
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                NotificationCompat.Action.Builder(
+                    android.R.drawable.ic_media_rew,
+                    context.getString(R.string.seek_back_30),
+                    seekBackIntent
+                ).build()
+            }
+            PlaybackMode.TimeShifted -> {
+                val goLiveIntent = PendingIntent.getService(
+                    context, 4,
+                    Intent(context, RadioPlaybackService::class.java).apply {
+                        action = ACTION_GO_LIVE
+                    },
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                NotificationCompat.Action.Builder(
+                    android.R.drawable.ic_media_ff,
+                    context.getString(R.string.go_live),
+                    goLiveIntent
+                ).build()
+            }
+        }
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
             .setContentText(currentArtist ?: getString(R.string.stream_description))
@@ -602,14 +655,26 @@ class RadioPlaybackService : MediaLibraryService() {
                         playIntent
                     ).build()
             )
-            .addAction(
-                NotificationCompat.Action.Builder(
-                    android.R.drawable.ic_media_rew,
-                    context.getString(R.string.seek_back_30),
-                    seekBackIntent
-                ).build()
-            )
+            .addAction(timeShiftAction)
             .build()
+    }
+
+    private fun updateCustomLayout() {
+        val session = mediaSession ?: return
+        val button = when (playbackMode) {
+            PlaybackMode.Live -> CommandButton.Builder()
+                .setDisplayName(getString(R.string.seek_back_30))
+                .setIconResId(android.R.drawable.ic_media_rew)
+                .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
+                .build()
+            PlaybackMode.TimeShifted -> CommandButton.Builder()
+                .setDisplayName(getString(R.string.go_live))
+                .setIconResId(android.R.drawable.ic_media_ff)
+                .setSessionCommand(SessionCommand(ACTION_GO_LIVE, android.os.Bundle.EMPTY))
+                .build()
+        }
+        session.setCustomLayout(ImmutableList.of(button))
+        updateNotificationSafe()
     }
 
     @SuppressLint("MissingPermission")
@@ -879,11 +944,16 @@ class RadioPlaybackService : MediaLibraryService() {
         private const val NOTIFICATION_ID = 1001
         private const val SEEK_BACK_INCREMENT_MS = 30_000L
 
+        // DVR time-shift buffer: 512KB ≈ 64s at 64kbps
+        internal const val REPLAY_BUFFER_SIZE = 524_288
+        private const val STREAM_BYTES_PER_SEC = 8_000L  // 64kbps
+
         // Intent actions
         private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
         const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
         private const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
         const val ACTION_SEEK_BACK = "com.cascadiacollections.sir.action.SEEK_BACK"
+        const val ACTION_GO_LIVE = "com.cascadiacollections.sir.action.GO_LIVE"
         const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"
         const val ACTION_SET_EQUALIZER = "com.cascadiacollections.sir.action.SET_EQUALIZER"
 

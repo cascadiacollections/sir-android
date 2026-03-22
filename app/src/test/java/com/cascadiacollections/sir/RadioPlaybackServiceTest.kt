@@ -19,6 +19,9 @@ class RadioPlaybackServiceTest {
         assertTrue(
             RadioPlaybackService.ACTION_SEEK_BACK.startsWith(prefix)
         )
+        assertTrue(
+            RadioPlaybackService.ACTION_GO_LIVE.startsWith(prefix)
+        )
     }
 
     @Test
@@ -37,6 +40,7 @@ class RadioPlaybackServiceTest {
         assertTrue(RadioPlaybackService.ACTION_SET_SLEEP_TIMER.endsWith("SET_SLEEP_TIMER"))
         assertTrue(RadioPlaybackService.ACTION_SET_EQUALIZER.endsWith("SET_EQUALIZER"))
         assertTrue(RadioPlaybackService.ACTION_SEEK_BACK.endsWith("SEEK_BACK"))
+        assertTrue(RadioPlaybackService.ACTION_GO_LIVE.endsWith("GO_LIVE"))
     }
 
     @Test
@@ -44,9 +48,10 @@ class RadioPlaybackServiceTest {
         val actions = setOf(
             RadioPlaybackService.ACTION_SET_SLEEP_TIMER,
             RadioPlaybackService.ACTION_SET_EQUALIZER,
-            RadioPlaybackService.ACTION_SEEK_BACK
+            RadioPlaybackService.ACTION_SEEK_BACK,
+            RadioPlaybackService.ACTION_GO_LIVE
         )
-        assertEquals(3, actions.size)
+        assertEquals(4, actions.size)
     }
 
     @Test
@@ -62,12 +67,22 @@ class RadioPlaybackServiceTest {
         val actions = setOf(
             RadioPlaybackService.ACTION_SET_SLEEP_TIMER,
             RadioPlaybackService.ACTION_SET_EQUALIZER,
-            RadioPlaybackService.ACTION_SEEK_BACK
+            RadioPlaybackService.ACTION_SEEK_BACK,
+            RadioPlaybackService.ACTION_GO_LIVE
         )
         val extras = setOf(
             RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,
             RadioPlaybackService.EXTRA_EQUALIZER_PRESET
         )
         assertTrue("Actions and extras must not share identical strings", actions.none { it in extras })
+    }
+
+    @Test
+    fun `REPLAY_BUFFER_SIZE holds at least 30 seconds at 64kbps`() {
+        val bytesFor30Seconds = 30 * 8_000  // 64kbps = 8KB/s
+        assertTrue(
+            "Buffer (${ RadioPlaybackService.REPLAY_BUFFER_SIZE }) must hold >= 30s ($bytesFor30Seconds bytes)",
+            RadioPlaybackService.REPLAY_BUFFER_SIZE >= bytesFor30Seconds
+        )
     }
 }

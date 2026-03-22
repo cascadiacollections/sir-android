@@ -298,14 +298,19 @@ class RadioPlaybackService : MediaLibraryService() {
                     when (customCommand.customAction) {
                         ACTION_SEEK_BACK -> {
                             val bytesToSeek = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
+                            if (!replayBuffer.canSeekBack(bytesToSeek)) {
+                                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
+                            }
                             timeShiftDataSourceFactory?.lastCreated?.seekBack(bytesToSeek)
                             playbackMode = PlaybackMode.TimeShifted
+                            flushPlayer()
                             updateCustomLayout()
                             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                         }
                         ACTION_GO_LIVE -> {
                             timeShiftDataSourceFactory?.lastCreated?.goLive()
                             playbackMode = PlaybackMode.Live
+                            flushPlayer()
                             updateCustomLayout()
                             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                         }
@@ -356,25 +361,15 @@ class RadioPlaybackService : MediaLibraryService() {
             })
             .setId(MEDIA_SESSION_ID)
             .build()
-            .also { session ->
-                // Register seek-back as a CommandButton so it appears in the
-                // Android 13+ system media player chip (not just expanded notification)
-                session.setCustomLayout(
-                    ImmutableList.of(
-                        CommandButton.Builder()
-                            .setDisplayName(getString(R.string.seek_back_30))
-                            .setIconResId(android.R.drawable.ic_media_rew)
-                            .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
-                            .build()
-                    )
-                )
-            }
+            // No initial custom layout — updateCustomLayout() adds "Replay 30s"
+            // once the buffer has enough data. Calling setCustomLayout with an
+            // empty list crashes the legacy PlaybackStateCompat stub.
 
         // Now add listeners after mediaSession is created
         player?.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY && player?.playWhenReady == true) {
-                    updateNotificationSafe()
+                    updateCustomLayout()
                 }
             }
 
@@ -487,14 +482,18 @@ class RadioPlaybackService : MediaLibraryService() {
 
             ACTION_SEEK_BACK -> {
                 val bytesToSeek = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
-                timeShiftDataSourceFactory?.lastCreated?.seekBack(bytesToSeek)
-                playbackMode = PlaybackMode.TimeShifted
-                updateCustomLayout()
+                if (replayBuffer.canSeekBack(bytesToSeek)) {
+                    timeShiftDataSourceFactory?.lastCreated?.seekBack(bytesToSeek)
+                    playbackMode = PlaybackMode.TimeShifted
+                    flushPlayer()
+                    updateCustomLayout()
+                }
             }
 
             ACTION_GO_LIVE -> {
                 timeShiftDataSourceFactory?.lastCreated?.goLive()
                 playbackMode = PlaybackMode.Live
+                flushPlayer()
                 updateCustomLayout()
             }
 
@@ -597,14 +596,13 @@ class RadioPlaybackService : MediaLibraryService() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val seekBackIntent = PendingIntent.getService(
-            context, 3,
-            Intent(context, RadioPlaybackService::class.java).apply {
-                action = ACTION_SEEK_BACK
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val compactActions = if (playbackMode is PlaybackMode.TimeShifted) intArrayOf(0, 1, 2) else intArrayOf(0, 1)
+        val seekBytes = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
+        val canSeek = replayBuffer.canSeekBack(seekBytes)
+
+        // Action index tracking for compact view
+        var actionIndex = 0
+        val compactIndices = mutableListOf(actionIndex) // play/pause always compact
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
             .setContentText(currentArtist ?: getString(R.string.stream_description))
@@ -616,9 +614,6 @@ class RadioPlaybackService : MediaLibraryService() {
             .setDeleteIntent(stopIntent)
             .setOngoing(player?.isPlaying == true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setStyle(
-                MediaStyleNotificationHelper.MediaStyle(session).setShowActionsInCompactView(*compactActions)
-            )
             .addAction(
                 if (player?.isPlaying == true)
                     NotificationCompat.Action.Builder(
@@ -633,15 +628,29 @@ class RadioPlaybackService : MediaLibraryService() {
                         playIntent
                     ).build()
             )
-            .addAction(
+
+        if (canSeek) {
+            actionIndex++
+            compactIndices += actionIndex
+            val seekBackIntent = PendingIntent.getService(
+                context, 3,
+                Intent(context, RadioPlaybackService::class.java).apply {
+                    action = ACTION_SEEK_BACK
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(
                 NotificationCompat.Action.Builder(
                     android.R.drawable.ic_media_rew,
                     context.getString(R.string.seek_back_30),
                     seekBackIntent
                 ).build()
             )
+        }
 
         if (playbackMode is PlaybackMode.TimeShifted) {
+            actionIndex++
+            compactIndices += actionIndex
             val goLiveIntent = PendingIntent.getService(
                 context, 4,
                 Intent(context, RadioPlaybackService::class.java).apply {
@@ -658,27 +667,53 @@ class RadioPlaybackService : MediaLibraryService() {
             )
         }
 
+        builder.setStyle(
+            MediaStyleNotificationHelper.MediaStyle(session)
+                .setShowActionsInCompactView(*compactIndices.toIntArray())
+        )
+
         return builder.build()
+    }
+
+    /**
+     * Force ExoPlayer to discard its internal decoded buffer and re-read from
+     * the [CircularByteBuffer] at the current read cursor position.
+     * Without this, ExoPlayer's 60s internal buffer would keep playing stale
+     * audio after a seekBack or goLive cursor change.
+     */
+    private fun flushPlayer() {
+        val p = player ?: return
+        val wasPlaying = p.playWhenReady
+        p.stop()
+        p.prepare()
+        if (wasPlaying) p.play()
     }
 
     private fun updateCustomLayout() {
         val session = mediaSession ?: return
-        val seekBackButton = CommandButton.Builder()
-            .setDisplayName(getString(R.string.seek_back_30))
-            .setIconResId(android.R.drawable.ic_media_rew)
-            .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
-            .build()
-        val buttons = if (playbackMode is PlaybackMode.TimeShifted) {
-            val liveButton = CommandButton.Builder()
+        val seekBytes = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
+        val canSeek = replayBuffer.canSeekBack(seekBytes)
+
+        val buttons = mutableListOf<CommandButton>()
+        if (canSeek) {
+            buttons += CommandButton.Builder()
+                .setDisplayName(getString(R.string.seek_back_30))
+                .setIconResId(android.R.drawable.ic_media_rew)
+                .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
+                .build()
+        }
+        if (playbackMode is PlaybackMode.TimeShifted) {
+            buttons += CommandButton.Builder()
                 .setDisplayName(getString(R.string.go_live))
                 .setIconResId(android.R.drawable.ic_media_ff)
                 .setSessionCommand(SessionCommand(ACTION_GO_LIVE, android.os.Bundle.EMPTY))
                 .build()
-            ImmutableList.of(seekBackButton, liveButton)
-        } else {
-            ImmutableList.of(seekBackButton)
         }
-        session.setCustomLayout(buttons)
+        // Only update layout when we have buttons — empty list crashes the
+        // legacy PlaybackStateCompat CustomAction builder (requires icon)
+        if (buttons.isNotEmpty()) {
+            session.setCustomLayout(ImmutableList.copyOf(buttons))
+        }
         updateNotificationSafe()
     }
 
@@ -910,6 +945,8 @@ class RadioPlaybackService : MediaLibraryService() {
         val newUrl = quality.url
         if (newUrl == currentStreamUrl) return
         currentStreamUrl = newUrl
+        replayBuffer.clear()
+        playbackMode = PlaybackMode.Live
         val wasPlaying = player?.isPlaying == true
         player?.stop()
         player?.setMediaItem(buildMediaItem())

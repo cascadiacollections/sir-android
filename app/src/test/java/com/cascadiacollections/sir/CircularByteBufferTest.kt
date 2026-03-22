@@ -225,6 +225,27 @@ class CircularByteBufferTest {
     }
 
     @Test
+    fun `canSeekBack false when not enough data buffered`() {
+        val buffer = CircularByteBuffer(64)
+        assertFalse(buffer.canSeekBack(1))
+
+        buffer.write(ByteArray(10), 0, 10)
+        // Data is ahead of read cursor, not behind it
+        assertFalse(buffer.canSeekBack(1))
+    }
+
+    @Test
+    fun `canSeekBack true after reading enough data`() {
+        val buffer = CircularByteBuffer(64)
+        buffer.write(ByteArray(20), 0, 20)
+        buffer.read(ByteArray(20), 0, 20)
+
+        assertTrue(buffer.canSeekBack(10))
+        assertTrue(buffer.canSeekBack(20))
+        assertFalse(buffer.canSeekBack(21))
+    }
+
+    @Test
     fun `read returns only available bytes when requested more`() {
         val buffer = CircularByteBuffer(64)
         buffer.write(byteArrayOf(1, 2, 3), 0, 3)

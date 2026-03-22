@@ -47,7 +47,7 @@ internal class CircularByteBuffer(val capacity: Int) {
      */
     fun read(dst: ByteArray, offset: Int, length: Int): Int {
         lock.withLock {
-            while (available() == 0) {
+            while (availableInternal() == 0) {
                 try {
                     dataAvailable.await()
                 } catch (_: InterruptedException) {
@@ -55,7 +55,7 @@ internal class CircularByteBuffer(val capacity: Int) {
                     return -1
                 }
             }
-            val toRead = length.coerceAtMost(available())
+            val toRead = length.coerceAtMost(availableInternal())
             for (i in 0 until toRead) {
                 dst[offset + i] = data[readPos]
                 readPos = (readPos + 1) % capacity
@@ -87,11 +87,7 @@ internal class CircularByteBuffer(val capacity: Int) {
     fun isLive(): Boolean = lock.withLock { readPos == writePos && totalWritten > 0 || totalWritten == 0L }
 
     /** Number of bytes available to read (ahead of read cursor). */
-    fun available(): Int = lock.withLock {
-        if (totalWritten == 0L) return@withLock 0
-        val diff = writePos - readPos
-        if (diff >= 0) diff else diff + capacity
-    }
+    fun available(): Int = lock.withLock { availableInternal() }
 
     /** Reset the buffer to its initial empty state. */
     fun clear() {
@@ -102,16 +98,23 @@ internal class CircularByteBuffer(val capacity: Int) {
         }
     }
 
+    /** True when at least [bytes] of previously read data can be replayed. */
+    fun canSeekBack(bytes: Int): Boolean = lock.withLock { seekBackAvailable() >= bytes }
+
     /**
      * Number of bytes behind the read cursor that can be seeked back to.
      * This is the data that has been read but is still in the buffer.
      */
-    private fun seekBackAvailable(): Int {
-        // Total data in buffer = min(totalWritten, capacity)
+    internal fun seekBackAvailable(): Int = lock.withLock {
         val totalInBuffer = totalWritten.coerceAtMost(capacity.toLong()).toInt()
-        // Data ahead of read cursor
-        val ahead = available()
-        // Data behind read cursor
-        return (totalInBuffer - ahead).coerceAtLeast(0)
+        val ahead = availableInternal()
+        (totalInBuffer - ahead).coerceAtLeast(0)
+    }
+
+    /** Unlocked available — call only while holding [lock]. */
+    private fun availableInternal(): Int {
+        if (totalWritten == 0L) return 0
+        val diff = writePos - readPos
+        return if (diff >= 0) diff else diff + capacity
     }
 }

@@ -29,7 +29,8 @@ internal class TimeShiftDataSource(
 
     override fun open(dataSpec: DataSpec): Long {
         upstream.open(dataSpec)
-        buffer.clear()
+        // Do NOT clear the buffer here — buffered audio must survive player
+        // stop/prepare cycles triggered by seekBack and goLive.
 
         readerThread = thread(isDaemon = true, name = "SIR-TimeShift") {
             val chunk = ByteArray(8192)
@@ -43,6 +44,9 @@ internal class TimeShiftDataSource(
                 }
             } catch (_: InterruptedException) {
                 // Expected on close
+            } catch (_: Exception) {
+                // Socket closed, HTTP errors, etc. — expected when DataSource is closed
+                // during a seek or quality change
             }
         }
 

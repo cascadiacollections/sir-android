@@ -28,7 +28,7 @@ robolectric = "4.14.1"
 mockk = "1.14.2"
 turbine = "1.2.0"
 uiautomator = "2.3.0"
-wearCompose = "1.4.1"
+wearCompose = "1.6.0"
 wearComposeMaterial3 = "1.5.0"
 
 [libraries]

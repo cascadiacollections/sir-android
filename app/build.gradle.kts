@@ -152,6 +152,10 @@ dependencies {
     // Splash screen
     implementation(libs.androidx.splashscreen)
 
+    // Glance widget
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+
     // Baseline Profiles - enables AOT compilation for faster startup
     implementation(libs.androidx.profileinstaller)
 

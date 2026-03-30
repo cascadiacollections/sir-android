@@ -41,8 +41,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.core.ktx)
 
-    // Wear Compose
-    implementation(libs.wear.compose.material)
+    // Wear Compose Material 3
+    implementation(libs.wear.compose.material3)
     implementation(libs.wear.compose.foundation)
     implementation(libs.androidx.compose.material.icons.extended)
 

@@ -30,16 +30,15 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.ButtonDefaults
-import androidx.wear.compose.material.CircularProgressIndicator
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText
-import androidx.wear.compose.material.Vignette
-import androidx.wear.compose.material.VignettePosition
+import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.IconButton
+import androidx.wear.compose.material3.IconButtonDefaults
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TimeText
 import kotlinx.coroutines.guava.await
 
 class WearActivity : ComponentActivity() {
@@ -88,32 +87,33 @@ class WearActivity : ComponentActivity() {
         }
 
         MaterialTheme {
-            Scaffold(
-                timeText = { TimeText() },
-                vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) }
-            ) {
-                WearPlayerUi(
-                    isPlaying = isPlaying,
-                    isBuffering = isBuffering,
-                    trackTitle = trackTitle,
-                    onToggle = {
-                        val ctrl = controller
-                        if (ctrl != null) {
-                            if (ctrl.isPlaying) ctrl.pause() else {
+            AppScaffold {
+                ScreenScaffold(
+                    timeText = { TimeText() }
+                ) {
+                    WearPlayerUi(
+                        isPlaying = isPlaying,
+                        isBuffering = isBuffering,
+                        trackTitle = trackTitle,
+                        onToggle = {
+                            val ctrl = controller
+                            if (ctrl != null) {
+                                if (ctrl.isPlaying) ctrl.pause() else {
+                                    ContextCompat.startForegroundService(
+                                        this@WearActivity,
+                                        android.content.Intent(this@WearActivity, WearPlaybackService::class.java)
+                                    )
+                                    ctrl.play()
+                                }
+                            } else {
                                 ContextCompat.startForegroundService(
                                     this@WearActivity,
                                     android.content.Intent(this@WearActivity, WearPlaybackService::class.java)
                                 )
-                                ctrl.play()
                             }
-                        } else {
-                            ContextCompat.startForegroundService(
-                                this@WearActivity,
-                                android.content.Intent(this@WearActivity, WearPlaybackService::class.java)
-                            )
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -136,23 +136,23 @@ private fun WearPlayerUi(
         ) {
             Text(
                 text = stringResource(R.string.station_name),
-                style = MaterialTheme.typography.title3
+                style = MaterialTheme.typography.titleMedium
             )
             if (trackTitle != null) {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = trackTitle,
-                    style = MaterialTheme.typography.caption2,
+                    style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center
                 )
             }
             Spacer(Modifier.height(12.dp))
             if (isBuffering) {
-                CircularProgressIndicator(modifier = Modifier.size(ButtonDefaults.LargeButtonSize))
+                CircularProgressIndicator(modifier = Modifier.size(IconButtonDefaults.LargeButtonSize))
             } else {
-                Button(
+                IconButton(
                     onClick = onToggle,
-                    modifier = Modifier.size(ButtonDefaults.LargeButtonSize)
+                    modifier = Modifier.size(IconButtonDefaults.LargeButtonSize)
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -164,7 +164,7 @@ private fun WearPlayerUi(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.live),
-                    style = MaterialTheme.typography.caption2
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }

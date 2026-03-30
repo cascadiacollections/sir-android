@@ -25,7 +25,7 @@ splashscreen = "1.0.1"
 profileinstaller = "1.4.1"
 benchmarkMacro = "1.4.1"
 uiautomator = "2.3.0"
-wearCompose = "1.4.1"
+wearCompose = "1.6.0"
 wearComposeMaterial3 = "1.5.0"
 
 [libraries]

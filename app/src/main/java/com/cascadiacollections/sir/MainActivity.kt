@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.cascadiacollections.sir
 
 import android.Manifest
@@ -17,13 +19,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +42,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -76,8 +76,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -502,10 +500,19 @@ private fun RadioUi(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+        ) {
+            if (isBuffering || isPlaying) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
                 .padding(horizontal = horizontalPadding, vertical = 24.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -521,48 +528,24 @@ private fun RadioUi(
                     modifier = Modifier.padding(top = 12.dp),
                     textAlign = TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                StreamVisualizer(
+                    isPlaying = isPlaying,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                )
                 Spacer(modifier = Modifier.height(32.dp))
                 LargeFloatingActionButton(
                     onClick = onToggle,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
-                    if (isPlaying) {
-                        val barColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        val transition = rememberInfiniteTransition(label = "eq")
-                        val h1 by transition.animateFloat(
-                            initialValue = 0.3f, targetValue = 1.0f,
-                            animationSpec = infiniteRepeatable(tween(400, easing = LinearEasing), RepeatMode.Reverse),
-                            label = "h1"
-                        )
-                        val h2 by transition.animateFloat(
-                            initialValue = 0.8f, targetValue = 0.25f,
-                            animationSpec = infiniteRepeatable(tween(600, easing = LinearEasing), RepeatMode.Reverse),
-                            label = "h2"
-                        )
-                        val h3 by transition.animateFloat(
-                            initialValue = 0.5f, targetValue = 0.95f,
-                            animationSpec = infiniteRepeatable(tween(500, easing = LinearEasing), RepeatMode.Reverse),
-                            label = "h3"
-                        )
-                        Canvas(modifier = Modifier.size(36.dp)) {
-                            val bw = size.width / 7f
-                            listOf(h1, h2, h3).forEachIndexed { i, h ->
-                                val bh = size.height * h
-                                drawRect(
-                                    color = barColor,
-                                    topLeft = Offset(bw * (1 + i * 2.5f), size.height - bh),
-                                    size = Size(bw, bh)
-                                )
-                            }
-                        }
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = stringResource(R.string.play),
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = stringResource(R.string.play),
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
                 if (sleepTimerLabel != null) {
                     Text(
@@ -573,6 +556,7 @@ private fun RadioUi(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -590,6 +574,62 @@ fun RadioScreenPreview() {
             onSettingsClick = {},
             onToggle = {}
         )
+    }
+}
+
+@Composable
+private fun StreamVisualizer(
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val barColor = MaterialTheme.colorScheme.primaryContainer
+
+    var tick by remember { mutableStateOf(0f) }
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            while (true) {
+                tick += 0.035f
+                delay(50L)
+            }
+        } else {
+            tick = 0f
+        }
+    }
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        // Each bar: phase offset, primary speed, secondary speed (layered sine for less predictable motion)
+        val bars = listOf(
+            Triple(0.0f, 0.7f, 1.9f),
+            Triple(0.9f, 0.5f, 2.3f),
+            Triple(1.8f, 0.8f, 1.7f),
+            Triple(0.5f, 0.6f, 2.1f),
+            Triple(2.4f, 0.9f, 1.5f),
+            Triple(1.3f, 0.55f, 2.5f),
+            Triple(3.1f, 0.75f, 1.8f),
+            Triple(0.3f, 0.65f, 2.2f),
+            Triple(2.0f, 0.85f, 1.6f),
+        )
+        bars.forEach { (offset, speed1, speed2) ->
+            // Layer two sine waves at different frequencies for organic feel
+            val primary = kotlin.math.sin((tick * speed1 + offset).toDouble())
+            val secondary = kotlin.math.sin((tick * speed2 + offset * 1.7).toDouble()) * 0.3
+            val h = ((primary + secondary + 1.3) / 2.6)
+                .toFloat()
+                .coerceIn(0.15f, 0.85f)
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight(fraction = h)
+                    .background(
+                        barColor,
+                        RoundedCornerShape(topStartPercent = 50, topEndPercent = 50)
+                    )
+            )
+        }
     }
 }
 
@@ -844,9 +884,8 @@ private fun SettingsDialog(
 
                     when (castModuleState) {
                         is CastModuleState.Installing -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
+                            LoadingIndicator(
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 

@@ -83,6 +83,12 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 
+    lint {
+        baseline = file("lint-baseline.xml")
+        abortOnError = true
+        warningsAsErrors = false
+    }
+
     // Dynamic feature modules
     dynamicFeatures += setOf(":cast")
 

@@ -120,7 +120,7 @@ class WearActivity : ComponentActivity() {
 }
 
 @Composable
-private fun WearPlayerUi(
+internal fun WearPlayerUi(
     isPlaying: Boolean,
     isBuffering: Boolean,
     trackTitle: String?,

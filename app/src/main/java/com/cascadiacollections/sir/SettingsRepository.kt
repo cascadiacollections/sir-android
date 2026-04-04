@@ -36,9 +36,9 @@ enum class SleepTimerDuration(val minutes: Int, val label: String) {
  * paths here if the station exposes them (e.g., /stream_lo for 64kbps).
  */
 enum class StreamQuality(val label: String, val url: String) {
-    HIGH("High (default)", "https://broadcast.shoutcheap.com/proxy/willradio/stream"),
-    MEDIUM("Medium", "https://broadcast.shoutcheap.com/proxy/willradio/stream"),
-    LOW("Low", "https://broadcast.shoutcheap.com/proxy/willradio/stream");
+    HIGH("High (default)", StreamConfig.DEFAULT_STREAM_URL),
+    MEDIUM("Medium", StreamConfig.DEFAULT_STREAM_URL),
+    LOW("Low", StreamConfig.DEFAULT_STREAM_URL);
 
     companion object {
         fun fromOrdinal(ordinal: Int): StreamQuality = entries.getOrNull(ordinal) ?: HIGH

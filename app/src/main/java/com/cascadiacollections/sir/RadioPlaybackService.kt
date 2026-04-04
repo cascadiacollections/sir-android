@@ -157,6 +157,20 @@ class RadioPlaybackService : MediaLibraryService() {
             }
             // Load and apply equalizer preset
             currentEqualizerPreset = settingsRepository.equalizerPreset.first()
+
+            // Restore sleep timer if it was active before process death
+            val firesAt = settingsRepository.sleepTimerFiresAt.first()
+            if (firesAt > 0L) {
+                val remainingMs = firesAt - System.currentTimeMillis()
+                if (remainingMs > 0L) {
+                    val remainingMinutes = (remainingMs / 60_000).toInt().coerceAtLeast(1)
+                    setSleepTimer(remainingMinutes)
+                    Log.d(TAG, "Restored sleep timer: ${remainingMinutes}m remaining")
+                } else {
+                    // Timer already expired — clear persisted value
+                    settingsRepository.setSleepTimerFiresAt(0L)
+                }
+            }
         }
 
         // Initialize wake locks to prevent device sleep during playback
@@ -988,10 +1002,8 @@ class RadioPlaybackService : MediaLibraryService() {
         private const val TAG = "RadioPlaybackService"
 
         // Stream configuration
-        private const val DEFAULT_STREAM_URL =
-            "https://broadcast.shoutcheap.com/proxy/willradio/stream"
+        private const val DEFAULT_STREAM_URL = StreamConfig.DEFAULT_STREAM_URL
         private const val DEFAULT_STATION_NAME = "SIR"
-        private const val DEFAULT_STREAM_DESCRIPTION = "Live stream"
 
         // Stream's static metadata values (not real track info)
         private const val STREAM_STATIC_TITLE = "Will Radio Stream"

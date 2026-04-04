@@ -44,6 +44,7 @@ internal class CircularByteBuffer(val capacity: Int) {
     /**
      * Read bytes from the buffer. Blocks when no data is available.
      * Returns the number of bytes actually read, or -1 if interrupted.
+     * Uses [System.arraycopy] for bulk reads when possible.
      */
     fun read(dst: ByteArray, offset: Int, length: Int): Int {
         lock.withLock {
@@ -56,9 +57,16 @@ internal class CircularByteBuffer(val capacity: Int) {
                 }
             }
             val toRead = length.coerceAtMost(availableInternal())
-            for (i in 0 until toRead) {
-                dst[offset + i] = data[readPos]
-                readPos = (readPos + 1) % capacity
+            var remaining = toRead
+            var dstPos = offset
+
+            while (remaining > 0) {
+                val spaceToEnd = capacity - readPos
+                val chunk = remaining.coerceAtMost(spaceToEnd)
+                System.arraycopy(data, readPos, dst, dstPos, chunk)
+                readPos = (readPos + chunk) % capacity
+                dstPos += chunk
+                remaining -= chunk
             }
             return toRead
         }
@@ -84,7 +92,7 @@ internal class CircularByteBuffer(val capacity: Int) {
     }
 
     /** True when the read cursor is at the write cursor (no delay). */
-    fun isLive(): Boolean = lock.withLock { readPos == writePos && totalWritten > 0 || totalWritten == 0L }
+    fun isLive(): Boolean = lock.withLock { (readPos == writePos && totalWritten > 0) || totalWritten == 0L }
 
     /** Number of bytes available to read (ahead of read cursor). */
     fun available(): Int = lock.withLock { availableInternal() }

@@ -1,8 +1,7 @@
 package com.cascadiacollections.sir
 
+import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import androidx.core.content.ContextCompat
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -19,7 +18,6 @@ import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
@@ -31,6 +29,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import com.cascadiacollections.sir.ui.theme.Amber40
 import com.cascadiacollections.sir.ui.theme.Amber80
 import com.cascadiacollections.sir.ui.theme.AmberGrey40
@@ -89,10 +90,26 @@ class RadioWidget : GlanceAppWidget() {
 
 class TogglePlaybackAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val intent = Intent(context, RadioPlaybackService::class.java).apply {
-            action = RadioPlaybackService.ACTION_PLAY
+        // Try to connect to existing media session and toggle
+        try {
+            val token = SessionToken(
+                context,
+                ComponentName(context, RadioPlaybackService::class.java)
+            )
+            val controller = MediaController.Builder(context, token)
+                .buildAsync()
+            val ctrl = controller.get()
+            if (ctrl.isConnected && ctrl.playWhenReady && ctrl.playbackState == Player.STATE_READY) {
+                ctrl.pause()
+            } else {
+                context.ensureRadioServiceRunning()
+                ctrl.play()
+            }
+            ctrl.release()
+        } catch (_: Exception) {
+            // No existing session — start service fresh
+            context.ensureRadioServiceRunning()
         }
-        ContextCompat.startForegroundService(context, intent)
     }
 }
 

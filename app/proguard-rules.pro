@@ -58,8 +58,9 @@
 -optimizationpasses 5
 -allowaccessmodification
 -repackageclasses ''
--mergeinterfacesaggressively
--overloadaggressively
+# NOTE: -mergeinterfacesaggressively and -overloadaggressively removed —
+# they cause subtle runtime failures with reflection-based libraries
+# (Compose, DataStore, Cast SDK).
 
 # Remove logging in release
 -assumenosideeffects class android.util.Log {

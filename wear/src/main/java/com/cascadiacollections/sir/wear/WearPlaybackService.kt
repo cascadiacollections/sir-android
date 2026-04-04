@@ -120,6 +120,7 @@ class WearPlaybackService : MediaSessionService() {
     }
 
     companion object {
+        // Canonical source: app/.../StreamConfig.DEFAULT_STREAM_URL
         private const val STREAM_URL = "https://broadcast.shoutcheap.com/proxy/willradio/stream"
         private const val SESSION_ID = "sir_wear_session"
         private const val CHANNEL_ID = "wear_radio_playback"

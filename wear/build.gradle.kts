@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.cascadiacollections.sir.wear"
-    compileSdk = 36
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
         applicationId = "com.cascadiacollections.sir.wear"
-        minSdk = 30
-        targetSdk = 36
+        minSdk = 30 // Wear OS 2+ only
+        targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
     }

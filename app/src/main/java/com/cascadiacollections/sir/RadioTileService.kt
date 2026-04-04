@@ -10,7 +10,6 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import kotlinx.coroutines.guava.await
-import kotlinx.coroutines.runBlocking
 
 class RadioTileService : TileService() {
 
@@ -72,14 +71,6 @@ class RadioTileService : TileService() {
         tile.updateTile()
     }
 
-    private fun ensureRadioServiceRunning() {
-        val intent = android.content.Intent(this, RadioPlaybackService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ContextCompat.startForegroundService(this, intent)
-        } else {
-            startService(intent)
-        }
-    }
 
     companion object {
         private const val TAG = "RadioTileService"

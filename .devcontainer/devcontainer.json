@@ -26,7 +26,7 @@
       }
     }
   },
-  "postCreateCommand": "./gradlew --version",
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.gradle && ./gradlew --version",
   "containerEnv": {
     "ANDROID_HOME": "/usr/local/android-sdk",
     "GRADLE_USER_HOME": "/home/vscode/.gradle"

@@ -148,8 +148,6 @@ class SettingsRepository(private val context: Context) {
     // Now-playing history (pipe-delimited: timestamp|title|artist, one per line, newest first)
     private val nowPlayingHistoryKey = stringPreferencesKey("now_playing_history")
 
-    data class HistoryEntry(val timestamp: Long, val title: String, val artist: String?)
-
     val nowPlayingHistory: Flow<List<HistoryEntry>> = context.dataStore.data.map { prefs ->
         prefs[nowPlayingHistoryKey]
             ?.splitToSequence('\n')
@@ -169,7 +167,9 @@ class SettingsRepository(private val context: Context) {
             val existing = prefs[nowPlayingHistoryKey]
                 ?.split('\n')?.toMutableList() ?: mutableListOf()
             // Deduplicate consecutive identical tracks
-            val newLine = "${System.currentTimeMillis()}|$title|${artist.orEmpty()}"
+            val safeTitle = title.replace('|', '-')
+            val safeArtist = artist.orEmpty().replace('|', '-')
+            val newLine = "${System.currentTimeMillis()}|$safeTitle|$safeArtist"
             val lastTitle = existing.firstOrNull()?.split('|')?.getOrNull(1)
             if (lastTitle != title) {
                 existing.add(0, newLine)

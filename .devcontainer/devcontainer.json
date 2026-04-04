@@ -5,8 +5,11 @@
   },
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/anthropics/claude-code-devcontainer-feature:latest": {}
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
   },
+  "postStartCommand": "npm install -g @anthropic-ai/claude-code || true",
   "customizations": {
     "vscode": {
       "extensions": [

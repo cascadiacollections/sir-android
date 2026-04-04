@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "fwcd.kotlin",
+    "vscjava.vscode-gradle",
+    "mathiasfrohlich.Kotlin",
+    "naco-siren.gradle-language",
+    "esafirm.kotlin-formatter",
+    "anthropic.claude-code"
+  ]
+}

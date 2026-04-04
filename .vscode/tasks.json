@@ -1,0 +1,68 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Debug",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["assembleDebug", "--no-daemon"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gradle"]
+    },
+    {
+      "label": "Build Release",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["assembleRelease", "--no-daemon"],
+      "group": "build",
+      "problemMatcher": ["$gradle"]
+    },
+    {
+      "label": "Test",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["testDebugUnitTest", "--no-daemon"],
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": ["$gradle"]
+    },
+    {
+      "label": "Test All",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["testDebugUnitTest", ":wear:testDebugUnitTest", "--no-daemon", "--parallel"],
+      "group": "test",
+      "problemMatcher": ["$gradle"]
+    },
+    {
+      "label": "Install Debug on Device",
+      "type": "shell",
+      "command": "just",
+      "args": ["install"],
+      "group": "build",
+      "problemMatcher": ["$gradle"]
+    },
+    {
+      "label": "Lint",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["lintDebug", "--no-daemon"],
+      "group": "test",
+      "problemMatcher": ["$gradle"]
+    },
+    {
+      "label": "Coverage Report",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["jacocoTestReport", "--no-daemon"],
+      "group": "test",
+      "problemMatcher": ["$gradle"]
+    },
+    {
+      "label": "Clean",
+      "type": "shell",
+      "command": "./gradlew",
+      "args": ["clean", "--no-daemon"],
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "files.exclude": {
+    "**/.gradle": true,
+    "**/.kotlin": true,
+    "**/build": true,
+    "**/.DS_Store": true,
+    "**/*.iml": true,
+    ".idea": true,
+    "local.properties": true
+  },
+  "files.watcherExclude": {
+    "**/.gradle/**": true,
+    "**/build/**": true,
+    "**/.kotlin/**": true
+  },
+  "search.exclude": {
+    "**/build": true,
+    "**/.gradle": true,
+    "**/.kotlin": true
+  },
+  "files.associations": {
+    "*.kts": "kotlin",
+    "*.pro": "text",
+    "gradlew": "shellscript"
+  },
+  "kotlin.languageServer.enabled": true,
+  "kotlin.debugAdapter.enabled": true,
+  "kotlin.compiler.jvm.target": "21",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "editor.formatOnSave": true,
+  "[kotlin]": {
+    "editor.defaultFormatter": "fwcd.kotlin",
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+  },
+  "[xml]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+  },
+  "[gradle]": {
+    "editor.tabSize": 4
+  },
+  "gradle.javaHome": "${config:java.home}"
+}

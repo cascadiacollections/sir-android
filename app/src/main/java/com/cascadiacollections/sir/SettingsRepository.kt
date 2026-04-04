@@ -145,40 +145,6 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    // Now-playing history (pipe-delimited: timestamp|title|artist, one per line, newest first)
-    private val nowPlayingHistoryKey = stringPreferencesKey("now_playing_history")
-
-    val nowPlayingHistory: Flow<List<HistoryEntry>> = context.dataStore.data.map { prefs ->
-        prefs[nowPlayingHistoryKey]
-            ?.splitToSequence('\n')
-            ?.mapNotNull { line ->
-                val parts = line.split('|', limit = 3)
-                val ts = parts.getOrNull(0)?.toLongOrNull() ?: return@mapNotNull null
-                val title = parts.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                HistoryEntry(ts, title, parts.getOrNull(2)?.takeIf { it.isNotBlank() })
-            }
-            ?.toList()
-            ?: emptyList()
-    }
-
-    suspend fun addHistoryEntry(title: String, artist: String?) {
-        if (title.isBlank()) return
-        context.dataStore.edit { prefs ->
-            val existing = prefs[nowPlayingHistoryKey]
-                ?.split('\n')?.toMutableList() ?: mutableListOf()
-            // Deduplicate consecutive identical tracks
-            val safeTitle = title.replace('|', '-')
-            val safeArtist = artist.orEmpty().replace('|', '-')
-            val newLine = "${System.currentTimeMillis()}|$safeTitle|$safeArtist"
-            val lastTitle = existing.firstOrNull()?.split('|')?.getOrNull(1)
-            if (lastTitle != title) {
-                existing.add(0, newLine)
-                if (existing.size > 50) existing.subList(50, existing.size).clear()
-                prefs[nowPlayingHistoryKey] = existing.joinToString("\n")
-            }
-        }
-    }
-
     /**
      * Flow of custom stream URL (debug only feature)
      */

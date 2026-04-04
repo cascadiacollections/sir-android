@@ -14,21 +14,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -117,7 +108,6 @@ fun RadioScreen(
 
     // Settings dialog state
     var showSettings by rememberSaveable { mutableStateOf(false) }
-    var showHistory by rememberSaveable { mutableStateOf(false) }
 
     // Cast state
     val castDevicesAvailable by castDeviceDetector?.castDevicesAvailable?.collectAsState()
@@ -190,48 +180,8 @@ fun RadioScreen(
         sleepTimerLabel = uiState.sleepTimerLabel,
         showSettingsButton = true,
         onSettingsClick = { showSettings = true },
-        onHistoryClick = { showHistory = true },
         onToggle = { viewModel.togglePlayback() }
     )
-
-    // History bottom sheet
-    if (showHistory) {
-        val history by settingsRepository.nowPlayingHistory.collectAsState(emptyList())
-        ModalBottomSheet(
-            onDismissRequest = { showHistory = false },
-            sheetState = rememberModalBottomSheetState()
-        ) {
-            Text(
-                text = stringResource(R.string.history),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            if (history.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.history_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp)
-                )
-            } else {
-                Column(
-                    modifier = Modifier
-                        .verticalScroll(rememberScrollState())
-                        .padding(bottom = 32.dp)
-                ) {
-                    history.forEach { entry ->
-                        ListItem(
-                            headlineContent = { Text(entry.title) },
-                            supportingContent = entry.artist?.let {
-                                { Text(it) }
-                            }
-                        )
-                        HorizontalDivider()
-                    }
-                }
-            }
-        }
-    }
 
     // Settings dialog
     if (showSettings && castFeatureManager != null) {

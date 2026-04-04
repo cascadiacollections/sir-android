@@ -69,9 +69,6 @@ class RadioViewModel(
             val title = mediaMetadata.title?.toString()
             val artist = mediaMetadata.artist?.toString()
             _uiState.update { it.copy(trackTitle = title, artist = artist) }
-            title?.let {
-                viewModelScope.launch { settingsRepository.addHistoryEntry(it, artist) }
-            }
         }
     }
 

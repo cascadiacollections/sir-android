@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -62,7 +61,6 @@ fun RadioUi(
     sleepTimerLabel: String? = null,
     showSettingsButton: Boolean = false,
     onSettingsClick: () -> Unit = {},
-    onHistoryClick: () -> Unit = {},
     onToggle: () -> Unit
 ) {
     // Widen margins on medium/expanded screens (Pixel 10 Pro Fold, tablets) so the
@@ -97,13 +95,6 @@ fun RadioUi(
                 TopAppBar(
                     title = {},
                     actions = {
-                        IconButton(onClick = onHistoryClick) {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = stringResource(R.string.history),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                         if (isPlaying && trackTitle != null) {
                             IconButton(onClick = {
                                 val shareText = listOfNotNull(trackTitle, artist).joinToString(" — ")

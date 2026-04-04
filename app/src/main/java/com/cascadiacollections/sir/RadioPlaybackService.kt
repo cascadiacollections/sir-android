@@ -311,6 +311,7 @@ class RadioPlaybackService : MediaLibraryService() {
                 ): ListenableFuture<SessionResult> {
                     when (customCommand.customAction) {
                         ACTION_SEEK_BACK -> {
+                            if (!SEEKBACK_ENABLED) return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
                             val bytesToSeek = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
                             if (!replayBuffer.canSeekBack(bytesToSeek)) {
                                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
@@ -322,6 +323,7 @@ class RadioPlaybackService : MediaLibraryService() {
                             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                         }
                         ACTION_GO_LIVE -> {
+                            if (!SEEKBACK_ENABLED) return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
                             timeShiftDataSourceFactory?.lastCreated?.goLive()
                             playbackMode = PlaybackMode.Live
                             flushPlayer()
@@ -394,7 +396,7 @@ class RadioPlaybackService : MediaLibraryService() {
                         NOTIFICATION_ID,
                         buildNotification(context)
                     )
-                    scheduleSeekBackReveal()
+                    if (SEEKBACK_ENABLED) scheduleSeekBackReveal()
                 } else {
                     releaseLocks()
                     stopForeground(STOP_FOREGROUND_DETACH)
@@ -496,20 +498,24 @@ class RadioPlaybackService : MediaLibraryService() {
             }
 
             ACTION_SEEK_BACK -> {
-                val bytesToSeek = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
-                if (replayBuffer.canSeekBack(bytesToSeek)) {
-                    timeShiftDataSourceFactory?.lastCreated?.seekBack(bytesToSeek)
-                    playbackMode = PlaybackMode.TimeShifted
-                    flushPlayer()
-                    updateCustomLayout()
+                if (SEEKBACK_ENABLED) {
+                    val bytesToSeek = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
+                    if (replayBuffer.canSeekBack(bytesToSeek)) {
+                        timeShiftDataSourceFactory?.lastCreated?.seekBack(bytesToSeek)
+                        playbackMode = PlaybackMode.TimeShifted
+                        flushPlayer()
+                        updateCustomLayout()
+                    }
                 }
             }
 
             ACTION_GO_LIVE -> {
-                timeShiftDataSourceFactory?.lastCreated?.goLive()
-                playbackMode = PlaybackMode.Live
-                flushPlayer()
-                updateCustomLayout()
+                if (SEEKBACK_ENABLED) {
+                    timeShiftDataSourceFactory?.lastCreated?.goLive()
+                    playbackMode = PlaybackMode.Live
+                    flushPlayer()
+                    updateCustomLayout()
+                }
             }
 
             ACTION_SET_SLEEP_TIMER -> {
@@ -645,7 +651,7 @@ class RadioPlaybackService : MediaLibraryService() {
                     ).build()
             )
 
-        if (canSeek) {
+        if (SEEKBACK_ENABLED && canSeek) {
             actionIndex++
             compactIndices += actionIndex
             val seekBackIntent = PendingIntent.getService(
@@ -664,7 +670,7 @@ class RadioPlaybackService : MediaLibraryService() {
             )
         }
 
-        if (playbackMode is PlaybackMode.TimeShifted) {
+        if (SEEKBACK_ENABLED && playbackMode is PlaybackMode.TimeShifted) {
             actionIndex++
             compactIndices += actionIndex
             val goLiveIntent = PendingIntent.getService(
@@ -727,14 +733,14 @@ class RadioPlaybackService : MediaLibraryService() {
         val canSeek = replayBuffer.canSeekBack(seekBytes)
 
         val buttons = mutableListOf<CommandButton>()
-        if (canSeek) {
+        if (SEEKBACK_ENABLED && canSeek) {
             buttons += CommandButton.Builder()
                 .setDisplayName(getString(R.string.seek_back_30))
                 .setIconResId(android.R.drawable.ic_media_rew)
                 .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
                 .build()
         }
-        if (playbackMode is PlaybackMode.TimeShifted) {
+        if (SEEKBACK_ENABLED && playbackMode is PlaybackMode.TimeShifted) {
             buttons += CommandButton.Builder()
                 .setDisplayName(getString(R.string.go_live))
                 .setIconResId(android.R.drawable.ic_media_ff)
@@ -1014,6 +1020,9 @@ class RadioPlaybackService : MediaLibraryService() {
         private const val BROWSE_ROOT_ID = "sir_root"
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
+        // Feature flags
+        const val SEEKBACK_ENABLED = false
+
         private const val SEEK_BACK_INCREMENT_MS = 30_000L
 
         // DVR time-shift buffer: 512KB ≈ 64s at 64kbps

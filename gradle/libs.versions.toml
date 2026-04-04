@@ -24,6 +24,9 @@ glance = "1.1.1"
 splashscreen = "1.0.1"
 profileinstaller = "1.4.1"
 benchmarkMacro = "1.4.1"
+robolectric = "4.14.1"
+mockk = "1.14.2"
+turbine = "1.2.0"
 uiautomator = "2.3.0"
 wearCompose = "1.4.1"
 wearComposeMaterial3 = "1.5.0"
@@ -68,6 +71,10 @@ android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", ve
 wear-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "wearCompose" }
 wear-compose-material3 = { group = "androidx.wear.compose", name = "compose-material3", version.ref = "wearComposeMaterial3" }
 wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-foundation", version.ref = "wearCompose" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacro" }
 androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 

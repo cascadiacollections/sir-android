@@ -42,12 +42,20 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build APKs, AAB and Run Tests (Parallel)
-        run: ./gradlew assembleRelease assembleDebug bundleRelease testDebugUnitTest --no-daemon --parallel --build-cache
+        run: ./gradlew assembleRelease assembleDebug bundleRelease testDebugUnitTest jacocoTestReport --no-daemon --parallel --build-cache
         env:
           KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ github.sha }}
+          path: app/build/reports/jacoco/jacocoTestReport/html/
+          retention-days: 7
 
       # Upload APK artifacts (legacy sideload support)
       - name: Upload APK Artifacts

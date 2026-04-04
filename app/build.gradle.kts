@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("sir.android.app")
     alias(libs.plugins.kotlin.compose)
+    id("jacoco")
 }
 
 // Load keystore.properties for local development (CI uses env vars instead)
@@ -76,6 +77,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 
     // Dynamic feature modules
@@ -163,6 +168,13 @@ dependencies {
     implementation(libs.kotlinx.coroutines.guava)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -172,4 +184,29 @@ dependencies {
 
     // Memory leak detection in debug builds (runs in separate process to avoid dynamic feature conflicts)
     debugImplementation(libs.leakcanary.android)
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+
+    val kotlinClasses = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+        exclude(
+            "**/R.class", "**/R$*.class",
+            "**/BuildConfig.class",
+            "**/ui/theme/**",
+            "**/*Preview*.class",
+        )
+    }
+
+    classDirectories.setFrom(kotlinClasses)
+    sourceDirectories.setFrom("${projectDir}/src/main/java")
+    executionData.setFrom(
+        fileTree(layout.buildDirectory) { include("jacoco/testDebugUnitTest.exec") }
+    )
 }

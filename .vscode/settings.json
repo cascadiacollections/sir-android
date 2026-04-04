@@ -40,5 +40,6 @@
   "[gradle]": {
     "editor.tabSize": 4
   },
-  "gradle.javaHome": "${config:java.home}"
+  "gradle.javaHome": "${config:java.home}",
+  "java.compile.nullAnalysis.mode": "automatic"
 }

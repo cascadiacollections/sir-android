@@ -3,13 +3,11 @@
 package com.cascadiacollections.sir
 
 import android.Manifest
-import android.content.ComponentName
+import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,13 +30,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -49,21 +45,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.PlaybackException
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
-import androidx.media3.session.MediaController
-import androidx.media3.session.SessionToken
 import com.cascadiacollections.sir.ui.RadioUi
 import com.cascadiacollections.sir.ui.SettingsSheet
 import com.cascadiacollections.sir.ui.theme.SirTheme
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.guava.await
-import kotlinx.coroutines.launch
 
-private const val RADIO_TAG = "RadioScreen"
 private const val ACTION_SHORTCUT_PLAY = "com.cascadiacollections.sir.SHORTCUT_PLAY"
 
 class MainActivity : ComponentActivity() {
@@ -126,7 +114,6 @@ fun RadioScreen(
 ) {
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
-    val scope = rememberCoroutineScope()
 
     // Settings dialog state
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -166,20 +153,13 @@ fun RadioScreen(
         return
     }
 
-    val sessionToken = remember {
-        SessionToken(
-            context,
-            ComponentName(context, RadioPlaybackService::class.java)
+    val viewModel: RadioViewModel = viewModel(
+        factory = RadioViewModel.Factory(
+            application = context.applicationContext as Application,
+            settingsRepository = settingsRepository ?: return
         )
-    }
-
-    var controller by remember { mutableStateOf<MediaController?>(null) }
-    var isConnected by rememberSaveable { mutableStateOf(false) }
-    var isPlaying by rememberSaveable { mutableStateOf(false) }
-    var isBuffering by rememberSaveable { mutableStateOf(false) }
-    var isError by rememberSaveable { mutableStateOf(false) }
-    var trackTitle by rememberSaveable { mutableStateOf<String?>(null) }
-    var artist by rememberSaveable { mutableStateOf<String?>(null) }
+    )
+    val uiState by viewModel.uiState.collectAsState()
 
     // Runtime permission requests: POST_NOTIFICATIONS (API 33+), BLUETOOTH_CONNECT (API 31+)
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -199,118 +179,23 @@ fun RadioScreen(
         toRequest.takeIf { it.isNotEmpty() }?.let { permissionLauncher.launch(it.toTypedArray()) }
     }
 
-    // Metered network warning (one-time per session)
-    var showMeteredWarning by rememberSaveable { mutableStateOf(false) }
-    var meteredWarningDismissed by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        if (!meteredWarningDismissed) {
-            val cm = context.getSystemService(ConnectivityManager::class.java)
-            if (cm?.isActiveNetworkMetered == true) showMeteredWarning = true
-        }
-    }
-
-    // Sleep timer countdown label
-    val sleepTimerFiresAt by settingsRepository?.sleepTimerFiresAt?.collectAsState(0L)
-        ?: remember { mutableStateOf(0L) }
-    var sleepTimerLabel by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(sleepTimerFiresAt) {
-        while (true) {
-            val remaining = sleepTimerFiresAt - System.currentTimeMillis()
-            sleepTimerLabel = if (remaining > 0)
-                context.getString(
-                    R.string.sleep_timer_countdown,
-                    (remaining / 60_000).toInt().coerceAtLeast(1)
-                ) else null
-            if (sleepTimerFiresAt <= 0L) break
-            delay(30_000L)
-        }
-    }
-
-    LaunchedEffect(sessionToken) {
-        context.ensureRadioServiceRunning()
-        try {
-            val newController = MediaController.Builder(context, sessionToken)
-                .buildAsync()
-                .await()
-            controller = newController
-            isConnected = true
-            isPlaying = newController.isActuallyPlaying
-            isBuffering = newController.playbackState == Player.STATE_BUFFERING
-            // Seed from any metadata already in the session
-            newController.mediaMetadata.also {
-                trackTitle = it.title?.toString()
-                artist = it.artist?.toString()
-            }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (error: Exception) {
-            Log.e(RADIO_TAG, "Failed to connect to media session", error)
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            controller?.release()
-            controller = null
-            isConnected = false
-        }
-    }
-
-    DisposableEffect(controller) {
-        val activeController = controller ?: return@DisposableEffect onDispose {}
-        val listener = object : Player.Listener {
-            override fun onEvents(player: Player, events: Player.Events) {
-                isPlaying = player.isActuallyPlaying
-                isBuffering = player.playbackState == Player.STATE_BUFFERING
-                if (player.playbackState == Player.STATE_READY) isError = false
-            }
-
-            override fun onPlayerError(error: PlaybackException) {
-                isError = true
-            }
-
-            override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-                trackTitle = mediaMetadata.title?.toString()
-                artist = mediaMetadata.artist?.toString()
-                trackTitle?.let { title ->
-                    scope.launch { settingsRepository?.addHistoryEntry(title, artist) }
-                }
-            }
-        }
-        activeController.addListener(listener)
-        onDispose {
-            activeController.removeListener(listener)
-        }
-    }
-
     RadioUi(
         modifier = modifier,
-        isConnected = isConnected,
-        isPlaying = isPlaying,
-        isBuffering = isBuffering,
-        isError = isError,
-        trackTitle = trackTitle,
-        artist = artist,
-        sleepTimerLabel = sleepTimerLabel,
+        isConnected = uiState.isConnected,
+        isPlaying = uiState.isPlaying,
+        isBuffering = uiState.isBuffering,
+        isError = uiState.isError,
+        trackTitle = uiState.trackTitle,
+        artist = uiState.artist,
+        sleepTimerLabel = uiState.sleepTimerLabel,
         showSettingsButton = true,
         onSettingsClick = { showSettings = true },
-        onHistoryClick = { showHistory = true }
-    ) {
-        val activeController = controller
-        if (activeController == null) {
-            context.ensureRadioServiceRunning()
-            return@RadioUi
-        }
-        if (isPlaying) {
-            activeController.pause()
-        } else {
-            context.ensureRadioServiceRunning()
-            activeController.play()
-        }
-    }
+        onHistoryClick = { showHistory = true },
+        onToggle = { viewModel.togglePlayback() }
+    )
 
     // History bottom sheet
-    if (showHistory && settingsRepository != null) {
+    if (showHistory) {
         val history by settingsRepository.nowPlayingHistory.collectAsState(emptyList())
         ModalBottomSheet(
             onDismissRequest = { showHistory = false },
@@ -349,7 +234,7 @@ fun RadioScreen(
     }
 
     // Settings dialog
-    if (showSettings && settingsRepository != null && castFeatureManager != null) {
+    if (showSettings && castFeatureManager != null) {
         SettingsSheet(
             settingsRepository = settingsRepository,
             castFeatureManager = castFeatureManager,
@@ -358,13 +243,13 @@ fun RadioScreen(
     }
 
     // Metered network warning dialog (shown once per session on cellular)
-    if (showMeteredWarning) {
+    if (uiState.showMeteredWarning) {
         AlertDialog(
-            onDismissRequest = { showMeteredWarning = false; meteredWarningDismissed = true },
+            onDismissRequest = { viewModel.dismissMeteredWarning() },
             title = { Text(stringResource(R.string.metered_network_title)) },
             text = { Text(stringResource(R.string.metered_network_message)) },
             confirmButton = {
-                TextButton(onClick = { showMeteredWarning = false; meteredWarningDismissed = true }) {
+                TextButton(onClick = { viewModel.dismissMeteredWarning() }) {
                     Text(stringResource(R.string.metered_network_dismiss))
                 }
             }
@@ -412,4 +297,3 @@ fun RadioScreenPlayingPreview() {
         )
     }
 }
-

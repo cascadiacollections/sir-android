@@ -51,7 +51,6 @@ import com.cascadiacollections.sir.R
 import com.cascadiacollections.sir.RadioPlaybackService
 import com.cascadiacollections.sir.SettingsRepository
 import com.cascadiacollections.sir.SleepTimerDuration
-import com.cascadiacollections.sir.StreamQuality
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,12 +66,10 @@ fun SettingsSheet(
     val castModuleState by castFeatureManager.moduleState.collectAsState()
     val sleepTimerDuration by settingsRepository.sleepTimerDuration.collectAsState(initial = SleepTimerDuration.OFF)
     val equalizerPreset by settingsRepository.equalizerPreset.collectAsState(initial = EqualizerPreset.NORMAL)
-    val streamQuality by settingsRepository.streamQuality.collectAsState(initial = StreamQuality.HIGH)
     val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
 
     var sleepTimerExpanded by remember { mutableStateOf(false) }
     var equalizerExpanded by remember { mutableStateOf(false) }
-    var qualityExpanded by remember { mutableStateOf(false) }
     var customStreamText by remember { mutableStateOf(customStreamUrl ?: "") }
 
     LaunchedEffect(customStreamUrl) {
@@ -190,49 +187,7 @@ fun SettingsSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Stream quality
-            Text(
-                text = stringResource(R.string.stream_quality),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
-            )
-            ExposedDropdownMenuBox(
-                expanded = qualityExpanded,
-                onExpandedChange = { qualityExpanded = it },
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                OutlinedTextField(
-                    value = streamQuality.label,
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = qualityExpanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                )
-                ExposedDropdownMenu(
-                    expanded = qualityExpanded,
-                    onDismissRequest = { qualityExpanded = false }
-                ) {
-                    StreamQuality.entries.forEach { quality ->
-                        DropdownMenuItem(
-                            text = { Text(quality.label) },
-                            onClick = {
-                                qualityExpanded = false
-                                context.startService(
-                                    Intent(context, RadioPlaybackService::class.java).apply {
-                                        action = RadioPlaybackService.ACTION_SET_STREAM_QUALITY
-                                        putExtra(RadioPlaybackService.EXTRA_STREAM_QUALITY, quality.ordinal)
-                                    }
-                                )
-                            }
-                        )
-                    }
-                }
-            }
+            // TODO: Re-enable stream quality selector when alternate SHOUTcast mounts are available
 
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()

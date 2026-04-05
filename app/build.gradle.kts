@@ -116,6 +116,8 @@ android {
         baseline = file("lint-baseline.xml")
         abortOnError = true
         warningsAsErrors = true
+        // targetSdk is an intentional choice; suppress lint disagreeing with CI SDK level
+        disable += "OldTargetApi"
     }
 
     // Dynamic feature modules

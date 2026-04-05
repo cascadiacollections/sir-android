@@ -64,6 +64,7 @@ android {
         }
         create("foss") {
             dimension = "distribution"
+            proguardFiles("proguard-rules-foss.pro")
         }
     }
 

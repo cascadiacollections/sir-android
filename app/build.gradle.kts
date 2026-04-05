@@ -243,7 +243,7 @@ dependencies {
 }
 
 tasks.register<JacocoReport>("jacocoTestReport") {
-    dependsOn("testDebugUnitTest")
+    dependsOn("testPlayDebugUnitTest")
 
     reports {
         xml.required.set(true)
@@ -251,7 +251,7 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         csv.required.set(false)
     }
 
-    val kotlinClasses = fileTree("${layout.buildDirectory.get()}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+    val kotlinClasses = fileTree("${layout.buildDirectory.get()}/intermediates/built_in_kotlinc/playDebug/compilePlayDebugKotlin/classes") {
         exclude(
             "**/R.class", "**/R$*.class",
             "**/BuildConfig.class",
@@ -263,6 +263,6 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     classDirectories.setFrom(kotlinClasses)
     sourceDirectories.setFrom("${projectDir}/src/main/java")
     executionData.setFrom(
-        fileTree(layout.buildDirectory) { include("jacoco/testDebugUnitTest.exec") }
+        fileTree(layout.buildDirectory) { include("jacoco/testPlayDebugUnitTest.exec") }
     )
 }

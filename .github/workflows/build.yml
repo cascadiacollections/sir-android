@@ -42,7 +42,7 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build, Lint, and Test
-        run: ./gradlew assembleRelease assembleDebug bundleRelease lintDebug testDebugUnitTest :wear:testDebugUnitTest jacocoTestReport --no-daemon --parallel --build-cache
+        run: ./gradlew assemblePlayRelease assembleFossRelease assemblePlayDebug bundlePlayRelease lintPlayDebug testPlayDebugUnitTest :wear:testDebugUnitTest jacocoTestReport --no-daemon --parallel --build-cache
         env:
           KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -75,7 +75,7 @@ jobs:
           echo "## Build Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "| Artifact | Size |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|------|" >> $GITHUB_STEP_SUMMARY
-          for f in app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/debug/app-debug.apk app/build/outputs/bundle/release/app-release.aab; do
+          for f in app/build/outputs/apk/play/release/app-play-release-unsigned.apk app/build/outputs/apk/foss/release/app-foss-release-unsigned.apk app/build/outputs/apk/play/debug/app-play-debug.apk app/build/outputs/bundle/play/release/app-play-release.aab; do
             if [ -f "$f" ]; then
               SIZE=$(du -h "$f" | cut -f1)
               echo "| $(basename $f) | $SIZE |" >> $GITHUB_STEP_SUMMARY
@@ -95,7 +95,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: lint-${{ github.sha }}
-          path: app/build/reports/lint-results-debug.html
+          path: app/build/reports/lint-results-playDebug*.html
           retention-days: 7
 
       # Upload APK artifacts (legacy sideload support)
@@ -104,8 +104,9 @@ jobs:
         with:
           name: apks-${{ github.sha }}
           path: |
-            app/build/outputs/apk/release/app-release-unsigned.apk
-            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/play/release/app-play-release-unsigned.apk
+            app/build/outputs/apk/foss/release/app-foss-release-unsigned.apk
+            app/build/outputs/apk/play/debug/app-play-debug.apk
           retention-days: 1
 
       # Upload AAB artifact (Play Store distribution)
@@ -113,7 +114,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: aab-${{ github.sha }}
-          path: app/build/outputs/bundle/release/app-release.aab
+          path: app/build/outputs/bundle/play/release/app-play-release.aab
           retention-days: 1
 
   # Skip nightly release if SHA hasn't changed since last nightly
@@ -178,9 +179,10 @@ jobs:
             ### Downloads
             | Variant | Description |
             |---------|-------------|
-            | `app-release.aab` | Signed AAB for Play Store (requires signing secrets) |
-            | `app-release-unsigned.apk` | Optimized release build (~2.5 MB) |
-            | `app-debug.apk` | Debug build with LeakCanary |
+            | `app-play-release.aab` | Signed AAB for Play Store (requires signing secrets) |
+            | `app-play-release-unsigned.apk` | Play release build with Firebase Crashlytics |
+            | `app-foss-release-unsigned.apk` | FOSS release build (no Google dependencies) |
+            | `app-play-debug.apk` | Debug build with LeakCanary + StrictMode |
 
             ### Installation
             1. Download the APK for your use case
@@ -192,9 +194,10 @@ jobs:
             ---
             _This release is automatically replaced on each commit to main._
           files: |
-            apks/release/app-release-unsigned.apk
-            apks/debug/app-debug.apk
-            aab/app-release.aab
+            apks/play/release/app-play-release-unsigned.apk
+            apks/foss/release/app-foss-release-unsigned.apk
+            apks/play/debug/app-play-debug.apk
+            aab/play/release/app-play-release.aab
           prerelease: true
           make_latest: false
         continue-on-error: true
@@ -225,7 +228,7 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.cascadiacollections.sir
-          releaseFiles: aab/app-release.aab
+          releaseFiles: aab/play/release/app-play-release.aab
           track: internal
           status: completed
         # No-ops gracefully if PLAY_SERVICE_ACCOUNT_JSON secret is not yet configured

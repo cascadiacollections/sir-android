@@ -6,6 +6,12 @@ plugins {
     id("jacoco")
 }
 
+// Apply Firebase plugins only when google-services.json is available (Play builds)
+if (file("src/play/google-services.json").exists()) {
+    apply(plugin = libs.plugins.google.services.get().pluginId)
+    apply(plugin = libs.plugins.firebase.crashlytics.get().pluginId)
+}
+
 // Load keystore.properties for local development (CI uses env vars instead)
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
@@ -37,6 +43,16 @@ android {
                 storeFile = storePath
                 storePassword = storePwd
             }
+        }
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+        }
+        create("foss") {
+            dimension = "distribution"
         }
     }
 
@@ -131,6 +147,18 @@ kotlin {
     }
 }
 
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_compiler")
+    metricsDestination = layout.buildDirectory.dir("compose_compiler")
+}
+
+// Disable google-services processing for FOSS builds (no Firebase)
+tasks.configureEach {
+    if (name.contains("Foss") && name.contains("GoogleServices")) {
+        enabled = false
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -151,6 +179,8 @@ dependencies {
     // OkHttp with BOM for consistent versioning
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
+    // Logging interceptor - guarded by BuildConfig.DEBUG at runtime, stripped by R8 in release
+    implementation(libs.okhttp.logging.interceptor)
 
     // Cast device detection (lightweight - actual Cast player in dynamic module)
     implementation(libs.mediarouter)
@@ -187,6 +217,11 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // Firebase (Play builds only)
+    "playImplementation"(platform(libs.firebase.bom))
+    "playImplementation"(libs.firebase.analytics)
+    "playImplementation"(libs.firebase.crashlytics)
 
     // Memory leak detection in debug builds (runs in separate process to avoid dynamic feature conflicts)
     debugImplementation(libs.leakcanary.android)

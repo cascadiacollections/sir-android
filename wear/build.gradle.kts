@@ -10,6 +10,7 @@ android {
     defaultConfig {
         applicationId = "com.cascadiacollections.sir.wear"
         minSdk = 30 // Wear OS 2+ only
+        missingDimensionStrategy("distribution", "play")
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"

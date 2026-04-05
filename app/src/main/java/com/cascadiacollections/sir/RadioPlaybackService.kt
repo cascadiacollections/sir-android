@@ -55,6 +55,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.ConnectionPool
+import okhttp3.ConnectionSpec
 import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -219,6 +220,7 @@ class RadioPlaybackService : MediaLibraryService() {
         val okHttpClient = OkHttpClient.Builder()
             .connectionPool(connectionPool)
             .dns(cachingDns)
+            .connectionSpecs(listOf(ConnectionSpec.MODERN_TLS))     // Refuse legacy TLS
             .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))  // Prefer HTTP/2
             .connectTimeout(10, TimeUnit.SECONDS)   // Faster connect timeout
             .readTimeout(30, TimeUnit.SECONDS)      // Longer read timeout for streaming
@@ -227,6 +229,15 @@ class RadioPlaybackService : MediaLibraryService() {
             .followRedirects(true)
             .followSslRedirects(true)
             .retryOnConnectionFailure(true)
+            .apply {
+                if (BuildConfig.DEBUG) {
+                    addInterceptor(
+                        okhttp3.logging.HttpLoggingInterceptor().setLevel(
+                            okhttp3.logging.HttpLoggingInterceptor.Level.HEADERS
+                        )
+                    )
+                }
+            }
             .build()
 
         // OkHttp data source for better HTTP performance (HTTP/2, connection reuse)

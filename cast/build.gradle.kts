@@ -4,6 +4,10 @@ plugins {
 
 android {
     namespace = "com.cascadiacollections.sir.cast"
+
+    defaultConfig {
+        missingDimensionStrategy("distribution", "play")
+    }
 }
 
 dependencies {

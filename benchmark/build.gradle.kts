@@ -11,6 +11,7 @@ android {
     defaultConfig {
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
+        missingDimensionStrategy("distribution", "play")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

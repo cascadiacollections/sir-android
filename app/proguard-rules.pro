@@ -16,6 +16,9 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
+# Firebase Crashlytics - preserve exception classes for readable reports
+-keep public class * extends java.lang.Exception
+
 # ============================================
 # OkHttp 5.x Rules
 # ============================================
@@ -35,6 +38,9 @@
 -dontwarn com.google.android.gms.common.api.ComplianceOptions$Builder
 -dontwarn com.google.android.gms.common.api.ComplianceOptions
 -dontwarn com.google.android.gms.common.wrappers.AttributionSourceWrapper
+
+# Cast SDK datatransport references (optional runtime dependency)
+-dontwarn com.google.android.datatransport.**
 
 # ============================================
 # Media3 / ExoPlayer Rules

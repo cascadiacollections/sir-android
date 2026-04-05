@@ -19,7 +19,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
-            line="160"
+            line="162"
             column="13"/>
     </issue>
 
@@ -30,7 +30,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
-            line="164"
+            line="166"
             column="13"/>
     </issue>
 
@@ -43,17 +43,6 @@
             file="src/main/AndroidManifest.xml"
             line="22"
             column="5"/>
-    </issue>
-
-    <issue
-        id="OldTargetApi"
-        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
-        errorLine1="targetSdk = &quot;36&quot;"
-        errorLine2="            ~~~~">
-        <location
-            file="$HOME/Development/sir-android/gradle/libs.versions.toml"
-            line="5"
-            column="13"/>
     </issue>
 
     <issue
@@ -150,7 +139,7 @@
         errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-9.4.0-bin.zip"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="$HOME/Development/sir-android/gradle/wrapper/gradle-wrapper.properties"
+            file="../gradle/wrapper/gradle-wrapper.properties"
             line="3"
             column="17"/>
     </issue>
@@ -161,7 +150,7 @@
         errorLine1="composeBom = &quot;2026.03.00&quot;"
         errorLine2="             ~~~~~~~~~~~~">
         <location
-            file="$HOME/Development/sir-android/gradle/libs.versions.toml"
+            file="../gradle/libs.versions.toml"
             line="13"
             column="14"/>
     </issue>
@@ -172,8 +161,8 @@
         errorLine1="wearComposeMaterial3 = &quot;1.5.0&quot;"
         errorLine2="                       ~~~~~~~">
         <location
-            file="$HOME/Development/sir-android/gradle/libs.versions.toml"
-            line="35"
+            file="../gradle/libs.versions.toml"
+            line="36"
             column="24"/>
     </issue>
 
@@ -183,8 +172,8 @@
         errorLine1="robolectric = &quot;4.14.1&quot;"
         errorLine2="              ~~~~~~~~">
         <location
-            file="$HOME/Development/sir-android/gradle/libs.versions.toml"
-            line="30"
+            file="../gradle/libs.versions.toml"
+            line="31"
             column="15"/>
     </issue>
 
@@ -194,8 +183,8 @@
         errorLine1="mockk = &quot;1.14.2&quot;"
         errorLine2="        ~~~~~~~~">
         <location
-            file="$HOME/Development/sir-android/gradle/libs.versions.toml"
-            line="31"
+            file="../gradle/libs.versions.toml"
+            line="32"
             column="9"/>
     </issue>
 
@@ -205,8 +194,8 @@
         errorLine1="turbine = &quot;1.2.0&quot;"
         errorLine2="          ~~~~~~~">
         <location
-            file="$HOME/Development/sir-android/gradle/libs.versions.toml"
-            line="32"
+            file="../gradle/libs.versions.toml"
+            line="33"
             column="11"/>
     </issue>
 
@@ -404,7 +393,7 @@
         errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="133"
+            line="134"
             column="41"/>
     </issue>
 
@@ -415,7 +404,7 @@
         errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="134"
+            line="135"
             column="42"/>
     </issue>
 
@@ -426,7 +415,7 @@
         errorLine2="                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="230"
+            line="231"
             column="80"/>
     </issue>
 
@@ -437,7 +426,7 @@
         errorLine2="                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="283"
+            line="294"
             column="57"/>
     </issue>
 
@@ -448,7 +437,7 @@
         errorLine2="                                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="295"
+            line="306"
             column="61"/>
     </issue>
 
@@ -459,7 +448,7 @@
         errorLine2="                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="298"
+            line="309"
             column="57"/>
     </issue>
 
@@ -531,23 +520,12 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.done` appears to be unused"
-        errorLine1="    &lt;string name=&quot;done&quot;>Done&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="48"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
         message="The resource `R.string.stream_quality` appears to be unused"
         errorLine1="    &lt;string name=&quot;stream_quality&quot;>Stream Quality&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="67"
+            line="68"
             column="13"/>
     </issue>
 
@@ -558,8 +536,19 @@
         errorLine2="                                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="230"
+            line="231"
             column="70"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="        classpath(&quot;com.mikepenz.aboutlibraries.plugin:aboutlibraries-plugin:14.0.0-b03&quot;)"
+        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="8"
+            column="19"/>
     </issue>
 
     <issue

@@ -72,6 +72,7 @@ class RadioPlaybackService : MediaLibraryService() {
     private var isNoisyReceiverRegistered = false
     private var isRouteReceiverRegistered = false
     private var pausedByNoisy = false
+    private var retryCount = 0
 
     // Locks to keep device active during playback
     private var wakeLock: PowerManager.WakeLock? = null
@@ -395,8 +396,11 @@ class RadioPlaybackService : MediaLibraryService() {
         // Now add listeners after mediaSession is created
         player?.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY && player?.playWhenReady == true) {
-                    updateCustomLayout()
+                if (playbackState == Player.STATE_READY) {
+                    retryCount = 0
+                    if (player?.playWhenReady == true) {
+                        updateCustomLayout()
+                    }
                 }
             }
 
@@ -445,8 +449,17 @@ class RadioPlaybackService : MediaLibraryService() {
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                Log.e(TAG, "Player failed", error)
-                updateNotificationSafe(getString(R.string.radio_error))
+                Log.e(TAG, "Player error (attempt ${retryCount + 1}/$MAX_RETRIES)", error)
+                if (retryCount < MAX_RETRIES) {
+                    val delayMs = (2_000L * (1 shl retryCount)).coerceAtMost(30_000L)
+                    updateNotificationSafe(getString(R.string.stream_reconnecting))
+                    sleepTimerHandler.postDelayed({
+                        retryCount++
+                        player?.prepare()
+                    }, delayMs)
+                } else {
+                    updateNotificationSafe(getString(R.string.radio_error))
+                }
             }
         })
 
@@ -1031,6 +1044,9 @@ class RadioPlaybackService : MediaLibraryService() {
         private const val BROWSE_ROOT_ID = "sir_root"
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
+        // Error retry
+        private const val MAX_RETRIES = 5
+
         // Feature flags
         const val SEEKBACK_ENABLED = false
 

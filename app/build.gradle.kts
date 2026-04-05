@@ -1,10 +1,21 @@
 import java.util.Properties
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.mikepenz.aboutlibraries.plugin:aboutlibraries-plugin:14.0.0-b03")
+    }
+}
+
 plugins {
     id("sir.android.app")
     alias(libs.plugins.kotlin.compose)
     id("jacoco")
 }
+
+apply(plugin = "com.mikepenz.aboutlibraries.plugin")
 
 // Apply Firebase plugins only when google-services.json is available (Play builds)
 if (file("src/play/google-services.json").exists()) {
@@ -58,8 +69,9 @@ android {
 
     defaultConfig {
         applicationId = "com.cascadiacollections.sir"
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
+            .standardOutput.asText.get().trim().toIntOrNull() ?: 1
+        versionName = "1.2.0"
 
         // Include ARM ABIs for phones/tablets + x86_64 for ChromeOS
         ndk {
@@ -102,7 +114,7 @@ android {
     lint {
         baseline = file("lint-baseline.xml")
         abortOnError = true
-        warningsAsErrors = false
+        warningsAsErrors = true
     }
 
     // Dynamic feature modules
@@ -193,6 +205,9 @@ dependencies {
 
     // Splash screen
     implementation(libs.androidx.splashscreen)
+
+    // OSS licenses UI
+    implementation(libs.aboutlibraries.compose)
 
     // Glance widget
     implementation(libs.androidx.glance.appwidget)

@@ -172,7 +172,7 @@ fun RadioUi(
                     ) {
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = stringResource(R.string.play),
+                            contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
                             modifier = Modifier.size(36.dp)
                         )
                     }

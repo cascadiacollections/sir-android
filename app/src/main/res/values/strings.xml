@@ -44,6 +44,7 @@
 
     <!-- Settings dialog -->
     <string name="privacy_policy">Privacy Policy</string>
+    <string name="open_source_licenses">Open Source Licenses</string>
     <string name="privacy_policy_url">https://cascadiacollections.github.io/sir-android/privacy/</string>
     <string name="done">Done</string>
     <string name="save">Save</string>

@@ -38,6 +38,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
+import com.cascadiacollections.sir.ui.LicensesScreen
 import com.cascadiacollections.sir.ui.RadioUi
 import com.cascadiacollections.sir.ui.SettingsSheet
 import com.cascadiacollections.sir.ui.theme.SirTheme
@@ -108,6 +109,7 @@ fun RadioScreen(
 
     // Settings dialog state
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showLicenses by rememberSaveable { mutableStateOf(false) }
 
     // Cast state
     val castDevicesAvailable by castDeviceDetector?.castDevicesAvailable?.collectAsState()
@@ -188,8 +190,17 @@ fun RadioScreen(
         SettingsSheet(
             settingsRepository = settingsRepository,
             castFeatureManager = castFeatureManager,
-            onDismiss = { showSettings = false }
+            onDismiss = { showSettings = false },
+            onOpenLicenses = {
+                showSettings = false
+                showLicenses = true
+            }
         )
+    }
+
+    // Open Source Licenses
+    if (showLicenses) {
+        LicensesScreen(onBack = { showLicenses = false })
     }
 
     // Metered network warning dialog (shown once per session on cellular)

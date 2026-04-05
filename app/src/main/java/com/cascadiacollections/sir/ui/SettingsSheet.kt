@@ -58,7 +58,8 @@ import kotlinx.coroutines.launch
 fun SettingsSheet(
     settingsRepository: SettingsRepository,
     castFeatureManager: CastFeatureManager,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOpenLicenses: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -234,6 +235,16 @@ fun SettingsSheet(
                     .padding(horizontal = 16.dp)
             ) {
                 Text(stringResource(R.string.privacy_policy))
+            }
+
+            // Open Source Licenses
+            TextButton(
+                onClick = onOpenLicenses,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text(stringResource(R.string.open_source_licenses))
             }
 
             // Debug-only: Custom Stream URL

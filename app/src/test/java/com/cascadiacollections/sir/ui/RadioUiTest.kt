@@ -71,9 +71,7 @@ class RadioUiTest {
                 )
             }
         }
-        // The content description is "Play" for the button but shows Pause icon
-        // — checking the composable renders without crash
-        composeRule.onNodeWithContentDescription("Play").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Pause").assertIsDisplayed()
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir
 
 import android.net.Uri
+import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
@@ -16,6 +17,8 @@ import kotlin.concurrent.thread
  * ExoPlayer's loading thread reads from the buffer via a movable read cursor.
  */
 @UnstableApi
+private const val TAG = "TimeShiftDataSource"
+
 internal class TimeShiftDataSource(
     private val upstream: DataSource,
     private val buffer: CircularByteBuffer
@@ -44,9 +47,8 @@ internal class TimeShiftDataSource(
                 }
             } catch (_: InterruptedException) {
                 // Expected on close
-            } catch (_: Exception) {
-                // Socket closed, HTTP errors, etc. — expected when DataSource is closed
-                // during a seek or quality change
+            } catch (e: Exception) {
+                Log.w(TAG, "TimeShift reader stopped", e)
             }
         }
 

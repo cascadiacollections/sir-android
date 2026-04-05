@@ -18,6 +18,11 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import okhttp3.ConnectionPool
 import okhttp3.ConnectionSpec
 import okhttp3.Dns
@@ -31,6 +36,8 @@ import java.util.concurrent.TimeUnit
 class WearPlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var retryCount = 0
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -69,7 +76,10 @@ class WearPlaybackService : MediaSessionService() {
             .build()
 
         val httpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
-            .setDefaultRequestProperties(mapOf("Icy-MetaData" to "1"))
+            .setDefaultRequestProperties(mapOf(
+                "Icy-MetaData" to "1",
+                "User-Agent" to "SIR Wear/${Build.VERSION.SDK_INT}"
+            ))
 
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(httpDataSourceFactory)
@@ -86,6 +96,22 @@ class WearPlaybackService : MediaSessionService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
             .apply {
+                addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_READY) retryCount = 0
+                    }
+
+                    override fun onPlayerError(error: PlaybackException) {
+                        Log.e(TAG, "Player error (attempt ${retryCount + 1}/$MAX_RETRIES)", error)
+                        if (retryCount < MAX_RETRIES) {
+                            val delayMs = (2_000L * (1 shl retryCount)).coerceAtMost(30_000L)
+                            handler.postDelayed({
+                                retryCount++
+                                prepare()
+                            }, delayMs)
+                        }
+                    }
+                })
                 setMediaItem(buildMediaItem())
                 prepare()
             }
@@ -101,6 +127,7 @@ class WearPlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
     override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
         mediaSession?.run {
             player.release()
             release()
@@ -152,10 +179,13 @@ class WearPlaybackService : MediaSessionService() {
     }
 
     companion object {
+        private const val TAG = "WearPlaybackService"
+
         // Canonical source: app/.../StreamConfig.DEFAULT_STREAM_URL
         private const val STREAM_URL = "https://broadcast.shoutcheap.com/proxy/willradio/stream"
         private const val SESSION_ID = "sir_wear_session"
         private const val CHANNEL_ID = "wear_radio_playback"
         private const val NOTIFICATION_ID = 2001
+        private const val MAX_RETRIES = 5
     }
 }

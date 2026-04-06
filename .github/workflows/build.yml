@@ -154,7 +154,7 @@ jobs:
         continue-on-error: true
 
       - name: List downloaded artifacts
-        run: find apks aab -type f
+        run: find apks -type f; find aab -type f 2>/dev/null || true
 
       - name: Get short SHA
         id: sha

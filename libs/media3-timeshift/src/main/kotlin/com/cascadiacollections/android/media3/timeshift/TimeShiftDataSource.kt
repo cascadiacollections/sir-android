@@ -1,4 +1,4 @@
-package com.cascadiacollections.sir
+package com.cascadiacollections.android.media3.timeshift
 
 import android.net.Uri
 import android.util.Log
@@ -9,19 +9,26 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 import kotlin.concurrent.thread
 
+private const val TAG = "TimeShiftDataSource"
+
 /**
  * A [DataSource] that proxies an upstream source through a [CircularByteBuffer],
  * enabling DVR-style time-shift on live streams.
  *
  * A background daemon thread continuously reads from the upstream into the buffer.
- * ExoPlayer's loading thread reads from the buffer via a movable read cursor.
+ * The consumer thread reads from the buffer via a movable read cursor.
+ *
+ * @param upstream The upstream [DataSource] to read from.
+ * @param buffer The [CircularByteBuffer] used for buffering.
+ * @param threadName Name for the background reader thread.
+ * @param chunkSize Size of the read buffer used by the background thread.
  */
 @UnstableApi
-private const val TAG = "TimeShiftDataSource"
-
-internal class TimeShiftDataSource(
+class TimeShiftDataSource(
     private val upstream: DataSource,
-    private val buffer: CircularByteBuffer
+    private val buffer: CircularByteBuffer,
+    private val threadName: String = "TimeShift",
+    private val chunkSize: Int = DEFAULT_CHUNK_SIZE
 ) : DataSource {
 
     private var readerThread: Thread? = null
@@ -32,11 +39,9 @@ internal class TimeShiftDataSource(
 
     override fun open(dataSpec: DataSpec): Long {
         upstream.open(dataSpec)
-        // Do NOT clear the buffer here — buffered audio must survive player
-        // stop/prepare cycles triggered by seekBack and goLive.
 
-        readerThread = thread(isDaemon = true, name = "SIR-TimeShift") {
-            val chunk = ByteArray(8192)
+        readerThread = thread(isDaemon = true, name = threadName) {
+            val chunk = ByteArray(chunkSize)
             try {
                 while (!Thread.currentThread().isInterrupted) {
                     val bytesRead = upstream.read(chunk, 0, chunk.size)
@@ -74,11 +79,18 @@ internal class TimeShiftDataSource(
     /**
      * Factory that creates [TimeShiftDataSource] instances wrapping an upstream factory.
      * Exposes [lastCreated] so the service can access seek/goLive controls.
+     *
+     * @param upstreamFactory Factory for creating upstream [DataSource] instances.
+     * @param buffer Shared [CircularByteBuffer] for all created data sources.
+     * @param threadName Name for the background reader thread.
+     * @param chunkSize Size of the read buffer used by the background thread.
      */
     @UnstableApi
     class Factory(
         private val upstreamFactory: DataSource.Factory,
-        private val buffer: CircularByteBuffer
+        private val buffer: CircularByteBuffer,
+        private val threadName: String = "TimeShift",
+        private val chunkSize: Int = DEFAULT_CHUNK_SIZE
     ) : DataSource.Factory {
 
         @Volatile
@@ -87,7 +99,11 @@ internal class TimeShiftDataSource(
 
         override fun createDataSource(): TimeShiftDataSource {
             val upstream = upstreamFactory.createDataSource()
-            return TimeShiftDataSource(upstream, buffer).also { lastCreated = it }
+            return TimeShiftDataSource(upstream, buffer, threadName, chunkSize).also { lastCreated = it }
         }
+    }
+
+    companion object {
+        const val DEFAULT_CHUNK_SIZE = 8192
     }
 }

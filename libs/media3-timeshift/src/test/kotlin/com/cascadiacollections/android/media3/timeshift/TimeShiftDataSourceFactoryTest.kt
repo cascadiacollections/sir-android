@@ -1,15 +1,12 @@
-package com.cascadiacollections.sir
+package com.cascadiacollections.android.media3.timeshift
 
-import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Tests for [TimeShiftDataSource.Factory].
- */
 class TimeShiftDataSourceFactoryTest {
 
     @Test
@@ -34,7 +31,6 @@ class TimeShiftDataSourceFactoryTest {
 
         val ds2 = factory.createDataSource()
         assertEquals(ds2, factory.lastCreated)
-        // ds2 should be a different instance
         assertFalse(ds1 === ds2)
     }
 
@@ -44,6 +40,26 @@ class TimeShiftDataSourceFactoryTest {
         val mockUpstreamFactory = mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
         val buffer = CircularByteBuffer(1024)
         val factory = TimeShiftDataSource.Factory(mockUpstreamFactory, buffer)
-        assertTrue(factory.lastCreated == null)
+        assertNull(factory.lastCreated)
+    }
+
+    @Test
+    @androidx.media3.common.util.UnstableApi
+    fun `factory uses custom thread name and chunk size`() {
+        val mockUpstreamFactory = mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
+        val buffer = CircularByteBuffer(1024)
+        val factory = TimeShiftDataSource.Factory(
+            mockUpstreamFactory,
+            buffer,
+            threadName = "MyApp-TimeShift",
+            chunkSize = 4096
+        )
+        val ds = factory.createDataSource()
+        assertEquals(ds, factory.lastCreated)
+    }
+
+    @Test
+    fun `DEFAULT_CHUNK_SIZE is 8192`() {
+        assertEquals(8192, TimeShiftDataSource.DEFAULT_CHUNK_SIZE)
     }
 }

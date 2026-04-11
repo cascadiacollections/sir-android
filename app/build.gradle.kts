@@ -176,6 +176,9 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
 
+    // Media3 time-shift library (CircularByteBuffer, TimeShiftDataSource)
+    implementation(project(":libs:media3-timeshift"))
+
     // Media3 with OkHttp for optimized HTTP streaming (no UI module - audio only)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)

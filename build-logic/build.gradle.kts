@@ -16,5 +16,9 @@ gradlePlugin {
             id = "sir.android.feature"
             implementationClass = "AndroidDynamicFeatureConventionPlugin"
         }
+        register("androidLibrary") {
+            id = "sir.android.lib"
+            implementationClass = "AndroidLibraryConventionPlugin"
+        }
     }
 }

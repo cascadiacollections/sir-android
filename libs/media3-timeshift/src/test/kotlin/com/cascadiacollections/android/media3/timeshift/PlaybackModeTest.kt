@@ -1,4 +1,4 @@
-package com.cascadiacollections.sir
+package com.cascadiacollections.android.media3.timeshift
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -7,10 +7,7 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Tests for [PlaybackMode] sealed interface.
- */
-class PlaybackModeExtendedTest {
+class PlaybackModeTest {
 
     @Test
     fun `Live is a singleton`() {
@@ -28,12 +25,8 @@ class PlaybackModeExtendedTest {
     }
 
     @Test
-    fun `Live is instance of PlaybackMode`() {
+    fun `both implement PlaybackMode`() {
         assertTrue(PlaybackMode.Live is PlaybackMode)
-    }
-
-    @Test
-    fun `TimeShifted is instance of PlaybackMode`() {
         assertTrue(PlaybackMode.TimeShifted is PlaybackMode)
     }
 

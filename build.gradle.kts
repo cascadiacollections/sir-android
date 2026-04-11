@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.test) apply false
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.firebase.crashlytics) apply false
+    alias(libs.plugins.aboutlibraries.plugin) apply false
 }
 
 // Configure Java toolchain for all subprojects

@@ -1,21 +1,11 @@
 import java.util.Properties
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.mikepenz.aboutlibraries.plugin:aboutlibraries-plugin:14.0.0-b03")
-    }
-}
-
 plugins {
     id("sir.android.app")
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.aboutlibraries.plugin)
     id("jacoco")
 }
-
-apply(plugin = "com.mikepenz.aboutlibraries.plugin")
 
 // Apply Firebase plugins only when google-services.json is available (Play builds)
 if (file("src/play/google-services.json").exists()) {

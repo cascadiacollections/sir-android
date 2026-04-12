@@ -11,6 +11,8 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import kotlinx.coroutines.guava.await
 
+private const val TAG = "RadioTileService"
+
 class RadioTileService : TileService() {
 
     private var controller: MediaController? = null
@@ -43,13 +45,12 @@ class RadioTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        val ctrl = controller
-        if (ctrl != null && ctrl.isConnected) {
+        controller?.takeIf { it.isConnected }?.let { ctrl ->
             if (ctrl.isPlaying) ctrl.pause() else {
                 ensureRadioServiceRunning()
                 ctrl.play()
             }
-        } else {
+        } ?: run {
             ensureRadioServiceRunning()
             ContextCompat.startForegroundService(
                 this,
@@ -69,10 +70,5 @@ class RadioTileService : TileService() {
             tile.subtitle = getString(R.string.station_name)
         }
         tile.updateTile()
-    }
-
-
-    companion object {
-        private const val TAG = "RadioTileService"
     }
 }

@@ -64,7 +64,7 @@ class RadioPlaybackService : MediaLibraryService() {
 
     private var mediaSession: MediaLibrarySession? = null
     private var player: ExoPlayer? = null
-    private lateinit var audioManager: AudioManager
+    private val audioManager: AudioManager by lazy { getSystemService(AudioManager::class.java) }
     private var isNoisyReceiverRegistered = false
     private var isRouteReceiverRegistered = false
     private var pausedByNoisy = false
@@ -88,7 +88,7 @@ class RadioPlaybackService : MediaLibraryService() {
     private var currentEqualizerPreset: EqualizerPreset = EqualizerPreset.NORMAL
 
     // Settings and coroutine scope
-    private lateinit var settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // Current stream URL (may be custom in debug builds)
@@ -129,11 +129,7 @@ class RadioPlaybackService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
-        audioManager = getSystemService(AudioManager::class.java)
         val context = this
-
-        // Initialize settings repository
-        settingsRepository = SettingsRepository(this)
 
         // Load settings asynchronously
         serviceScope.launch {
@@ -568,7 +564,7 @@ class RadioPlaybackService : MediaLibraryService() {
 
     @OptIn(UnstableApi::class)
     private fun buildNotification(context: Context): Notification {
-        val session = mediaSession ?: throw IllegalStateException("MediaSession is null")
+        val session = checkNotNull(mediaSession) { "MediaSession is null" }
         val openAppIntent = PendingIntent.getActivity(
             context,
             0,
@@ -612,7 +608,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .setContentTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
             .setContentText(currentArtist ?: getString(R.string.stream_description))
             .setSubText(
-                if (currentTrackTitle != null) currentStation ?: getString(R.string.station_name) else null
+                currentTrackTitle?.let { currentStation ?: getString(R.string.station_name) }
             )
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(openAppIntent)

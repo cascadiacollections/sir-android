@@ -48,18 +48,13 @@ private const val ACTION_SHORTCUT_PLAY = "com.cascadiacollections.sir.SHORTCUT_P
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var castDeviceDetector: CastDeviceDetector
-    private lateinit var castFeatureManager: CastFeatureManager
-    private lateinit var settingsRepository: SettingsRepository
+    private val castDeviceDetector by lazy { CastDeviceDetector(this) }
+    private val castFeatureManager by lazy { CastFeatureManager(this) }
+    private val settingsRepository by lazy { SettingsRepository(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-
-        // Initialize Cast detection and feature management
-        castDeviceDetector = CastDeviceDetector(this)
-        castFeatureManager = CastFeatureManager(this)
-        settingsRepository = SettingsRepository(this)
 
         // Only detect Cast devices if module not already installed
         if (!castFeatureManager.isModuleInstalled()) {

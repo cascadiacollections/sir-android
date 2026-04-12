@@ -96,8 +96,7 @@ class WearActivity : ComponentActivity() {
                         isBuffering = isBuffering,
                         trackTitle = trackTitle,
                         onToggle = {
-                            val ctrl = controller
-                            if (ctrl != null) {
+                            controller?.let { ctrl ->
                                 if (ctrl.isPlaying) ctrl.pause() else {
                                     ContextCompat.startForegroundService(
                                         this@WearActivity,
@@ -105,12 +104,10 @@ class WearActivity : ComponentActivity() {
                                     )
                                     ctrl.play()
                                 }
-                            } else {
-                                ContextCompat.startForegroundService(
-                                    this@WearActivity,
-                                    android.content.Intent(this@WearActivity, WearPlaybackService::class.java)
-                                )
-                            }
+                            } ?: ContextCompat.startForegroundService(
+                                this@WearActivity,
+                                android.content.Intent(this@WearActivity, WearPlaybackService::class.java)
+                            )
                         }
                     )
                 }
@@ -138,10 +135,10 @@ internal fun WearPlayerUi(
                 text = stringResource(R.string.station_name),
                 style = MaterialTheme.typography.titleMedium
             )
-            if (trackTitle != null) {
+            trackTitle?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = trackTitle,
+                    text = it,
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center
                 )

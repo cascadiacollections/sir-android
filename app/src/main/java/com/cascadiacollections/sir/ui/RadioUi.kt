@@ -176,9 +176,9 @@ fun RadioUi(
                             modifier = Modifier.size(36.dp)
                         )
                     }
-                    if (sleepTimerLabel != null) {
+                    sleepTimerLabel?.let { label ->
                         Text(
-                            text = sleepTimerLabel,
+                            text = label,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant

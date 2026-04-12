@@ -25,6 +25,13 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 
+private const val TAG = "WearPlaybackService"
+private const val STREAM_URL = "https://broadcast.shoutcheap.com/proxy/willradio/stream"
+private const val SESSION_ID = "sir_wear_session"
+private const val CHANNEL_ID = "wear_radio_playback"
+private const val NOTIFICATION_ID = 2001
+private const val MAX_RETRIES = 5
+
 class WearPlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
@@ -138,16 +145,5 @@ class WearPlaybackService : MediaSessionService() {
             )
             getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
         }
-    }
-
-    companion object {
-        private const val TAG = "WearPlaybackService"
-
-        // Canonical source: app/.../StreamConfig.DEFAULT_STREAM_URL
-        private const val STREAM_URL = "https://broadcast.shoutcheap.com/proxy/willradio/stream"
-        private const val SESSION_ID = "sir_wear_session"
-        private const val CHANNEL_ID = "wear_radio_playback"
-        private const val NOTIFICATION_ID = 2001
-        private const val MAX_RETRIES = 5
     }
 }

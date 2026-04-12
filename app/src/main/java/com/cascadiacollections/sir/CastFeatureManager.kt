@@ -75,9 +75,8 @@ class CastFeatureManager(context: Context) {
     /**
      * Check if the cast module is already installed
      */
-    fun isModuleInstalled(): Boolean {
-        return CAST_MODULE_NAME in splitInstallManager.installedModules
-    }
+    fun isModuleInstalled(): Boolean =
+        CAST_MODULE_NAME in splitInstallManager.installedModules
 
     /**
      * Request installation of the cast module

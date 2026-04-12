@@ -1,15 +1,17 @@
 package com.cascadiacollections.sir.wear
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WearPlaybackServiceTest {
 
+    // Top-level private constants compile into the file-level Kt class
+    private val fileClass = Class.forName("com.cascadiacollections.sir.wear.WearPlaybackServiceKt")
+
     @Test
     fun `stream URL is valid HTTPS`() {
-        val field = WearPlaybackService::class.java.getDeclaredField("STREAM_URL")
+        val field = fileClass.getDeclaredField("STREAM_URL")
         field.isAccessible = true
         val url = field.get(null) as String
         assertTrue("Stream URL should use HTTPS", url.startsWith("https://"))
@@ -18,7 +20,7 @@ class WearPlaybackServiceTest {
 
     @Test
     fun `session ID is not blank`() {
-        val field = WearPlaybackService::class.java.getDeclaredField("SESSION_ID")
+        val field = fileClass.getDeclaredField("SESSION_ID")
         field.isAccessible = true
         val id = field.get(null) as String
         assertTrue(id.isNotBlank())
@@ -26,7 +28,7 @@ class WearPlaybackServiceTest {
 
     @Test
     fun `channel ID is not blank`() {
-        val field = WearPlaybackService::class.java.getDeclaredField("CHANNEL_ID")
+        val field = fileClass.getDeclaredField("CHANNEL_ID")
         field.isAccessible = true
         val id = field.get(null) as String
         assertTrue(id.isNotBlank())
@@ -34,7 +36,7 @@ class WearPlaybackServiceTest {
 
     @Test
     fun `notification ID is positive`() {
-        val field = WearPlaybackService::class.java.getDeclaredField("NOTIFICATION_ID")
+        val field = fileClass.getDeclaredField("NOTIFICATION_ID")
         field.isAccessible = true
         val id = field.getInt(null)
         assertTrue("Notification ID should be positive", id > 0)
@@ -42,7 +44,7 @@ class WearPlaybackServiceTest {
 
     @Test
     fun `stream URL matches app module URL`() {
-        val field = WearPlaybackService::class.java.getDeclaredField("STREAM_URL")
+        val field = fileClass.getDeclaredField("STREAM_URL")
         field.isAccessible = true
         val url = field.get(null) as String
         assertEquals(

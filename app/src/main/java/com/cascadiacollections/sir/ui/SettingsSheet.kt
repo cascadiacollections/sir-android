@@ -272,7 +272,7 @@ fun SettingsSheet(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 )
-                if (customStreamUrl != null) {
+                customStreamUrl?.let {
                     Text(
                         text = stringResource(R.string.custom_stream_active),
                         style = MaterialTheme.typography.bodySmall,

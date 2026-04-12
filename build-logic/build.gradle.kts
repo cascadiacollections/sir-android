@@ -20,5 +20,9 @@ gradlePlugin {
             id = "sir.android.lib"
             implementationClass = "AndroidLibraryConventionPlugin"
         }
+        register("androidWear") {
+            id = "sir.android.wear"
+            implementationClass = "AndroidWearConventionPlugin"
+        }
     }
 }

@@ -48,6 +48,7 @@ import androidx.media3.session.SessionResult
 import com.cascadiacollections.android.media3.timeshift.CircularByteBuffer
 import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
+import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -57,14 +58,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import okhttp3.ConnectionPool
-import okhttp3.ConnectionSpec
-import okhttp3.Dns
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import java.net.Inet4Address
-import java.net.InetAddress
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 class RadioPlaybackService : MediaLibraryService() {
@@ -194,45 +187,8 @@ class RadioPlaybackService : MediaLibraryService() {
             .build()
 
         // OkHttp client optimized for live audio streaming
-        // - Connection pooling for instant reconnects on network switches
-        // - HTTP/2 with HTTP/1.1 fallback for maximum compatibility
-        // - Keep-alive for persistent streaming connection
-        // - DNS caching for faster reconnects
-        val connectionPool = ConnectionPool(
-            maxIdleConnections = 2,        // Keep 2 connections warm for fast reconnects
-            keepAliveDuration = 5,         // 5 minute keep-alive
-            timeUnit = TimeUnit.MINUTES
-        )
-
-        // DNS caching to avoid repeated lookups on reconnect
-        val cachingDns = object : Dns {
-            private val cache = ConcurrentHashMap<String, Pair<List<InetAddress>, Long>>()
-            private val ttlMs = 5 * 60 * 1000L  // 5 minute TTL
-
-            override fun lookup(hostname: String): List<InetAddress> {
-                val now = System.currentTimeMillis()
-                return cache[hostname]
-                    ?.takeIf { now - it.second < ttlMs }
-                    ?.first
-                    ?: Dns.SYSTEM.lookup(hostname)
-                        // Prefer IPv4 for faster connection on mobile networks (false sorts before true)
-                        .sortedBy { it !is Inet4Address }
-                        .also { cache[hostname] = it to now }
-            }
-        }
-
-        val okHttpClient = OkHttpClient.Builder()
-            .connectionPool(connectionPool)
-            .dns(cachingDns)
-            .connectionSpecs(listOf(ConnectionSpec.MODERN_TLS))     // Refuse legacy TLS
-            .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))  // Prefer HTTP/2
-            .connectTimeout(10, TimeUnit.SECONDS)   // Faster connect timeout
-            .readTimeout(30, TimeUnit.SECONDS)      // Longer read timeout for streaming
+        val okHttpClient = StreamingHttpClientFactory.newBuilder()
             .writeTimeout(10, TimeUnit.SECONDS)
-            .callTimeout(0, TimeUnit.SECONDS)       // No overall timeout for streaming
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .retryOnConnectionFailure(true)
             .apply {
                 if (BuildConfig.DEBUG) {
                     addInterceptor(

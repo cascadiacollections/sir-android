@@ -5,12 +5,17 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -18,20 +23,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
-import okhttp3.ConnectionPool
-import okhttp3.ConnectionSpec
-import okhttp3.Dns
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import java.net.Inet4Address
-import java.net.InetAddress
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
+import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 
 class WearPlaybackService : MediaSessionService() {
 
@@ -43,37 +35,7 @@ class WearPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
-        val connectionPool = ConnectionPool(
-            maxIdleConnections = 2,
-            keepAliveDuration = 5,
-            timeUnit = TimeUnit.MINUTES
-        )
-
-        val cachingDns = object : Dns {
-            private val cache = ConcurrentHashMap<String, Pair<List<InetAddress>, Long>>()
-            private val ttlMs = 5 * 60 * 1000L
-
-            override fun lookup(hostname: String): List<InetAddress> {
-                val now = System.currentTimeMillis()
-                return cache[hostname]
-                    ?.takeIf { now - it.second < ttlMs }
-                    ?.first
-                    ?: Dns.SYSTEM.lookup(hostname)
-                        .sortedBy { it !is Inet4Address }
-                        .also { cache[hostname] = it to now }
-            }
-        }
-
-        val okHttpClient = OkHttpClient.Builder()
-            .connectionPool(connectionPool)
-            .dns(cachingDns)
-            .connectionSpecs(listOf(ConnectionSpec.MODERN_TLS))
-            .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .callTimeout(0, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .build()
+        val okHttpClient = StreamingHttpClientFactory.newBuilder().build()
 
         val httpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
             .setDefaultRequestProperties(mapOf(

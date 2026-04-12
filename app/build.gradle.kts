@@ -179,6 +179,9 @@ dependencies {
     // Media3 time-shift library (CircularByteBuffer, TimeShiftDataSource)
     implementation(project(":libs:media3-timeshift"))
 
+    // Shared OkHttp client factory for live audio streaming
+    implementation(project(":libs:okhttp-streaming"))
+
     // Media3 with OkHttp for optimized HTTP streaming (no UI module - audio only)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)

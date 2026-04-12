@@ -1,27 +1,16 @@
 plugins {
-    alias(libs.plugins.android.application)
+    id("sir.android.wear")
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.cascadiacollections.sir.wear"
-    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
         applicationId = "com.cascadiacollections.sir.wear"
-        minSdk = 30 // Wear OS 2+ only
         missingDimensionStrategy("distribution", "play")
-        targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-        }
     }
 
     buildFeatures {
@@ -30,11 +19,6 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
     }
 }
 
@@ -56,7 +40,8 @@ dependencies {
     implementation(libs.media3.session)
     implementation(libs.media3.datasource.okhttp)
 
-    // OkHttp
+    // Shared OkHttp client factory for live audio streaming
+    implementation(project(":libs:okhttp-streaming"))
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
 

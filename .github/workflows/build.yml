@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up mise
-        uses: jdx/mise-action@v4
+        uses: jdx/mise-action@v2
         with:
           install: true
           cache: true
@@ -84,7 +84,7 @@ jobs:
 
       - name: Upload Coverage Report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ github.sha }}
           path: app/build/reports/jacoco/jacocoTestReport/html/
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload Lint Report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: lint-${{ github.sha }}
           path: app/build/reports/lint-results-playDebug*.html
@@ -100,7 +100,7 @@ jobs:
 
       # Upload APK artifacts (legacy sideload support)
       - name: Upload APK Artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: apks-${{ github.sha }}
           path: |
@@ -111,7 +111,7 @@ jobs:
 
       # Upload AAB artifact (Play Store distribution)
       - name: Upload AAB Artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: aab-${{ github.sha }}
           path: app/build/outputs/bundle/play/release/app-play-release.aab
@@ -141,13 +141,13 @@ jobs:
 
     steps:
       - name: Download APK Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: apks-${{ github.sha }}
           path: apks
 
       - name: Download AAB Artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: aab-${{ github.sha }}
           path: aab
@@ -205,7 +205,7 @@ jobs:
 
       # Cleanup artifacts to save storage
       - name: Delete Artifacts
-        uses: geekyeggo/delete-artifact@v6
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: |
             apks-${{ github.sha }}
@@ -219,7 +219,7 @@ jobs:
 
     steps:
       - name: Download AAB Artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: aab-${{ github.sha }}
           path: aab

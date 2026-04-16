@@ -141,13 +141,13 @@ jobs:
 
     steps:
       - name: Download APK Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: apks-${{ github.sha }}
           path: apks
 
       - name: Download AAB Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: aab-${{ github.sha }}
           path: aab
@@ -219,7 +219,7 @@ jobs:
 
     steps:
       - name: Download AAB Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: aab-${{ github.sha }}
           path: aab

@@ -84,7 +84,7 @@ jobs:
 
       - name: Upload Coverage Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ github.sha }}
           path: app/build/reports/jacoco/jacocoTestReport/html/
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload Lint Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-${{ github.sha }}
           path: app/build/reports/lint-results-playDebug*.html
@@ -100,7 +100,7 @@ jobs:
 
       # Upload APK artifacts (legacy sideload support)
       - name: Upload APK Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: apks-${{ github.sha }}
           path: |
@@ -111,7 +111,7 @@ jobs:
 
       # Upload AAB artifact (Play Store distribution)
       - name: Upload AAB Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aab-${{ github.sha }}
           path: app/build/outputs/bundle/play/release/app-play-release.aab

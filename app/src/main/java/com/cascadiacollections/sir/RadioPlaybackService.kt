@@ -457,6 +457,7 @@ class RadioPlaybackService : MediaLibraryService() {
         isRouteReceiverRegistered = true
     }
 
+    @OptIn(UnstableApi::class)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {

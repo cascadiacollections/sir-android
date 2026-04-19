@@ -57,17 +57,18 @@ jobs:
           path: '**/build/test-results/**/TEST-*.xml'
           reporter: java-junit
 
-      - name: Coverage Report
+      - name: Coverage Threshold
         run: |
           REPORT=app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
-          if [ ! -f "$REPORT" ]; then echo "JaCoCo report not found"; exit 0; fi
+          if [ ! -f "$REPORT" ]; then echo "JaCoCo report not found"; exit 1; fi
           LINE_COUNTER=$(grep -o 'type="LINE" missed="[0-9]*" covered="[0-9]*"' "$REPORT" | tail -1)
           MISSED=$(echo "$LINE_COUNTER" | sed 's/.*missed="\([0-9]*\)".*/\1/')
           COVERED=$(echo "$LINE_COUNTER" | sed 's/.*covered="\([0-9]*\)".*/\1/')
           TOTAL=$((MISSED + COVERED))
-          if [ "$TOTAL" -eq 0 ]; then echo "No line data"; exit 0; fi
+          if [ "$TOTAL" -eq 0 ]; then echo "No line data"; exit 1; fi
           PCT=$((COVERED * 100 / TOTAL))
           echo "Line coverage: ${PCT}% (${COVERED}/${TOTAL})"
+          if [ "$PCT" -lt 5 ]; then echo "::error::Coverage ${PCT}% is below 5% threshold"; exit 1; fi
 
       - name: APK & AAB Size
         run: |

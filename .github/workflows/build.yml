@@ -142,6 +142,11 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download APK Artifacts
         uses: actions/download-artifact@v8
         with:
@@ -165,11 +170,6 @@ jobs:
       - name: Get current date
         id: date
         run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-
-      - name: Checkout repo for gh-pages
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Publish FOSS APK to GitHub Pages
         run: |

@@ -197,10 +197,10 @@ jobs:
             ---
             _This release is automatically replaced on each commit to main._
           files: |
-            apks/play/release/app-play-release-unsigned.apk
-            apks/foss/release/app-foss-release-unsigned.apk
-            apks/play/debug/app-play-debug.apk
-            aab/play/release/app-play-release.aab
+            apks/app/build/outputs/apk/play/release/app-play-release-unsigned.apk
+            apks/app/build/outputs/apk/foss/release/app-foss-release-unsigned.apk
+            apks/app/build/outputs/apk/play/debug/app-play-debug.apk
+            aab/app/build/outputs/bundle/playRelease/app-play-release.aab
           prerelease: true
           make_latest: false
         continue-on-error: true

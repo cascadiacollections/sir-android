@@ -195,7 +195,7 @@ jobs:
 
       # Cleanup artifacts to save storage
       - name: Delete Artifacts
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         with:
           name: |
             apks-${{ github.sha }}

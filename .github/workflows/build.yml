@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up mise
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v4
         with:
           install: true
           cache: true
@@ -137,8 +137,15 @@ jobs:
     needs: [build, check-nightly]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-nightly.outputs.changed == 'true'
+    permissions:
+      contents: write
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Download APK Artifacts
         uses: actions/download-artifact@v8
         with:
@@ -163,48 +170,31 @@ jobs:
         id: date
         run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-      - name: Update nightly release
-        uses: softprops/action-gh-release@v3
+      - name: Publish FOSS APK to GitHub Pages
+        run: |
+          FOSS_APK=$(find apks/foss/release -name "*.apk" | head -1)
+          if [ -z "$FOSS_APK" ]; then
+            echo "No FOSS APK found, skipping"
+            exit 0
+          fi
+          mkdir -p gh-pages-dist
+          cp docs/index.html gh-pages-dist/index.html
+          cp "$FOSS_APK" gh-pages-dist/foss.apk
+          echo "Copied: $(ls -lh gh-pages-dist/)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          tag_name: nightly-build
-          token: ${{ secrets.GH_RELEASE_TOKEN }}
-          name: "Nightly Build (${{ steps.date.outputs.date }})"
-          body: |
-            ## 🌙 Nightly Build
-
-            **Commit:** ${{ github.sha }}
-            **Date:** ${{ steps.date.outputs.date }}
-            **Short SHA:** ${{ steps.sha.outputs.short }}
-
-            ### Downloads
-            | Variant | Description |
-            |---------|-------------|
-            | `app-play-release.aab` | Signed AAB for Play Store (requires signing secrets) |
-            | `app-play-release-unsigned.apk` | Play release build with Firebase Crashlytics |
-            | `app-foss-release-unsigned.apk` | FOSS release build (no Google dependencies) |
-            | `app-play-debug.apk` | Debug build with LeakCanary + StrictMode |
-
-            ### Installation
-            1. Download the APK for your use case
-            2. Enable "Install from unknown sources" on your device
-            3. Install the APK
-
-            ⚠️ **Note:** APKs are unsigned unless signing secrets are configured. AAB is for Play Store upload only.
-
-            ---
-            _This release is automatically replaced on each commit to main._
-          files: |
-            apks/play/release/app-play-release-unsigned.apk
-            apks/foss/release/app-foss-release-unsigned.apk
-            apks/play/debug/app-play-debug.apk
-            aab/play/release/app-play-release.aab
-          prerelease: true
-          make_latest: false
-        continue-on-error: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages-dist
+          force_orphan: true
+          commit_message: "ci: update FOSS APK (${{ steps.sha.outputs.short }}) [skip ci]"
 
       # Cleanup artifacts to save storage
       - name: Delete Artifacts
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         with:
           name: |
             apks-${{ github.sha }}

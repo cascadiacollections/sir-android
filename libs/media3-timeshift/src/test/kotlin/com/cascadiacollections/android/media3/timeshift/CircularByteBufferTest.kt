@@ -33,6 +33,28 @@ class CircularByteBufferTest {
     }
 
     @Test
+    fun `available tracks exact full buffer`() {
+        val buf = CircularByteBuffer(4)
+        buf.write(byteArrayOf(1, 2, 3, 4), 0, 4)
+        assertEquals(4, buf.available())
+
+        val dst = ByteArray(4)
+        assertEquals(4, buf.read(dst, 0, 4))
+        assertArrayEquals(byteArrayOf(1, 2, 3, 4), dst)
+        assertEquals(0, buf.available())
+    }
+
+    @Test
+    fun `overwriting full buffer drops oldest unread bytes`() {
+        val buf = CircularByteBuffer(4)
+        buf.write(byteArrayOf(1, 2, 3, 4, 5, 6), 0, 6)
+
+        val dst = ByteArray(4)
+        assertEquals(4, buf.read(dst, 0, 4))
+        assertArrayEquals(byteArrayOf(3, 4, 5, 6), dst)
+    }
+
+    @Test
     fun `seekBack replays previously read data`() {
         val buf = CircularByteBuffer(100)
         buf.write(ByteArray(20) { it.toByte() }, 0, 20)
@@ -127,6 +149,14 @@ class CircularByteBufferTest {
         val buf = CircularByteBuffer(10)
         buf.write(byteArrayOf(1, 2, 3), 0, 0)
         assertEquals(0, buf.available())
+    }
+
+    @Test
+    fun `read with length 0 is a no-op`() {
+        val buf = CircularByteBuffer(10)
+        buf.write(byteArrayOf(1, 2, 3), 0, 3)
+        assertEquals(0, buf.read(ByteArray(0), 0, 0))
+        assertEquals(3, buf.available())
     }
 
     @Test

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 9.1.0" type="baseline" client="gradle" dependencies="false" name="AGP (9.1.0)" variant="all" version="9.1.0">
+<issues format="6" by="lint 9.2.0" type="baseline" client="gradle" dependencies="false" name="AGP (9.2.0)" variant="all" version="9.2.0">
 
     <issue
         id="MissingPermission"
@@ -8,7 +8,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="606"
+            line="562"
             column="13"/>
     </issue>
 
@@ -19,7 +19,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
-            line="162"
+            line="157"
             column="13"/>
     </issue>
 
@@ -30,7 +30,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
-            line="166"
+            line="161"
             column="13"/>
     </issue>
 
@@ -107,7 +107,7 @@
         errorLine2="                                                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="326"
+            line="281"
             column="97"/>
     </issue>
 
@@ -118,7 +118,7 @@
         errorLine2="                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="329"
+            line="284"
             column="78"/>
     </issue>
 
@@ -129,74 +129,8 @@
         errorLine2="                                                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="338"
+            line="293"
             column="97"/>
-    </issue>
-
-    <issue
-        id="AndroidGradlePluginVersion"
-        message="A newer version of Gradle than 9.4.0 is available: 9.4.1"
-        errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-9.4.0-bin.zip"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="../gradle/wrapper/gradle-wrapper.properties"
-            line="3"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.compose:compose-bom than 2026.03.00 is available: 2026.03.01"
-        errorLine1="composeBom = &quot;2026.03.00&quot;"
-        errorLine2="             ~~~~~~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="13"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.wear.compose:compose-material3 than 1.5.0 is available: 1.6.0"
-        errorLine1="wearComposeMaterial3 = &quot;1.5.0&quot;"
-        errorLine2="                       ~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="36"
-            column="24"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of org.robolectric:robolectric than 4.14.1 is available: 4.16.1"
-        errorLine1="robolectric = &quot;4.14.1&quot;"
-        errorLine2="              ~~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="31"
-            column="15"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of io.mockk:mockk than 1.14.2 is available: 1.14.9"
-        errorLine1="mockk = &quot;1.14.2&quot;"
-        errorLine2="        ~~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="32"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of app.cash.turbine:turbine than 1.2.0 is available: 1.2.1"
-        errorLine1="turbine = &quot;1.2.0&quot;"
-        errorLine2="          ~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="33"
-            column="11"/>
     </issue>
 
     <issue
@@ -206,162 +140,8 @@
         errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="104"
+            line="100"
             column="45"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="    override fun addTransferListener(transferListener: TransferListener) {"
-        errorLine2="                 ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="29"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="    override fun addTransferListener(transferListener: TransferListener) {"
-        errorLine2="                                                       ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="29"
-            column="56"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="        upstream.addTransferListener(transferListener)"
-        errorLine2="                 ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="30"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="    override fun open(dataSpec: DataSpec): Long {"
-        errorLine2="                 ~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="33"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="    override fun open(dataSpec: DataSpec): Long {"
-        errorLine2="                                ~~~~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="33"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="        upstream.open(dataSpec)"
-        errorLine2="                 ~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="34"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="                    val bytesRead = upstream.read(chunk, 0, chunk.size)"
-        errorLine2="                                             ~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="42"
-            column="46"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="                    if (bytesRead == C.RESULT_END_OF_INPUT) break"
-        errorLine2="                                       ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="43"
-            column="40"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="                Log.w(TAG, &quot;TimeShift reader stopped&quot;, e)"
-        errorLine2="                      ~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="51"
-            column="23"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="    override fun read(target: ByteArray, offset: Int, length: Int): Int {"
-        errorLine2="                 ~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="58"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="    override fun getUri(): Uri? = upstream.uri"
-        errorLine2="                 ~~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="62"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="    override fun getUri(): Uri? = upstream.uri"
-        errorLine2="                                           ~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="62"
-            column="44"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="    override fun close() {"
-        errorLine2="                 ~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="64"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="        upstream.close()"
-        errorLine2="                 ~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/TimeShiftDataSource.kt"
-            line="67"
-            column="18"/>
     </issue>
 
     <issue
@@ -538,17 +318,6 @@
             file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
             line="231"
             column="70"/>
-    </issue>
-
-    <issue
-        id="UseTomlInstead"
-        message="Use version catalog instead"
-        errorLine1="        classpath(&quot;com.mikepenz.aboutlibraries.plugin:aboutlibraries-plugin:14.0.0-b03&quot;)"
-        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="build.gradle.kts"
-            line="8"
-            column="19"/>
     </issue>
 
     <issue

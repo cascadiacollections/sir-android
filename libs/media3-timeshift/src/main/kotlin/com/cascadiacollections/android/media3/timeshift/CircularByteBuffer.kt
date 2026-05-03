@@ -12,10 +12,13 @@ import kotlin.concurrent.withLock
  */
 class CircularByteBuffer(val capacity: Int) {
 
+    init {
+        require(capacity > 0) { "capacity must be positive" }
+    }
+
     private val data = ByteArray(capacity)
-    private var writePos = 0
-    private var readPos = 0
-    private var totalWritten = 0L
+    private var writeOffset = 0L
+    private var readOffset = 0L
 
     private val lock = ReentrantLock()
     private val dataAvailable = lock.newCondition()
@@ -34,14 +37,11 @@ class CircularByteBuffer(val capacity: Int) {
         if (length <= 0) return
         lock.withLock {
             for (i in 0 until length) {
-                data[writePos] = src[offset + i]
-                writePos = (writePos + 1) % capacity
-
-                if (writePos == readPos && totalWritten >= capacity) {
-                    readPos = (readPos + 1) % capacity
-                }
+                data[indexFor(writeOffset)] = src[offset + i]
+                writeOffset++
+                val oldestOffset = oldestOffsetInternal()
+                if (readOffset < oldestOffset) readOffset = oldestOffset
             }
-            totalWritten += length
             dataAvailable.signalAll()
         }
     }
@@ -57,6 +57,7 @@ class CircularByteBuffer(val capacity: Int) {
      * @return The number of bytes actually read, or -1 if the thread was interrupted.
      */
     fun read(dst: ByteArray, offset: Int, length: Int): Int {
+        if (length <= 0) return 0
         lock.withLock {
             while (availableInternal() == 0) {
                 try {
@@ -71,10 +72,11 @@ class CircularByteBuffer(val capacity: Int) {
             var dstPos = offset
 
             while (remaining > 0) {
+                val readPos = indexFor(readOffset)
                 val spaceToEnd = capacity - readPos
                 val chunk = remaining.coerceAtMost(spaceToEnd)
                 System.arraycopy(data, readPos, dst, dstPos, chunk)
-                readPos = (readPos + chunk) % capacity
+                readOffset += chunk
                 dstPos += chunk
                 remaining -= chunk
             }
@@ -93,19 +95,19 @@ class CircularByteBuffer(val capacity: Int) {
         lock.withLock {
             val maxSeekBack = seekBackAvailable()
             val actual = bytes.coerceAtMost(maxSeekBack)
-            readPos = ((readPos - actual) % capacity + capacity) % capacity
+            readOffset -= actual
         }
     }
 
     /** Snap the read cursor to the write cursor (resume live playback). */
     fun goLive() {
         lock.withLock {
-            readPos = writePos
+            readOffset = writeOffset
         }
     }
 
     /** True when the read cursor is at the write cursor (no delay). */
-    fun isLive(): Boolean = lock.withLock { (readPos == writePos && totalWritten > 0) || totalWritten == 0L }
+    fun isLive(): Boolean = lock.withLock { readOffset == writeOffset }
 
     /** Number of bytes available to read (ahead of read cursor). */
     fun available(): Int = lock.withLock { availableInternal() }
@@ -113,9 +115,8 @@ class CircularByteBuffer(val capacity: Int) {
     /** Reset the buffer to its initial empty state. */
     fun clear() {
         lock.withLock {
-            writePos = 0
-            readPos = 0
-            totalWritten = 0L
+            writeOffset = 0L
+            readOffset = 0L
         }
     }
 
@@ -127,15 +128,19 @@ class CircularByteBuffer(val capacity: Int) {
      * This is the data that has been read but is still in the buffer.
      */
     internal fun seekBackAvailable(): Int = lock.withLock {
-        val totalInBuffer = totalWritten.coerceAtMost(capacity.toLong()).toInt()
-        val ahead = availableInternal()
-        (totalInBuffer - ahead).coerceAtLeast(0)
+        (readOffset - oldestOffsetInternal()).coerceAtLeast(0).toInt()
     }
 
     /** Unlocked available — call only while holding [lock]. */
     private fun availableInternal(): Int {
-        if (totalWritten == 0L) return 0
-        val diff = writePos - readPos
-        return if (diff >= 0) diff else diff + capacity
+        return (writeOffset - readOffset).coerceIn(0L, capacity.toLong()).toInt()
+    }
+
+    private fun oldestOffsetInternal(): Long {
+        return (writeOffset - capacity).coerceAtLeast(0L)
+    }
+
+    private fun indexFor(offset: Long): Int {
+        return (offset % capacity).toInt()
     }
 }

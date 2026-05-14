@@ -93,8 +93,12 @@ class RadioPlaybackServiceTest {
     }
 
     @Test
-    fun `hasStationChanged returns false for blank station or same station`() {
+    fun `hasStationChanged returns false when station does not change`() {
         assertFalse(hasStationChanged(previousStation = "Station A", newStation = "Station A"))
+    }
+
+    @Test
+    fun `hasStationChanged returns false for blank station`() {
         assertFalse(hasStationChanged(previousStation = "Station A", newStation = ""))
     }
 }

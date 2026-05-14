@@ -85,4 +85,15 @@ class RadioPlaybackServiceTest {
             RadioPlaybackService.REPLAY_BUFFER_SIZE >= bytesFor30Seconds
         )
     }
+
+    @Test
+    fun `hasStationChanged returns true when static metadata station changes`() {
+        assertTrue(hasStationChanged(previousStation = "Station A", newStation = "Station B"))
+    }
+
+    @Test
+    fun `hasStationChanged returns false for blank station or same station`() {
+        assertTrue(!hasStationChanged(previousStation = "Station A", newStation = "Station A"))
+        assertTrue(!hasStationChanged(previousStation = "Station A", newStation = ""))
+    }
 }

@@ -379,6 +379,7 @@ class RadioPlaybackService : MediaLibraryService() {
                 val streamTitle = mediaMetadata.title?.toString()
                 val artist = mediaMetadata.artist?.toString()
                 val station = mediaMetadata.station?.toString()
+                val previousStation = currentStation
 
                 Log.d(TAG, "Stream metadata: title=$streamTitle, artist=$artist, station=$station")
 
@@ -397,7 +398,7 @@ class RadioPlaybackService : MediaLibraryService() {
                     currentTrackTitle = streamTitle
                     currentArtist = artist?.takeIf { it != STREAM_STATIC_ARTIST }
                     updateNotificationSafe()
-                } else if (!station.isNullOrBlank() && currentStation != station) {
+                } else if (hasStationChanged(previousStation, station)) {
                     // Station name changed, update notification
                     updateNotificationSafe()
                 }
@@ -1041,3 +1042,6 @@ internal fun calculateEqualizerLevels(
     val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
     (minLevel + range * curve(position)).toInt().toShort().coerceIn(minLevel, maxLevel)
 }
+
+internal fun hasStationChanged(previousStation: String?, newStation: String?): Boolean =
+    !newStation.isNullOrBlank() && previousStation != newStation

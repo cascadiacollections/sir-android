@@ -75,9 +75,9 @@
 
 ### Build Toolchain
 
-- **AGP 9.1** with configuration cache
+- **AGP 9.2.1** with configuration cache
 - **Eclipse Adoptium Temurin JDK 21** via Foojay resolver
-- **Gradle 9.4** with parallel builds and build cache
+- **Gradle 9.5.0** with parallel builds and build cache
 - **JaCoCo** coverage with 5% minimum threshold
 - **Baseline profiles** for AOT compilation
 - **Convention plugins** (`build-logic/`) for shared config

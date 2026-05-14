@@ -7,6 +7,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -120,6 +123,30 @@ class RadioViewModelTest {
         vm.togglePlayback()
     }
 
+    @Test
+    fun `sleep timer label clears when timer is cancelled`() = runTest {
+        val settings = SettingsRepository(app)
+        val vm = RadioViewModel(app, settings)
+
+        settings.setSleepTimerFiresAt(System.currentTimeMillis() + 10 * 60_000L)
+        waitUntil { vm.uiState.value.sleepTimerLabel != null }
+
+        settings.setSleepTimerFiresAt(0L)
+        waitUntil { vm.uiState.value.sleepTimerLabel == null }
+    }
+
+    @Test
+    fun `sleep timer label updates when timer changes`() = runTest {
+        val settings = SettingsRepository(app)
+        val vm = RadioViewModel(app, settings)
+
+        settings.setSleepTimerFiresAt(System.currentTimeMillis() + 120 * 60_000L)
+        waitUntil { vm.uiState.value.sleepTimerLabel != null }
+
+        settings.setSleepTimerFiresAt(System.currentTimeMillis() + 60_000L)
+        waitUntil { vm.uiState.value.sleepTimerLabel?.endsWith("1m") == true }
+    }
+
     // ---- RadioUiState copy correctness ----
 
     @Test
@@ -160,5 +187,16 @@ class RadioViewModelTest {
         val factory = RadioViewModel.Factory(app, settings)
         val vm = factory.create(RadioViewModel::class.java)
         assertTrue(vm is RadioViewModel)
+    }
+
+    private suspend fun waitUntil(
+        timeoutMillis: Long = 2_000L,
+        condition: () -> Boolean
+    ) {
+        withTimeout(timeoutMillis) {
+            while (!condition()) {
+                delay(10L)
+            }
+        }
     }
 }

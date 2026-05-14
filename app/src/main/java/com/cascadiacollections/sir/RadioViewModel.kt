@@ -15,9 +15,13 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
@@ -113,22 +117,35 @@ class RadioViewModel(
 
     private fun observeSleepTimer() {
         viewModelScope.launch {
-            settingsRepository.sleepTimerFiresAt.collect { firesAt ->
-                while (true) {
-                    val remaining = firesAt - System.currentTimeMillis()
-                    _uiState.update {
-                        it.copy(
-                            sleepTimerLabel = if (remaining > 0)
-                                getApplication<Application>().getString(
-                                    R.string.sleep_timer_countdown,
-                                    (remaining / 60_000).toInt().coerceAtLeast(1)
-                                ) else null
-                        )
+            settingsRepository.sleepTimerFiresAt
+                .flatMapLatest { firesAt ->
+                    if (firesAt <= 0L) {
+                        flowOf(null)
+                    } else {
+                        countdownLabelFlow(firesAt)
                     }
-                    if (firesAt <= 0L || remaining <= 0L) break
-                    delay(30_000L)
                 }
-            }
+                .collect { label ->
+                    _uiState.update { it.copy(sleepTimerLabel = label) }
+                }
+        }
+    }
+
+    private fun countdownLabelFlow(firesAt: Long): Flow<String?> = flow {
+        while (true) {
+            val remaining = firesAt - System.currentTimeMillis()
+            emit(
+                if (remaining > 0) {
+                    getApplication<Application>().getString(
+                        R.string.sleep_timer_countdown,
+                        (remaining / 60_000).toInt().coerceAtLeast(1)
+                    )
+                } else {
+                    null
+                }
+            )
+            if (remaining <= 0L) break
+            delay(30_000L)
         }
     }
 

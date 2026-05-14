@@ -14,6 +14,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -115,6 +116,7 @@ class RadioViewModel(
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeSleepTimer() {
         viewModelScope.launch {
             settingsRepository.sleepTimerFiresAt

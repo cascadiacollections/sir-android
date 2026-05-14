@@ -229,7 +229,7 @@ internal fun StreamVisualizer(
         bars.forEach { (offset, speed1, speed2) ->
             // Layer two sine waves at different frequencies for organic feel
             val primary = kotlin.math.sin((tick * speed1 + offset).toDouble())
-            val secondary = kotlin.math.sin((tick * speed2 + offset * 1.7).toDouble()) * 0.3
+            val secondary = kotlin.math.sin((tick * speed2 + offset * 1.7f).toDouble()) * 0.3
             val h = ((primary + secondary + 1.3) / 2.6)
                 .toFloat()
                 .coerceIn(0.15f, 0.85f)
@@ -245,4 +245,3 @@ internal fun StreamVisualizer(
         }
     }
 }
-

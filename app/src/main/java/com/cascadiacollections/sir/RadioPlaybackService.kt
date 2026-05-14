@@ -714,16 +714,14 @@ class RadioPlaybackService : MediaLibraryService() {
 
         val buttons = mutableListOf<CommandButton>()
         if (SEEKBACK_ENABLED && canSeek) {
-            buttons += CommandButton.Builder()
+            buttons += CommandButton.Builder(CommandButton.ICON_SKIP_BACK_30)
                 .setDisplayName(getString(R.string.seek_back_30))
-                .setIconResId(android.R.drawable.ic_media_rew)
                 .setSessionCommand(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
                 .build()
         }
         if (SEEKBACK_ENABLED && playbackMode is PlaybackMode.TimeShifted) {
-            buttons += CommandButton.Builder()
+            buttons += CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD)
                 .setDisplayName(getString(R.string.go_live))
-                .setIconResId(android.R.drawable.ic_media_ff)
                 .setSessionCommand(SessionCommand(ACTION_GO_LIVE, android.os.Bundle.EMPTY))
                 .build()
         }

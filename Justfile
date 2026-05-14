@@ -5,7 +5,7 @@ flavor := "foss"
 
 # Build debug APK
 build:
-    ./gradlew assemble{{capitalize(flavor)}}Debug --no-daemon
+    ./gradlew assemble{{capitalize(flavor)}}Debug --no-daemon --console=rich --warning-mode=none
 
 # Run unit tests
 test:
@@ -30,9 +30,8 @@ deploy: build install
 
 # Build FOSS variant
 build-foss:
-    ./gradlew assembleFossDebug --no-daemon
+    ./gradlew assembleFossDebug --no-daemon --console=rich --warning-mode=none
 
 # Build full variant (with Firebase)
 build-full:
     ./gradlew assembleFullDebug --no-daemon
-

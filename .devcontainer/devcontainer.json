@@ -9,7 +9,7 @@
       "version": "lts"
     }
   },
-  "postStartCommand": "npm install -g @anthropic-ai/claude-code || true",
+  "postStartCommand": "gh extension install github/gh-copilot || gh extension upgrade github/gh-copilot || true",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -18,7 +18,8 @@
         "mathiasfrohlich.Kotlin",
         "naco-siren.gradle-language",
         "esafirm.kotlin-formatter",
-        "anthropic.claude-code"
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
       ],
       "settings": {
         "kotlin.languageServer.enabled": true,

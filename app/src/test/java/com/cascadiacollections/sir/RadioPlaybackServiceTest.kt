@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -93,7 +94,7 @@ class RadioPlaybackServiceTest {
 
     @Test
     fun `hasStationChanged returns false for blank station or same station`() {
-        assertTrue(!hasStationChanged(previousStation = "Station A", newStation = "Station A"))
-        assertTrue(!hasStationChanged(previousStation = "Station A", newStation = ""))
+        assertFalse(hasStationChanged(previousStation = "Station A", newStation = "Station A"))
+        assertFalse(hasStationChanged(previousStation = "Station A", newStation = ""))
     }
 }

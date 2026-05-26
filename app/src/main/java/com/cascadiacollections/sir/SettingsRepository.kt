@@ -75,6 +75,7 @@ class SettingsRepository(private val context: Context) {
     private val customStreamUrlKey = stringPreferencesKey("custom_stream_url")
     private val savedStationsKey = stringPreferencesKey("saved_stations")
     private val fifoExportEnabledKey = booleanPreferencesKey("fifo_export_enabled")
+    private val offlineCaptureEnabledKey = booleanPreferencesKey("offline_capture_enabled")
 
     val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
         StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
@@ -247,6 +248,26 @@ class SettingsRepository(private val context: Context) {
                 preferences[fifoExportEnabledKey] = true
             } else {
                 preferences.remove(fifoExportEnabledKey)
+            }
+        }
+    }
+
+    /**
+     * Flow of offline capture enabled (airplane mode: record 5-min snapshots)
+     */
+    val offlineCaptureEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[offlineCaptureEnabledKey] ?: false
+    }
+
+    /**
+     * Set offline capture enabled (debug only feature)
+     */
+    suspend fun setOfflineCaptureEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            if (enabled) {
+                preferences[offlineCaptureEnabledKey] = true
+            } else {
+                preferences.remove(offlineCaptureEnabledKey)
             }
         }
     }

@@ -106,6 +106,11 @@ class RadioPlaybackService : MediaLibraryService() {
     private var fifoExportJob: kotlinx.coroutines.Job? = null
     private val FIFO_PATH = "/data/local/tmp/sir_buffer.fifo"
 
+    // Offline capture for airplane mode (debug only) — rolling 5-min snapshots
+    private var offlineCaptureJob: kotlinx.coroutines.Job? = null
+    private val OFFLINE_CAPTURE_DIR by lazy { File(getExternalFilesDir(null), "offline_captures") }
+    private val OFFLINE_CAPTURE_DURATION_MS = 5 * 60 * 1000  // 5 minutes
+
     private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent?.action && player?.isPlaying == true) {
@@ -203,6 +208,19 @@ class RadioPlaybackService : MediaLibraryService() {
                         startFifoExport()
                     } else {
                         stopFifoExport()
+                    }
+                }
+            }
+        }
+
+        // Observe offline capture setting (debug only) — record 5-min snapshots for airplane mode
+        if (BuildConfig.DEBUG) {
+            serviceScope.launch {
+                settingsRepository.offlineCaptureEnabled.collect { enabled ->
+                    if (enabled) {
+                        startOfflineCapture()
+                    } else {
+                        stopOfflineCapture()
                     }
                 }
             }
@@ -577,6 +595,9 @@ class RadioPlaybackService : MediaLibraryService() {
         // Stop FIFO export if enabled
         stopFifoExport()
 
+        // Stop offline capture if enabled
+        stopOfflineCapture()
+
         // Cancel coroutine scope
         serviceScope.cancel()
 
@@ -881,6 +902,74 @@ class RadioPlaybackService : MediaLibraryService() {
         } catch (e: Exception) {
             Log.w(TAG, "Error cleaning up FIFO", e)
         }
+    }
+
+    /**
+     * Start offline capture: record rolling 5-minute buffer snapshots for airplane mode
+     * Files stored in: Android/data/com.cascadiacollections.sir/files/offline_captures/
+     * User can convert with: ffmpeg -f rawvideo -ar 44100 -ac 2 -c:a pcm_s16le -i capture_*.raw output.wav
+     */
+    @Suppress("BlockingMethodInNonBlockingContext")
+    private fun startOfflineCapture() {
+        if (offlineCaptureJob != null) return  // Already running
+
+        offlineCaptureJob = serviceScope.launch {
+            try {
+                // Ensure capture directory exists
+                OFFLINE_CAPTURE_DIR.mkdirs()
+                Log.d(TAG, "Offline capture started — files saved to ${OFFLINE_CAPTURE_DIR.absolutePath}")
+
+                // Capture buffer to file every 5 minutes, keeping only latest snapshot
+                while (offlineCaptureJob?.isActive == true) {
+                    delay(OFFLINE_CAPTURE_DURATION_MS.toLong())
+                    
+                    val timestamp = System.currentTimeMillis()
+                    val captureFile = File(OFFLINE_CAPTURE_DIR, "capture_${timestamp}.raw")
+                    
+                    try {
+                        // Snapshot current buffer state to file
+                        captureFile.outputStream().use { out ->
+                            val buffer = ByteArray(65536)
+                            var totalBytes = 0
+                            while (totalBytes < REPLAY_BUFFER_SIZE) {
+                                val bytesRead = replayBuffer.read(buffer, 0, buffer.size)
+                                if (bytesRead > 0) {
+                                    out.write(buffer, 0, bytesRead)
+                                    totalBytes += bytesRead
+                                } else {
+                                    break
+                                }
+                            }
+                        }
+                        
+                        Log.d(TAG, "Offline capture snapshot saved: ${captureFile.name} (${captureFile.length()} bytes)")
+                        
+                        // Clean up old captures, keep only latest 2
+                        val captures = OFFLINE_CAPTURE_DIR.listFiles()?.sortedBy { it.lastModified() } ?: emptyList()
+                        if (captures.size > 2) {
+                            captures.dropLast(2).forEach { oldFile ->
+                                oldFile.delete()
+                                Log.d(TAG, "Cleaned up old capture: ${oldFile.name}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error writing offline capture", e)
+                    }
+                }
+            } catch (e: Exception) {
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    Log.e(TAG, "Offline capture error", e)
+                }
+            } finally {
+                stopOfflineCapture()
+            }
+        }
+    }
+
+    private fun stopOfflineCapture() {
+        offlineCaptureJob?.cancel()
+        offlineCaptureJob = null
+        Log.d(TAG, "Offline capture stopped")
     }
 
     private fun buildMediaItem(): MediaItem = MediaItem.Builder()

@@ -73,6 +73,7 @@ fun SettingsSheet(
     val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
     val savedStations by settingsRepository.savedStations.collectAsState(initial = emptyList())
     val fifoExportEnabled by settingsRepository.fifoExportEnabled.collectAsState(initial = false)
+    val offlineCaptureEnabled by settingsRepository.offlineCaptureEnabled.collectAsState(initial = false)
 
     var sleepTimerExpanded by remember { mutableStateOf(false) }
     var equalizerExpanded by remember { mutableStateOf(false) }
@@ -409,6 +410,24 @@ fun SettingsSheet(
                                 onCheckedChange = { enabled ->
                                     scope.launch {
                                         settingsRepository.setFifoExportEnabled(enabled)
+                                    }
+                                }
+                            )
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    
+                    // Offline capture toggle (airplane mode)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ListItem(
+                        headlineContent = { Text("Offline Capture (5-min snapshots)") },
+                        supportingContent = { Text("Save rolling 5-min buffer for airplane mode") },
+                        trailingContent = {
+                            Switch(
+                                checked = offlineCaptureEnabled,
+                                onCheckedChange = { enabled ->
+                                    scope.launch {
+                                        settingsRepository.setOfflineCaptureEnabled(enabled)
                                     }
                                 }
                             )

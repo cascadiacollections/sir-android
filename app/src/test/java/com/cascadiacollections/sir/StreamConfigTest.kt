@@ -24,4 +24,17 @@ class StreamConfigTest {
             )
         }
     }
+
+    @Test
+    fun `fallback test stream list is not empty`() {
+        assertTrue(StreamConfig.FALLBACK_TEST_STREAMS.isNotEmpty())
+    }
+
+    @Test
+    fun `fallback test streams are valid HTTPS URLs`() {
+        StreamConfig.FALLBACK_TEST_STREAMS.forEach { source ->
+            assertTrue(source.name.isNotBlank())
+            assertTrue(source.url.startsWith("https://"))
+        }
+    }
 }

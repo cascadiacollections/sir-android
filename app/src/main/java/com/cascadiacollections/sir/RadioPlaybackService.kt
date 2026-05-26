@@ -57,6 +57,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
@@ -163,6 +164,27 @@ class RadioPlaybackService : MediaLibraryService() {
                 } else {
                     // Timer already expired — clear persisted value
                     settingsRepository.setSleepTimerFiresAt(0L)
+                }
+            }
+        }
+
+        // Observe custom stream URL changes (debug only) — apply immediately without restart
+        if (BuildConfig.DEBUG) {
+            serviceScope.launch {
+                settingsRepository.customStreamUrl.collect { newUrl ->
+                    val oldUrl = currentStreamUrl
+                    currentStreamUrl = newUrl ?: DEFAULT_STREAM_URL
+                    if (oldUrl != currentStreamUrl) {
+                        Log.d(TAG, "Stream URL changed: $oldUrl -> $currentStreamUrl")
+                        player?.let {
+                            val wasPlaying = it.isPlaying
+                            it.setMediaItem(buildMediaItem())
+                            it.prepare()
+                            if (wasPlaying) {
+                                it.play()
+                            }
+                        }
+                    }
                 }
             }
         }

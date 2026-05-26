@@ -382,16 +382,16 @@ fun SettingsSheet(
                         Text(stringResource(R.string.save))
                     }
                 }
-            }
 
-            // Find Stations button
-            TextButton(
-                onClick = { showStationSearch = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text(stringResource(R.string.find_stations))
+                // Find Stations button
+                TextButton(
+                    onClick = { showStationSearch = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text(stringResource(R.string.find_stations))
+                }
             }
         }
     }

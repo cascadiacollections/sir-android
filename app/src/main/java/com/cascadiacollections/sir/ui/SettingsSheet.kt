@@ -72,6 +72,7 @@ fun SettingsSheet(
     val equalizerPreset by settingsRepository.equalizerPreset.collectAsState(initial = EqualizerPreset.NORMAL)
     val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
     val savedStations by settingsRepository.savedStations.collectAsState(initial = emptyList())
+    val fifoExportEnabled by settingsRepository.fifoExportEnabled.collectAsState(initial = false)
 
     var sleepTimerExpanded by remember { mutableStateOf(false) }
     var equalizerExpanded by remember { mutableStateOf(false) }
@@ -394,6 +395,26 @@ fun SettingsSheet(
                         .padding(horizontal = 16.dp)
                 ) {
                     Text(stringResource(R.string.find_stations))
+                }
+
+                // FIFO export toggle (debug only)
+                if (BuildConfig.DEBUG) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ListItem(
+                        headlineContent = { Text("FIFO Buffer Export") },
+                        supportingContent = { Text("Stream buffer to /data/local/tmp/sir_buffer.fifo") },
+                        trailingContent = {
+                            Switch(
+                                checked = fifoExportEnabled,
+                                onCheckedChange = { enabled ->
+                                    scope.launch {
+                                        settingsRepository.setFifoExportEnabled(enabled)
+                                    }
+                                }
+                            )
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
                 }
             }
         }

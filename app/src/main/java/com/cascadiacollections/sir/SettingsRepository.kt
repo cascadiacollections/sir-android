@@ -74,6 +74,7 @@ class SettingsRepository(private val context: Context) {
     private val equalizerPresetKey = intPreferencesKey("equalizer_preset")
     private val customStreamUrlKey = stringPreferencesKey("custom_stream_url")
     private val savedStationsKey = stringPreferencesKey("saved_stations")
+    private val fifoExportEnabledKey = booleanPreferencesKey("fifo_export_enabled")
 
     val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
         StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
@@ -227,6 +228,26 @@ class SettingsRepository(private val context: Context) {
 
             current.removeAll { it.id == stationId }
             preferences[savedStationsKey] = Json.encodeToString(current)
+        }
+    }
+
+    /**
+     * Flow of FIFO export enabled (debug only feature for buffer export)
+     */
+    val fifoExportEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[fifoExportEnabledKey] ?: false
+    }
+
+    /**
+     * Set FIFO export enabled (debug only feature)
+     */
+    suspend fun setFifoExportEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            if (enabled) {
+                preferences[fifoExportEnabledKey] = true
+            } else {
+                preferences.remove(fifoExportEnabledKey)
+            }
         }
     }
 }

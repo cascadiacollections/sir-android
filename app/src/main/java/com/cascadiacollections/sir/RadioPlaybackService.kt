@@ -25,6 +25,7 @@ import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import java.io.File
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -56,6 +57,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -99,6 +101,10 @@ class RadioPlaybackService : MediaLibraryService() {
     private val replayBuffer = CircularByteBuffer(REPLAY_BUFFER_SIZE)
     private var playbackMode: PlaybackMode = PlaybackMode.Live
     private var timeShiftDataSourceFactory: TimeShiftDataSource.Factory? = null
+
+    // FIFO export for offline playback (debug only)
+    private var fifoExportJob: kotlinx.coroutines.Job? = null
+    private val FIFO_PATH = "/data/local/tmp/sir_buffer.fifo"
 
     private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -184,6 +190,19 @@ class RadioPlaybackService : MediaLibraryService() {
                                 it.play()
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // Observe FIFO export setting (debug only) — stream buffer to named pipe for offline playback
+        if (BuildConfig.DEBUG) {
+            serviceScope.launch {
+                settingsRepository.fifoExportEnabled.collect { enabled ->
+                    if (enabled) {
+                        startFifoExport()
+                    } else {
+                        stopFifoExport()
                     }
                 }
             }
@@ -555,6 +574,9 @@ class RadioPlaybackService : MediaLibraryService() {
         // Clear replay buffer
         replayBuffer.clear()
 
+        // Stop FIFO export if enabled
+        stopFifoExport()
+
         // Cancel coroutine scope
         serviceScope.cancel()
 
@@ -790,6 +812,74 @@ class RadioPlaybackService : MediaLibraryService() {
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager?.createNotificationChannel(channel)
+        }
+    }
+
+    /**
+     * Start FIFO export: create named pipe and stream buffer contents to it
+     * External processes can read from the pipe: mkfifo /data/local/tmp/sir_buffer.fifo
+     * Then: ffmpeg -i /data/local/tmp/sir_buffer.fifo output.mp3
+     */
+    @Suppress("BlockingMethodInNonBlockingContext")
+    private fun startFifoExport() {
+        if (fifoExportJob != null) return  // Already running
+
+        fifoExportJob = serviceScope.launch {
+            try {
+                val fifoFile = File(FIFO_PATH)
+                
+                // Remove old FIFO if it exists
+                if (fifoFile.exists()) {
+                    fifoFile.delete()
+                }
+
+                // Create FIFO using mkfifo via shell
+                val runtime = Runtime.getRuntime()
+                try {
+                    runtime.exec("mkfifo $FIFO_PATH").waitFor()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to create FIFO at $FIFO_PATH", e)
+                    return@launch
+                }
+
+                Log.d(TAG, "FIFO export started at $FIFO_PATH")
+
+                // Stream buffer to FIFO in 64KB chunks
+                val buffer = ByteArray(65536)
+                fifoFile.outputStream().use { out ->
+                    while (fifoExportJob?.isActive == true) {
+                        val bytesRead = replayBuffer.read(buffer, 0, buffer.size)
+                        if (bytesRead > 0) {
+                            out.write(buffer, 0, bytesRead)
+                            out.flush()
+                        } else {
+                            delay(100)  // Small delay if no data available
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    Log.e(TAG, "FIFO export error", e)
+                }
+            } finally {
+                stopFifoExport()
+            }
+        }
+    }
+
+    private fun stopFifoExport() {
+        fifoExportJob?.cancel()
+        fifoExportJob = null
+
+        // Clean up FIFO file
+        try {
+            val fifoFile = File(FIFO_PATH)
+            if (fifoFile.exists()) {
+                fifoFile.delete()
+                Log.d(TAG, "FIFO export stopped and cleaned up")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error cleaning up FIFO", e)
         }
     }
 

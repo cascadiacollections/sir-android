@@ -71,6 +71,7 @@ fun SettingsSheet(
     val sleepTimerDuration by settingsRepository.sleepTimerDuration.collectAsState(initial = SleepTimerDuration.OFF)
     val equalizerPreset by settingsRepository.equalizerPreset.collectAsState(initial = EqualizerPreset.NORMAL)
     val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
+    val savedStations by settingsRepository.savedStations.collectAsState(initial = emptyList())
 
     var sleepTimerExpanded by remember { mutableStateOf(false) }
     var equalizerExpanded by remember { mutableStateOf(false) }
@@ -260,11 +261,13 @@ fun SettingsSheet(
             // Debug-only: Custom Stream URL
             if (BuildConfig.DEBUG) {
                 val defaultPresetLabel = stringResource(R.string.stream_override_default)
-                val presetOptions = remember(defaultPresetLabel) {
+                val presetOptions = remember(defaultPresetLabel, savedStations) {
                     listOf(
                         defaultPresetLabel to null
                     ) + StreamConfig.FALLBACK_TEST_STREAMS.map { stream ->
                         stream.name to stream.url
+                    } + savedStations.map { station ->
+                        station.name to station.url
                     }
                 }
                 val selectedPresetLabel = presetOptions.firstOrNull { it.second == customStreamUrl }?.first

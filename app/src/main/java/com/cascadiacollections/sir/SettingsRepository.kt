@@ -174,7 +174,10 @@ class SettingsRepository(private val context: Context) {
     val savedStations: Flow<List<RadioBrowserStation>> = context.dataStore.data.map { preferences ->
         val json = preferences[savedStationsKey] ?: "[]"
         try {
-            Json.decodeFromString<List<RadioBrowserStation>>(json)
+            val jsonDecoder = kotlinx.serialization.json.Json {
+                ignoreUnknownKeys = true
+            }
+            jsonDecoder.decodeFromString<List<RadioBrowserStation>>(json)
         } catch (e: Exception) {
             emptyList()
         }
@@ -187,7 +190,10 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             val current = try {
                 val json = preferences[savedStationsKey] ?: "[]"
-                Json.decodeFromString<List<RadioBrowserStation>>(json).toMutableList()
+                val jsonDecoder = kotlinx.serialization.json.Json {
+                    ignoreUnknownKeys = true
+                }
+                jsonDecoder.decodeFromString<List<RadioBrowserStation>>(json).toMutableList()
             } catch (e: Exception) {
                 mutableListOf()
             }
@@ -211,7 +217,10 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             val current = try {
                 val json = preferences[savedStationsKey] ?: "[]"
-                Json.decodeFromString<List<RadioBrowserStation>>(json).toMutableList()
+                val jsonDecoder = kotlinx.serialization.json.Json {
+                    ignoreUnknownKeys = true
+                }
+                jsonDecoder.decodeFromString<List<RadioBrowserStation>>(json).toMutableList()
             } catch (e: Exception) {
                 mutableListOf()
             }

@@ -75,7 +75,10 @@ class RadioBrowserService {
                     Log.d(TAG, "Response body: $body")
                     
                     val stations = try {
-                        kotlinx.serialization.json.Json.decodeFromString<List<RadioBrowserStation>>(body)
+                        val json = kotlinx.serialization.json.Json {
+                            ignoreUnknownKeys = true
+                        }
+                        json.decodeFromString<List<RadioBrowserStation>>(body)
                     } catch (e: Exception) {
                         Log.e(TAG, "JSON decode failed", e)
                         emptyList()

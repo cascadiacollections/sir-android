@@ -4,6 +4,7 @@ plugins {
     id("sir.android.app")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.aboutlibraries.plugin)
+    kotlin("plugin.serialization") version "2.3.21"
     id("jacoco")
 }
 
@@ -201,6 +202,9 @@ dependencies {
     implementation(libs.okhttp)
     // Logging interceptor - guarded by BuildConfig.DEBUG at runtime, stripped by R8 in release
     implementation(libs.okhttp.logging.interceptor)
+
+    // Serialization for API responses
+    implementation(libs.kotlinx.serialization.json)
 
     // Cast device detection (lightweight - actual Cast player in dynamic module)
     implementation(libs.mediarouter)

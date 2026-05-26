@@ -48,6 +48,8 @@ import com.cascadiacollections.sir.CastFeatureManager
 import com.cascadiacollections.sir.CastModuleState
 import com.cascadiacollections.sir.EqualizerPreset
 import com.cascadiacollections.sir.R
+import com.cascadiacollections.sir.RadioBrowserService
+import com.cascadiacollections.sir.RadioBrowserViewModel
 import com.cascadiacollections.sir.RadioPlaybackService
 import com.cascadiacollections.sir.SettingsRepository
 import com.cascadiacollections.sir.SleepTimerDuration
@@ -74,6 +76,12 @@ fun SettingsSheet(
     var equalizerExpanded by remember { mutableStateOf(false) }
     var customStreamText by remember { mutableStateOf(customStreamUrl ?: "") }
     var streamPresetExpanded by remember { mutableStateOf(false) }
+    var showStationSearch by remember { mutableStateOf(false) }
+
+    val radioBrowserService = remember { RadioBrowserService() }
+    val radioBrowserViewModel = remember {
+        RadioBrowserViewModel(radioBrowserService, settingsRepository)
+    }
 
     LaunchedEffect(customStreamUrl) {
         customStreamText = customStreamUrl ?: ""
@@ -375,6 +383,23 @@ fun SettingsSheet(
                     }
                 }
             }
+
+            // Find Stations button
+            TextButton(
+                onClick = { showStationSearch = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text(stringResource(R.string.find_stations))
+            }
         }
+    }
+
+    if (showStationSearch) {
+        StationSearchSheet(
+            viewModel = radioBrowserViewModel,
+            onDismiss = { showStationSearch = false }
+        )
     }
 }

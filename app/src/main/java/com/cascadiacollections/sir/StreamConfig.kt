@@ -1,20 +1,21 @@
 package com.cascadiacollections.sir
 
-data class StreamSource(
-    val name: String,
-    val url: String
-)
-
 /**
  * Central stream configuration constants shared across the app, widget, tile, and wear modules.
  * Eliminates duplication of the stream URL across RadioPlaybackService, StreamQuality, and WearPlaybackService.
  */
 object StreamConfig {
+    data class StreamSource(
+        val name: String,
+        val url: String
+    )
+
     /** Default SHOUTcast stream URL for SIR radio */
     const val DEFAULT_STREAM_URL = "https://broadcast.shoutcheap.com/proxy/willradio/stream"
 
     /**
-     * Free fallback streams for playback testing when the primary station is unavailable.
+     * Manual debug preset streams for stream override testing.
+     * These are user-selected presets and are not used as automatic playback fallback.
      * Sources are curated from https://github.com/mikepierce/internet-radio-streams.
      */
     val FALLBACK_TEST_STREAMS: List<StreamSource> = listOf(

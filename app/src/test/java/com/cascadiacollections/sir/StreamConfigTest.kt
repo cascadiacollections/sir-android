@@ -33,8 +33,10 @@ class StreamConfigTest {
     @Test
     fun `fallback test streams are valid HTTPS URLs`() {
         StreamConfig.FALLBACK_TEST_STREAMS.forEach { source ->
+            val url = java.net.URL(source.url)
             assertTrue(source.name.isNotBlank())
-            assertTrue(source.url.startsWith("https://"))
+            assertTrue(url.protocol == "https")
+            assertTrue(url.host.isNotBlank())
         }
     }
 }

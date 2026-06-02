@@ -38,7 +38,12 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Install Android SDK platform
-        run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "platforms;android-37"
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -d "${ANDROID_HOME}/platforms/android-37" ]; then
+            $SDKMANAGER --channel=3 "platforms;android-CinnamonBun" || \
+            $SDKMANAGER --channel=3 "platforms;android-37"
+          fi
 
       - name: Decode keystore
         if: ${{ env.KEYSTORE_BASE64 != '' }}

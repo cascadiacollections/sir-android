@@ -30,4 +30,10 @@ class StreamConfigExtendedTest {
         assertEquals("https", url.protocol)
         assertTrue(url.host.isNotEmpty())
     }
+
+    @Test
+    fun `fallback stream URLs are unique`() {
+        val urls = StreamConfig.FALLBACK_TEST_STREAMS.map { it.url }
+        assertEquals(urls.size, urls.toSet().size)
+    }
 }

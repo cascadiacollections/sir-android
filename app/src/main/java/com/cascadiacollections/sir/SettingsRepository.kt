@@ -11,6 +11,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -71,6 +73,7 @@ class SettingsRepository(private val context: Context) {
     private val sleepTimerFiresAtKey = longPreferencesKey("sleep_timer_fires_at")
     private val equalizerPresetKey = intPreferencesKey("equalizer_preset")
     private val customStreamUrlKey = stringPreferencesKey("custom_stream_url")
+    private val savedStationsKey = stringPreferencesKey("saved_stations")
 
     val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
         StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
@@ -162,6 +165,68 @@ class SettingsRepository(private val context: Context) {
             } else {
                 preferences[customStreamUrlKey] = url
             }
+        }
+    }
+
+    /**
+     * Flow of saved discovered stations (from radio-browser.info)
+     */
+    val savedStations: Flow<List<RadioBrowserStation>> = context.dataStore.data.map { preferences ->
+        val json = preferences[savedStationsKey] ?: "[]"
+        try {
+            val jsonDecoder = kotlinx.serialization.json.Json {
+                ignoreUnknownKeys = true
+            }
+            jsonDecoder.decodeFromString<List<RadioBrowserStation>>(json)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * Add or update a saved station
+     */
+    suspend fun saveStation(station: RadioBrowserStation) {
+        context.dataStore.edit { preferences ->
+            val current = try {
+                val json = preferences[savedStationsKey] ?: "[]"
+                val jsonDecoder = kotlinx.serialization.json.Json {
+                    ignoreUnknownKeys = true
+                }
+                jsonDecoder.decodeFromString<List<RadioBrowserStation>>(json).toMutableList()
+            } catch (e: Exception) {
+                mutableListOf()
+            }
+
+            // Replace if exists (by id), otherwise add
+            val index = current.indexOfFirst { it.id == station.id }
+            if (index >= 0) {
+                current[index] = station
+            } else {
+                current.add(station)
+            }
+
+            preferences[savedStationsKey] = Json.encodeToString(current)
+        }
+    }
+
+    /**
+     * Remove a saved station by id
+     */
+    suspend fun removeStation(stationId: String) {
+        context.dataStore.edit { preferences ->
+            val current = try {
+                val json = preferences[savedStationsKey] ?: "[]"
+                val jsonDecoder = kotlinx.serialization.json.Json {
+                    ignoreUnknownKeys = true
+                }
+                jsonDecoder.decodeFromString<List<RadioBrowserStation>>(json).toMutableList()
+            } catch (e: Exception) {
+                mutableListOf()
+            }
+
+            current.removeAll { it.id == stationId }
+            preferences[savedStationsKey] = Json.encodeToString(current)
         }
     }
 }

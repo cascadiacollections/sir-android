@@ -48,9 +48,12 @@ import com.cascadiacollections.sir.CastFeatureManager
 import com.cascadiacollections.sir.CastModuleState
 import com.cascadiacollections.sir.EqualizerPreset
 import com.cascadiacollections.sir.R
+import com.cascadiacollections.sir.RadioBrowserService
+import com.cascadiacollections.sir.RadioBrowserViewModel
 import com.cascadiacollections.sir.RadioPlaybackService
 import com.cascadiacollections.sir.SettingsRepository
 import com.cascadiacollections.sir.SleepTimerDuration
+import com.cascadiacollections.sir.StreamConfig
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,10 +71,18 @@ fun SettingsSheet(
     val sleepTimerDuration by settingsRepository.sleepTimerDuration.collectAsState(initial = SleepTimerDuration.OFF)
     val equalizerPreset by settingsRepository.equalizerPreset.collectAsState(initial = EqualizerPreset.NORMAL)
     val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
+    val savedStations by settingsRepository.savedStations.collectAsState(initial = emptyList())
 
     var sleepTimerExpanded by remember { mutableStateOf(false) }
     var equalizerExpanded by remember { mutableStateOf(false) }
     var customStreamText by remember { mutableStateOf(customStreamUrl ?: "") }
+    var streamPresetExpanded by remember { mutableStateOf(false) }
+    var showStationSearch by remember { mutableStateOf(false) }
+
+    val radioBrowserService = remember { RadioBrowserService() }
+    val radioBrowserViewModel = remember {
+        RadioBrowserViewModel(radioBrowserService, settingsRepository)
+    }
 
     LaunchedEffect(customStreamUrl) {
         customStreamText = customStreamUrl ?: ""
@@ -249,6 +260,19 @@ fun SettingsSheet(
 
             // Debug-only: Custom Stream URL
             if (BuildConfig.DEBUG) {
+                val defaultPresetLabel = stringResource(R.string.stream_override_default)
+                val presetOptions = remember(defaultPresetLabel, savedStations) {
+                    listOf(
+                        defaultPresetLabel to null
+                    ) + StreamConfig.FALLBACK_TEST_STREAMS.map { stream ->
+                        stream.name to stream.url
+                    } + savedStations.map { station ->
+                        station.name to station.url
+                    }
+                }
+                val selectedPresetLabel = presetOptions.firstOrNull { it.second == customStreamUrl }?.first
+                    ?: stringResource(R.string.stream_override_custom)
+
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -258,6 +282,53 @@ fun SettingsSheet(
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
+
+                Text(
+                    text = stringResource(R.string.stream_override_presets),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
+                )
+                ExposedDropdownMenuBox(
+                    expanded = streamPresetExpanded,
+                    onExpandedChange = { streamPresetExpanded = it },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    OutlinedTextField(
+                        value = selectedPresetLabel,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = streamPresetExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = streamPresetExpanded,
+                        onDismissRequest = { streamPresetExpanded = false }
+                    ) {
+                        presetOptions.forEach { (label, url) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    streamPresetExpanded = false
+                                    scope.launch {
+                                        settingsRepository.setCustomStreamUrl(url)
+                                        customStreamText = url ?: ""
+                                        val message = if (url == null) {
+                                            context.getString(R.string.custom_stream_reset)
+                                        } else {
+                                            context.getString(R.string.custom_stream_saved)
+                                        }
+                                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = stringResource(R.string.custom_stream_url),
@@ -314,8 +385,24 @@ fun SettingsSheet(
                         Text(stringResource(R.string.save))
                     }
                 }
+
+                // Find Stations button
+                TextButton(
+                    onClick = { showStationSearch = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text(stringResource(R.string.find_stations))
+                }
             }
         }
     }
-}
 
+    if (showStationSearch) {
+        StationSearchSheet(
+            viewModel = radioBrowserViewModel,
+            onDismiss = { showStationSearch = false }
+        )
+    }
+}

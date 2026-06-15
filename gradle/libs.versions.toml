@@ -34,7 +34,7 @@ mockk = "1.14.11"
 turbine = "1.2.1"
 uiautomator = "2.3.0"
 wearCompose = "1.7.0-alpha04"
-wearComposeMaterial3 = "1.7.0-alpha03"
+wearComposeMaterial3 = "1.7.0-alpha04"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

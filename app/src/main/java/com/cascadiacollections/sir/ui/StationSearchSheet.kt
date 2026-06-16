@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cascadiacollections.sir.R
@@ -44,6 +45,7 @@ fun StationSearchSheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val uiState by viewModel.uiState.collectAsState()
 
     ModalBottomSheet(
@@ -136,14 +138,14 @@ fun StationSearchSheet(
                                             viewModel.removeStation(station.id)
                                             Toast.makeText(
                                                 context,
-                                                context.getString(R.string.station_removed),
+                                                resources.getString(R.string.station_removed),
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         } else {
                                             viewModel.saveStation(station)
                                             Toast.makeText(
                                                 context,
-                                                context.getString(R.string.station_saved),
+                                                resources.getString(R.string.station_saved),
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         }
@@ -185,7 +187,7 @@ fun StationSearchSheet(
                                         viewModel.removeStation(station.id)
                                         Toast.makeText(
                                             context,
-                                            context.getString(R.string.station_removed),
+                                            resources.getString(R.string.station_removed),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }

@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -88,6 +89,7 @@ fun RadioUi(
     }
 
     val context = LocalContext.current
+    val resources = LocalResources.current
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -102,7 +104,7 @@ fun RadioUi(
                                     Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         putExtra(Intent.EXTRA_TEXT,
-                                            context.getString(R.string.share_now_playing, shareText))
+                                            resources.getString(R.string.share_now_playing, shareText))
                                     }, null
                                 ))
                             }) {

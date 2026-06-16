@@ -41,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cascadiacollections.sir.BuildConfig
@@ -65,6 +66,7 @@ fun SettingsSheet(
     onOpenLicenses: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val chromecastEnabled by settingsRepository.chromecastEnabled.collectAsState(initial = false)
     val castModuleState by castFeatureManager.moduleState.collectAsState()
@@ -142,8 +144,8 @@ fun SettingsSheet(
                                         }
                                     )
                                     val message = if (duration == SleepTimerDuration.OFF)
-                                        context.getString(R.string.sleep_timer_off)
-                                    else context.getString(R.string.sleep_timer_set, duration.label)
+                                        resources.getString(R.string.sleep_timer_off)
+                                    else resources.getString(R.string.sleep_timer_set, duration.label)
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                 }
                             }
@@ -239,7 +241,7 @@ fun SettingsSheet(
             // Privacy Policy
             TextButton(
                 onClick = {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.privacy_policy_url))))
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(resources.getString(R.string.privacy_policy_url))))
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -316,9 +318,9 @@ fun SettingsSheet(
                                         settingsRepository.setCustomStreamUrl(url)
                                         customStreamText = url ?: ""
                                         val message = if (url == null) {
-                                            context.getString(R.string.custom_stream_reset)
+                                            resources.getString(R.string.custom_stream_reset)
                                         } else {
-                                            context.getString(R.string.custom_stream_saved)
+                                            resources.getString(R.string.custom_stream_saved)
                                         }
                                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                     }
@@ -362,7 +364,7 @@ fun SettingsSheet(
                             scope.launch {
                                 settingsRepository.setCustomStreamUrl(null)
                                 customStreamText = ""
-                                Toast.makeText(context, context.getString(R.string.custom_stream_reset), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, resources.getString(R.string.custom_stream_reset), Toast.LENGTH_SHORT).show()
                             }
                         },
                         enabled = customStreamUrl != null
@@ -374,10 +376,10 @@ fun SettingsSheet(
                             if (customStreamText.startsWith("http://") || customStreamText.startsWith("https://")) {
                                 scope.launch {
                                     settingsRepository.setCustomStreamUrl(customStreamText)
-                                    Toast.makeText(context, context.getString(R.string.custom_stream_saved), Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, resources.getString(R.string.custom_stream_saved), Toast.LENGTH_LONG).show()
                                 }
                             } else {
-                                Toast.makeText(context, context.getString(R.string.custom_stream_invalid), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, resources.getString(R.string.custom_stream_invalid), Toast.LENGTH_SHORT).show()
                             }
                         },
                         enabled = customStreamText.isNotBlank() && customStreamText != customStreamUrl

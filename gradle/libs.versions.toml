@@ -32,7 +32,7 @@ benchmarkMacro = "1.4.1"
 robolectric = "4.16.1"
 mockk = "1.14.11"
 turbine = "1.2.1"
-uiautomator = "2.3.0"
+uiautomator = "2.4.0"
 wearCompose = "1.7.0-alpha05"
 wearComposeMaterial3 = "1.7.0-alpha04"
 

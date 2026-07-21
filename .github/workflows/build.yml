@@ -40,9 +40,8 @@ jobs:
       - name: Install Android SDK platform
         run: |
           SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -d "${ANDROID_HOME}/platforms/android-37" ]; then
-            $SDKMANAGER --channel=3 "platforms;android-CinnamonBun" || \
-            $SDKMANAGER --channel=3 "platforms;android-37"
+          if [ ! -d "${ANDROID_HOME}/platforms/android-36" ]; then
+            yes | $SDKMANAGER "platforms;android-36"
           fi
 
       - name: Decode keystore

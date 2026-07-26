@@ -74,6 +74,17 @@ setup, HTTP, wake locks, equalizer, sleep timer and media session in one class.
   debug stream override > user-selected station > the quality-derived SIR URL. The
   service applies the result and no-ops when the URL is unchanged, so unrelated
   settings writes never interrupt playback.
+- `StreamMetadataResolver` interprets ICY metadata. Stations routinely emit a constant
+  placeholder title instead of the current track, so the resolver knows which titles and
+  artists are static and reports whether anything user-visible actually changed — the
+  service then rebuilds the notification only when it must.
+- `AudioRoutePolicy` is the noisy/resume state machine. Pausing on
+  `ACTION_AUDIO_BECOMING_NOISY` is mandatory; resuming when the route returns is only
+  correct if *we* paused, so a user-initiated pause clears the claim.
+- `RetryBackoff` holds the reconnect schedule (2s doubling, capped at 30s, 5 attempts).
+- `PlaybackLocks` pairs the partial wake lock with the WiFi lock. Both acquires are
+  idempotent — double-acquiring corrupts the refcount and leaks the lock past playback,
+  which surfaces as battery drain rather than a crash.
 
 ## `:core:persistence`
 

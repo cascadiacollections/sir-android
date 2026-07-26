@@ -15,11 +15,9 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.audiofx.Equalizer
-import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
@@ -48,10 +46,16 @@ import androidx.media3.session.SessionResult
 import com.cascadiacollections.android.media3.timeshift.CircularByteBuffer
 import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
+import com.cascadiacollections.sir.core.playback.AudioRoutePolicy
 import com.cascadiacollections.sir.core.playback.EqualizerCurves
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.PlaybackBufferConfig
+import com.cascadiacollections.sir.core.playback.PlaybackLocks
+import com.cascadiacollections.sir.core.playback.RawStreamMetadata
+import com.cascadiacollections.sir.core.playback.RetryBackoff
 import com.cascadiacollections.sir.core.playback.SleepTimerRestore
+import com.cascadiacollections.sir.core.playback.StreamMetadata
+import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
 import com.cascadiacollections.sir.core.playback.StreamSource
 import com.cascadiacollections.sir.core.playback.StreamSourceResolver
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
@@ -74,17 +78,21 @@ class RadioPlaybackService : MediaLibraryService() {
     private val audioManager: AudioManager by lazy { getSystemService(AudioManager::class.java) }
     private var isNoisyReceiverRegistered = false
     private var isRouteReceiverRegistered = false
-    private var pausedByNoisy = false
-    private var retryCount = 0
+    private val audioRoutePolicy = AudioRoutePolicy()
+    private val retryBackoff = RetryBackoff()
 
     // Locks to keep device active during playback
-    private var wakeLock: PowerManager.WakeLock? = null
-    private var wifiLock: WifiManager.WifiLock? = null
+    private var playbackLocks: PlaybackLocks? = null
 
     // Current stream metadata from ICY headers
-    private var currentTrackTitle: String? = null
-    private var currentArtist: String? = null
-    private var currentStation: String? = null
+    private val metadataResolver = StreamMetadataResolver(
+        staticTitles = setOf(STREAM_STATIC_TITLE, DEFAULT_STATION_NAME),
+        staticArtists = setOf(STREAM_STATIC_ARTIST),
+    )
+    private var streamMetadata = StreamMetadata()
+    private val currentTrackTitle: String? get() = streamMetadata.trackTitle
+    private val currentArtist: String? get() = streamMetadata.artist
+    private val currentStation: String? get() = streamMetadata.station
 
     // Sleep timer
     private val sleepTimerHandler = Handler(Looper.getMainLooper())
@@ -111,8 +119,8 @@ class RadioPlaybackService : MediaLibraryService() {
 
     private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent?.action && player?.isPlaying == true) {
-                pausedByNoisy = true
+            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY != intent?.action) return
+            if (audioRoutePolicy.onBecomingNoisy(isPlaying = player?.isPlaying == true)) {
                 player?.pause()
             }
         }
@@ -173,7 +181,7 @@ class RadioPlaybackService : MediaLibraryService() {
         }
 
         // Initialize wake locks to prevent device sleep during playback
-        initializeLocks()
+        playbackLocks = PlaybackLocks(this)
 
         val bufferConfig = PlaybackBufferConfig.LIVE_RADIO
         val loadControl = DefaultLoadControl.Builder()
@@ -356,7 +364,7 @@ class RadioPlaybackService : MediaLibraryService() {
         player?.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
-                    retryCount = 0
+                    retryBackoff.reset()
                     if (player?.playWhenReady == true) {
                         updateCustomLayout()
                     }
@@ -365,14 +373,14 @@ class RadioPlaybackService : MediaLibraryService() {
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) {
-                    acquireLocks()
+                    playbackLocks?.acquire()
                     startForeground(
                         NOTIFICATION_ID,
                         buildNotification(context)
                     )
                     if (SEEKBACK_ENABLED) scheduleSeekBackReveal()
                 } else {
-                    releaseLocks()
+                    playbackLocks?.release()
                     stopForeground(STOP_FOREGROUND_DETACH)
                     updateNotificationSafe()
                 }
@@ -380,43 +388,24 @@ class RadioPlaybackService : MediaLibraryService() {
 
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
                 // ICY metadata from internet radio stream
-                val streamTitle = mediaMetadata.title?.toString()
-                val artist = mediaMetadata.artist?.toString()
-                val station = mediaMetadata.station?.toString()
-                val previousStation = currentStation
+                val raw = RawStreamMetadata(
+                    title = mediaMetadata.title?.toString(),
+                    artist = mediaMetadata.artist?.toString(),
+                    station = mediaMetadata.station?.toString(),
+                )
+                Log.d(TAG, "Stream metadata: $raw")
 
-                Log.d(TAG, "Stream metadata: title=$streamTitle, artist=$artist, station=$station")
-
-                // Capture station name if available
-                if (!station.isNullOrBlank()) {
-                    currentStation = station
-                }
-
-                // Check if this is real track metadata vs stream's static defaults
-                val isStaticMetadata = streamTitle == STREAM_STATIC_TITLE ||
-                    streamTitle == DEFAULT_STATION_NAME ||
-                    streamTitle.isNullOrBlank()
-
-                if (!isStaticMetadata) {
-                    // Real track info - could be "Artist - Title" format
-                    currentTrackTitle = streamTitle
-                    currentArtist = artist?.takeIf { it != STREAM_STATIC_ARTIST }
-                    updateNotificationSafe()
-                } else if (hasStationChanged(previousStation, station)) {
-                    // Station name changed, update notification
-                    updateNotificationSafe()
-                }
+                val update = metadataResolver.resolve(streamMetadata, raw)
+                streamMetadata = update.metadata
+                if (update.notifyChanged) updateNotificationSafe()
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                Log.e(TAG, "Player error (attempt ${retryCount + 1}/$MAX_RETRIES)", error)
-                if (retryCount < MAX_RETRIES) {
-                    val delayMs = (2_000L * (1 shl retryCount)).coerceAtMost(30_000L)
+                Log.e(TAG, "Player error (attempt ${retryBackoff.attemptLabel})", error)
+                val delayMs = retryBackoff.nextDelayMs()
+                if (delayMs != null) {
                     updateNotificationSafe(getString(R.string.stream_reconnecting))
-                    sleepTimerHandler.postDelayed({
-                        retryCount++
-                        player?.prepare()
-                    }, delayMs)
+                    sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
                 } else {
                     updateNotificationSafe(getString(R.string.radio_error))
                 }
@@ -466,7 +455,7 @@ class RadioPlaybackService : MediaLibraryService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
-                pausedByNoisy = false
+                audioRoutePolicy.onPlaybackStateChangedByUser()
                 cancelSleepTimer()
                 player?.pause()
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -540,7 +529,7 @@ class RadioPlaybackService : MediaLibraryService() {
         // Cancel coroutine scope
         serviceScope.cancel()
 
-        releaseLocks()
+        playbackLocks?.release()
         mediaSession?.release()
         mediaSession = null
         player?.release()
@@ -794,59 +783,7 @@ class RadioPlaybackService : MediaLibraryService() {
         .build()
 
     private fun resumeIfPausedByNoisy() {
-        if (!pausedByNoisy) return
-        pausedByNoisy = false
-        player?.play()
-    }
-
-    @SuppressLint("WakelockTimeout")
-    private fun initializeLocks() {
-        // Wake lock to prevent CPU sleep during audio playback
-        val powerManager = getSystemService(PowerManager::class.java)
-        wakeLock = powerManager.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK,
-            "SIR::PlaybackWakeLock"
-        )
-
-        // WiFi lock to prevent WiFi from going into low-power mode.
-        // WIFI_MODE_FULL_LOW_LATENCY (API 29+) reduces buffering on Pixel 10's WiFi 7 chipset;
-        // fall back to WIFI_MODE_FULL_HIGH_PERF on older devices.
-        val wifiManager = applicationContext.getSystemService(WifiManager::class.java)
-        wifiLock = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            wifiManager.createWifiLock(
-                WifiManager.WIFI_MODE_FULL_LOW_LATENCY,
-                "SIR::PlaybackWifiLock"
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            wifiManager.createWifiLock(
-                WifiManager.WIFI_MODE_FULL_HIGH_PERF,
-                "SIR::PlaybackWifiLock"
-            )
-        }
-    }
-
-    @SuppressLint("WakelockTimeout")
-    private fun acquireLocks() {
-        wakeLock?.takeUnless { it.isHeld }?.run {
-            acquire()
-            Log.d(TAG, "Wake lock acquired")
-        }
-        wifiLock?.takeUnless { it.isHeld }?.run {
-            acquire()
-            Log.d(TAG, "WiFi lock acquired")
-        }
-    }
-
-    private fun releaseLocks() {
-        wakeLock?.takeIf { it.isHeld }?.run {
-            release()
-            Log.d(TAG, "Wake lock released")
-        }
-        wifiLock?.takeIf { it.isHeld }?.run {
-            release()
-            Log.d(TAG, "WiFi lock released")
-        }
+        if (audioRoutePolicy.onRouteRestored()) player?.play()
     }
 
     // Sleep Timer methods
@@ -1002,7 +939,6 @@ class RadioPlaybackService : MediaLibraryService() {
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
         // Error retry
-        private const val MAX_RETRIES = 5
 
         // Feature flags
         const val SEEKBACK_ENABLED = false
@@ -1034,5 +970,3 @@ class RadioPlaybackService : MediaLibraryService() {
  * Calculate equalizer band levels using a curve function.
  * @param curve Function mapping band position (0.0..1.0) to level multiplier (0.0..1.0)
  */
-internal fun hasStationChanged(previousStation: String?, newStation: String?): Boolean =
-    !newStation.isNullOrBlank() && previousStation != newStation

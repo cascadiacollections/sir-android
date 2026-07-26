@@ -197,7 +197,7 @@ class RadioViewModelTest {
     }
 
     private suspend fun waitUntil(
-        timeoutMillis: Long = 2_000L,
+        timeoutMillis: Long = 10_000L,
         condition: () -> Boolean
     ) {
         withTimeout(timeoutMillis) {

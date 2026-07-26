@@ -1,7 +1,6 @@
 package com.cascadiacollections.sir
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -85,20 +84,5 @@ class RadioPlaybackServiceTest {
             "Buffer (${ RadioPlaybackService.REPLAY_BUFFER_SIZE }) must hold >= 30s ($bytesFor30Seconds bytes)",
             RadioPlaybackService.REPLAY_BUFFER_SIZE >= bytesFor30Seconds
         )
-    }
-
-    @Test
-    fun `hasStationChanged returns true when static metadata station changes`() {
-        assertTrue(hasStationChanged(previousStation = "Station A", newStation = "Station B"))
-    }
-
-    @Test
-    fun `hasStationChanged returns false when station does not change`() {
-        assertFalse(hasStationChanged(previousStation = "Station A", newStation = "Station A"))
-    }
-
-    @Test
-    fun `hasStationChanged returns false for blank station`() {
-        assertFalse(hasStationChanged(previousStation = "Station A", newStation = ""))
     }
 }

@@ -47,14 +47,14 @@ import androidx.compose.ui.unit.dp
 import com.cascadiacollections.sir.BuildConfig
 import com.cascadiacollections.sir.CastFeatureManager
 import com.cascadiacollections.sir.CastModuleState
-import com.cascadiacollections.sir.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.R
-import com.cascadiacollections.sir.RadioBrowserService
 import com.cascadiacollections.sir.RadioBrowserViewModel
 import com.cascadiacollections.sir.RadioPlaybackService
 import com.cascadiacollections.sir.SettingsRepository
-import com.cascadiacollections.sir.SleepTimerDuration
+import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 import com.cascadiacollections.sir.StreamConfig
+import com.cascadiacollections.sir.core.directory.RadioDirectories
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,9 +81,9 @@ fun SettingsSheet(
     var streamPresetExpanded by remember { mutableStateOf(false) }
     var showStationSearch by remember { mutableStateOf(false) }
 
-    val radioBrowserService = remember { RadioBrowserService() }
+    val radioDirectory = remember { RadioDirectories.create() }
     val radioBrowserViewModel = remember {
-        RadioBrowserViewModel(radioBrowserService, settingsRepository)
+        RadioBrowserViewModel(radioDirectory, settingsRepository)
     }
 
     LaunchedEffect(customStreamUrl) {

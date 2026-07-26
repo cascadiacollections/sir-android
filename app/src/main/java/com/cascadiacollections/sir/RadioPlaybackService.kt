@@ -48,6 +48,10 @@ import androidx.media3.session.SessionResult
 import com.cascadiacollections.android.media3.timeshift.CircularByteBuffer
 import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
+import com.cascadiacollections.sir.core.playback.EqualizerCurves
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.PlaybackBufferConfig
+import com.cascadiacollections.sir.core.playback.SleepTimerRestore
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -155,9 +159,11 @@ class RadioPlaybackService : MediaLibraryService() {
             // Restore sleep timer if it was active before process death
             val firesAt = settingsRepository.sleepTimerFiresAt.first()
             if (firesAt > 0L) {
-                val remainingMs = firesAt - System.currentTimeMillis()
-                if (remainingMs > 0L) {
-                    val remainingMinutes = (remainingMs / 60_000).toInt().coerceAtLeast(1)
+                val remainingMinutes = SleepTimerRestore.remainingMinutes(
+                    firesAtEpochMillis = firesAt,
+                    nowEpochMillis = System.currentTimeMillis()
+                )
+                if (remainingMinutes != null) {
                     setSleepTimer(remainingMinutes)
                     Log.d(TAG, "Restored sleep timer: ${remainingMinutes}m remaining")
                 } else {
@@ -170,16 +176,15 @@ class RadioPlaybackService : MediaLibraryService() {
         // Initialize wake locks to prevent device sleep during playback
         initializeLocks()
 
-        // Optimized load control for 64kbps live radio stream
-        // Stream: 64kbps = 8KB/s, so 10 seconds = 80KB buffer
+        val bufferConfig = PlaybackBufferConfig.LIVE_RADIO
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                /* minBufferMs */ 15_000,      // 15 sec min buffer (120KB at 64kbps)
-                /* maxBufferMs */ 60_000,      // 60 sec max buffer (480KB at 64kbps)
-                /* bufferForPlaybackMs */ 2_500,    // Start playback after 2.5 sec buffer
-                /* bufferForPlaybackAfterRebufferMs */ 5_000  // 5 sec buffer after rebuffer
+                bufferConfig.minBufferMs,
+                bufferConfig.maxBufferMs,
+                bufferConfig.bufferForPlaybackMs,
+                bufferConfig.bufferForPlaybackAfterRebufferMs
             )
-            .setPrioritizeTimeOverSizeThresholds(true)  // Prioritize low latency
+            .setPrioritizeTimeOverSizeThresholds(bufferConfig.prioritizeTimeOverSizeThresholds)
             .build()
 
         // OkHttp client optimized for live audio streaming
@@ -903,45 +908,12 @@ class RadioPlaybackService : MediaLibraryService() {
         val eq = equalizer ?: return
 
         try {
-            val bandCount = eq.numberOfBands.toInt()
-            val minLevel = eq.bandLevelRange[0]
-            val maxLevel = eq.bandLevelRange[1]
-            val range = maxLevel - minLevel
-
-            // Apply preset using unified curve function
-            val levels = when (preset) {
-                EqualizerPreset.NORMAL -> List(bandCount) { 0.toShort() }
-                EqualizerPreset.BASS_BOOST -> calculateEqualizerLevels(
-                    bandCount,
-                    minLevel,
-                    maxLevel,
-                    range
-                ) { pos ->
-                    (1 - pos) * 0.6f
-                }
-
-                EqualizerPreset.VOCAL -> calculateEqualizerLevels(
-                    bandCount,
-                    minLevel,
-                    maxLevel,
-                    range
-                ) { pos ->
-                    when {
-                        pos < 0.3f -> 0.1f  // Cut bass
-                        pos < 0.7f -> 0.7f  // Boost mids
-                        else -> 0.4f        // Slight boost highs
-                    }
-                }
-
-                EqualizerPreset.TREBLE -> calculateEqualizerLevels(
-                    bandCount,
-                    minLevel,
-                    maxLevel,
-                    range
-                ) { pos ->
-                    pos * 0.6f
-                }
-            }
+            val levels = EqualizerCurves.levelsFor(
+                preset = preset,
+                bandCount = eq.numberOfBands.toInt(),
+                minLevel = eq.bandLevelRange[0],
+                maxLevel = eq.bandLevelRange[1]
+            )
 
             levels.forEachIndexed { band, level ->
                 eq.setBandLevel(band.toShort(), level)
@@ -1032,16 +1004,5 @@ class RadioPlaybackService : MediaLibraryService() {
  * Calculate equalizer band levels using a curve function.
  * @param curve Function mapping band position (0.0..1.0) to level multiplier (0.0..1.0)
  */
-internal fun calculateEqualizerLevels(
-    bandCount: Int,
-    minLevel: Short,
-    maxLevel: Short,
-    range: Int,
-    curve: (Float) -> Float
-): List<Short> = List(bandCount) { band ->
-    val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
-    (minLevel + range * curve(position)).toInt().toShort().coerceIn(minLevel, maxLevel)
-}
-
 internal fun hasStationChanged(previousStation: String?, newStation: String?): Boolean =
     !newStation.isNullOrBlank() && previousStation != newStation

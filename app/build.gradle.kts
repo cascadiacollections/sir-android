@@ -4,7 +4,7 @@ plugins {
     id("sir.android.app")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.aboutlibraries.plugin)
-    kotlin("plugin.serialization") version "2.4.0"
+    alias(libs.plugins.kotlin.serialization)
     id("jacoco")
 }
 
@@ -171,6 +171,12 @@ tasks.configureEach {
 }
 
 dependencies {
+    // Core domain + station directory boundary (radio-browser client, caching, curated fallback)
+    implementation(projects.core.model)
+    implementation(projects.core.directory)
+    // Platform-independent playback policy (equalizer curves, buffering, sleep timer)
+    implementation(projects.core.playback)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

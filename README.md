@@ -4,7 +4,7 @@
 
 [![Build Status](https://github.com/cascadiacollections/sir-android/workflows/Android%20CI/badge.svg)](https://github.com/cascadiacollections/sir-android/actions)
 [![API](https://img.shields.io/badge/API-24%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=24)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-blue.svg?logo=kotlin)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-blue.svg?logo=kotlin)](https://kotlinlang.org)
 [![Latest Release](https://img.shields.io/github/v/release/cascadiacollections/sir-android?include_prereleases&label=nightly)](https://github.com/cascadiacollections/sir-android/releases/tag/nightly)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -64,9 +64,9 @@
 
 ## Tech Stack
 
-- **Kotlin** 2.3.20 with **Compose** UI + Material 3 Expressive
-- **Media3** 1.10.0 (ExoPlayer + MediaSession + Cast)
-- **OkHttp** 5.3.2 for HTTP/2 networking
+- **Kotlin** 2.4.10 with **Compose** UI + Material 3 Expressive
+- **Media3** 1.10.1 (ExoPlayer + MediaSession + Cast)
+- **OkHttp** 5.4.0 for HTTP/2 networking
 - **DataStore** for preferences
 - **Glance** for home screen widget
 - **Firebase Crashlytics/Analytics** (Play builds only)
@@ -75,9 +75,9 @@
 
 ### Build Toolchain
 
-- **AGP 9.2.1** with configuration cache
+- **AGP 9.3.1** with configuration cache
 - **Eclipse Adoptium Temurin JDK 21** via Foojay resolver
-- **Gradle 9.5.0** with parallel builds and build cache
+- **Gradle 9.6.1** with parallel builds and build cache
 - **JaCoCo** coverage with 5% minimum threshold
 - **Baseline profiles** for AOT compilation
 - **Convention plugins** (`build-logic/`) for shared config
@@ -106,7 +106,27 @@ just build-foss
 
 # Lint
 ./gradlew lintPlayDebug
+
+# Refactor baseline validation
+just verify
 ```
+
+## Architecture
+
+The app is split into a core/feature module graph that mirrors the boundaries of its
+sibling iOS client:
+
+| Module | Responsibility |
+| --- | --- |
+| `:app` | Composition root, Compose UI, Android surfaces (Auto, Tile, Widget, shortcuts) |
+| `:core:model` | Platform-neutral domain types (`Station`, `StationQuery`) |
+| `:core:directory` | `RadioDirectory` boundary: radio-browser client, mirror rotation, caching, curated fallback |
+| `:core:playback` | Playback policy: equalizer curves, buffer config, sleep timer restore |
+| `:cast` | On-demand Chromecast dynamic feature |
+| `:libs:media3-timeshift` | DVR/time-shift Media3 `DataSource` (publishable) |
+| `:libs:okhttp-streaming` | Streaming-tuned OkHttp client factory (publishable) |
+
+See [`docs/architecture.md`](docs/architecture.md) for the design rationale.
 
 ## Nightly Builds
 

@@ -34,4 +34,8 @@ build-foss:
 
 # Build full variant (with Firebase)
 build-full:
-    ./gradlew assembleFullDebug --no-daemon
+    ./gradlew assemblePlayDebug --no-daemon
+
+# Refactor safety baseline (matches CI's core local checks)
+verify:
+    ./gradlew assembleFossDebug testPlayDebugUnitTest :wear:testDebugUnitTest :core:model:testDebugUnitTest :core:directory:testDebugUnitTest :core:playback:testDebugUnitTest lintPlayDebug --no-daemon --parallel --build-cache

@@ -9,28 +9,15 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
-
-/**
- * Available sleep timer durations in minutes
- */
-enum class SleepTimerDuration(val minutes: Int, val label: String) {
-    OFF(0, "Off"),
-    FIFTEEN(15, "15 minutes"),
-    THIRTY(30, "30 minutes"),
-    SIXTY(60, "1 hour"),
-    NINETY(90, "1.5 hours");
-
-    companion object {
-        fun fromMinutes(minutes: Int): SleepTimerDuration =
-            entries.find { it.minutes == minutes } ?: OFF
-    }
-}
 
 /**
  * Stream quality options — URLs point to the same SHOUTcast mount; the server
@@ -44,21 +31,6 @@ enum class StreamQuality(val label: String, val url: String) {
 
     companion object {
         fun fromOrdinal(ordinal: Int): StreamQuality = entries.getOrNull(ordinal) ?: HIGH
-    }
-}
-
-/**
- * Audio equalizer presets
- */
-enum class EqualizerPreset(val label: String) {
-    NORMAL("Normal"),
-    BASS_BOOST("Bass Boost"),
-    VOCAL("Vocal/Podcast"),
-    TREBLE("Treble Boost");
-
-    companion object {
-        fun fromOrdinal(ordinal: Int): EqualizerPreset =
-            entries.getOrNull(ordinal) ?: NORMAL
     }
 }
 
@@ -171,13 +143,13 @@ class SettingsRepository(private val context: Context) {
     /**
      * Flow of saved discovered stations (from radio-browser.info)
      */
-    val savedStations: Flow<List<RadioBrowserStation>> = context.dataStore.data.map { preferences ->
+    val savedStations: Flow<List<Station>> = context.dataStore.data.map { preferences ->
         val json = preferences[savedStationsKey] ?: "[]"
         try {
             val jsonDecoder = kotlinx.serialization.json.Json {
                 ignoreUnknownKeys = true
             }
-            jsonDecoder.decodeFromString<List<RadioBrowserStation>>(json)
+            jsonDecoder.decodeFromString<List<Station>>(json)
         } catch (e: Exception) {
             emptyList()
         }
@@ -186,14 +158,14 @@ class SettingsRepository(private val context: Context) {
     /**
      * Add or update a saved station
      */
-    suspend fun saveStation(station: RadioBrowserStation) {
+    suspend fun saveStation(station: Station) {
         context.dataStore.edit { preferences ->
             val current = try {
                 val json = preferences[savedStationsKey] ?: "[]"
                 val jsonDecoder = kotlinx.serialization.json.Json {
                     ignoreUnknownKeys = true
                 }
-                jsonDecoder.decodeFromString<List<RadioBrowserStation>>(json).toMutableList()
+                jsonDecoder.decodeFromString<List<Station>>(json).toMutableList()
             } catch (e: Exception) {
                 mutableListOf()
             }
@@ -220,7 +192,7 @@ class SettingsRepository(private val context: Context) {
                 val jsonDecoder = kotlinx.serialization.json.Json {
                     ignoreUnknownKeys = true
                 }
-                jsonDecoder.decodeFromString<List<RadioBrowserStation>>(json).toMutableList()
+                jsonDecoder.decodeFromString<List<Station>>(json).toMutableList()
             } catch (e: Exception) {
                 mutableListOf()
             }

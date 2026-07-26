@@ -2,6 +2,10 @@ package com.cascadiacollections.sir
 
 import android.content.Intent
 import android.media.AudioManager
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.SleepTimerDuration
+import com.cascadiacollections.sir.core.playback.StreamConfig
+import com.cascadiacollections.sir.core.playback.StreamQuality
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -14,8 +18,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ServiceController
 import org.robolectric.annotation.Config
-import com.cascadiacollections.sir.core.playback.EqualizerPreset
-import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 
 /**
  * Behavior tests for [RadioPlaybackService].

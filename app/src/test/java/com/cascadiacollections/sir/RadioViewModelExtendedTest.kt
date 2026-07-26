@@ -2,6 +2,7 @@ package com.cascadiacollections.sir
 
 import android.app.Application
 import android.net.ConnectivityManager
+import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals

@@ -12,8 +12,9 @@ once.
 :app                      composition root, Android surfaces (Auto, Tile, Widget, shortcuts)
 ├── :core:model           platform-neutral domain types (Station, StationQuery)
 ├── :core:directory       station catalogue boundary + radio-browser client
-├── :core:playback        playback policy: equalizer curves, buffering, sleep timer
-├── :core:persistence     favourites/recents collection rules + station serialization
+├── :core:playback        playback policy: equalizer, buffering, sleep timer, metadata,
+│                         audio route, retry backoff, stream source and quality
+├── :core:persistence     settings store, favourites/recents rules, station serialization
 ├── :cast                 on-demand dynamic feature (Chromecast)
 ├── :libs:media3-timeshift    DVR/time-shift DataSource (publishable)
 └── :libs:okhttp-streaming    streaming-tuned OkHttp client factory (publishable)
@@ -99,11 +100,34 @@ Collection rules for saved and recently-heard stations, kept out of
   id and capped, so replaying a station moves it to the top rather than duplicating it.
 - `SettingsRepository` is the only DataStore-aware layer. `selectStation` writes the
   selection and the recents entry in a single transaction so the two can never diverge.
+  It also owns `StreamQuality` and `StreamConfig`, which moved here from `:app` so that
+  nothing in the settings layer depends on the application module.
+
+The DataStore instance is cached per application context rather than through the
+`preferencesDataStore` property delegate. The delegate caches against the first context
+it ever sees, which is correct in production but wrong under Robolectric, where each
+test class gets a fresh Application and a fresh files directory — every class after the
+first would write through a store pointing at a directory that no longer exists, and its
+tests would hang until they timed out.
 
 Note for tests: DataStore does real IO on real threads, so `runTest`'s virtual clock
 skips past it and turbine times out. Use `runBlocking` with direct `.first()` /
 `StateFlow.value` reads, and reset the keys under test in `@Before` — the DataStore
 file is shared across tests in a class.
+
+## UI
+
+`:app` hosts a four-tab shell (`SirAppShell`): listen, browse, library and settings.
+The shell owns the scaffold, so the navigation bar and the mini player survive tab
+changes; each tab contributes content only. The mini player is hidden on the listen tab,
+where the full transport controls are already on screen.
+
+Screens are still in `:app` rather than in `:feature:*` modules. `SettingsContent` is
+bound to the Cast dynamic feature, the playback service and `BuildConfig.DEBUG`, and the
+browse and library screens share one `RadioBrowserViewModel`; extracting them today would
+relocate that coupling rather than remove it. The screens are already split into
+content-only composables (`ListenScreen`, `BrowseScreen`, `LibraryScreen`,
+`SettingsContent`), which is the prerequisite for the move.
 
 ## Verification
 

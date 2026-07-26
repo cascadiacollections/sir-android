@@ -1,4 +1,4 @@
-package com.cascadiacollections.sir
+package com.cascadiacollections.sir.core.persistence
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -8,31 +8,51 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.preferencesDataStoreFile
 import com.cascadiacollections.sir.core.model.Station
-import com.cascadiacollections.sir.core.persistence.StationCodec
-import com.cascadiacollections.sir.core.persistence.StationCollections
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.SleepTimerDuration
+import com.cascadiacollections.sir.core.playback.StreamQuality
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+import java.util.WeakHashMap
 
 /**
- * Stream quality options — URLs point to the same SHOUTcast mount; the server
- * auto-selects the highest available bitrate for /stream. Add alternate mount
- * paths here if the station exposes them (e.g., /stream_lo for 64kbps).
+ * One [DataStore] per [Context.getApplicationContext].
+ *
+ * DataStore requires that a file is owned by a single instance, which the
+ * `preferencesDataStore` property delegate guarantees by caching one instance forever.
+ * That delegate caches it against the *first* context it ever sees, though, which breaks
+ * under Robolectric: each test class gets a fresh Application with a fresh files
+ * directory, so every class after the first would keep writing through a store pointing
+ * at a directory that no longer exists. Keying the cache on the application context keeps
+ * the production guarantee (there is only ever one Application) while giving each test
+ * Application its own store.
  */
-enum class StreamQuality(val label: String, val url: String) {
-    HIGH("High (default)", StreamConfig.DEFAULT_STREAM_URL),
-    MEDIUM("Medium", StreamConfig.DEFAULT_STREAM_URL),
-    LOW("Low", StreamConfig.DEFAULT_STREAM_URL);
+private object SettingsDataStore {
 
-    companion object {
-        fun fromOrdinal(ordinal: Int): StreamQuality = entries.getOrNull(ordinal) ?: HIGH
+    private const val FILE_NAME = "settings"
+
+    private val instances = WeakHashMap<Context, DataStore<Preferences>>()
+
+    @Synchronized
+    operator fun get(context: Context): DataStore<Preferences> {
+        val app = context.applicationContext
+        return instances.getOrPut(app) {
+            PreferenceDataStoreFactory.create(
+                scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            ) {
+                app.preferencesDataStoreFile(FILE_NAME)
+            }
+        }
     }
 }
+
+private val Context.dataStore: DataStore<Preferences> get() = SettingsDataStore[this]
 
 /**
  * Settings repository using DataStore for persistence.

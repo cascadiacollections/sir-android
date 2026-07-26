@@ -3,6 +3,7 @@ package com.cascadiacollections.sir
 import android.app.Application
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic

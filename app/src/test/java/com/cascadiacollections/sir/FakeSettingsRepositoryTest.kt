@@ -1,14 +1,15 @@
 package com.cascadiacollections.sir
 
 import app.cash.turbine.test
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.SleepTimerDuration
+import com.cascadiacollections.sir.core.playback.StreamQuality
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import com.cascadiacollections.sir.core.playback.EqualizerPreset
-import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 
 /**
  * Tests for [FakeSettingsRepository] to validate the test double

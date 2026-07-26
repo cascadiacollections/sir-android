@@ -38,9 +38,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
+import com.cascadiacollections.sir.core.persistence.SettingsRepository
+import com.cascadiacollections.sir.core.directory.RadioDirectories
 import com.cascadiacollections.sir.ui.LicensesScreen
 import com.cascadiacollections.sir.ui.RadioUi
-import com.cascadiacollections.sir.ui.SettingsSheet
+import com.cascadiacollections.sir.ui.SirAppShell
+import com.cascadiacollections.sir.ui.SirTab
 import com.cascadiacollections.sir.ui.theme.SirTheme
 import kotlinx.coroutines.flow.first
 
@@ -102,8 +105,8 @@ fun RadioScreen(
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
 
-    // Settings dialog state
-    var showSettings by rememberSaveable { mutableStateOf(false) }
+    // Shell state
+    var selectedTab by rememberSaveable { mutableStateOf(SirTab.LISTEN) }
     var showLicenses by rememberSaveable { mutableStateOf(false) }
 
     // Cast state
@@ -122,9 +125,9 @@ fun RadioScreen(
         }
     }
 
-    // Predictive back gesture: dismiss settings dialog with system back animation (API 33+)
-    BackHandler(enabled = showSettings) {
-        showSettings = false
+    // Predictive back gesture: back from any tab returns to listen rather than exiting
+    BackHandler(enabled = selectedTab != SirTab.LISTEN) {
+        selectedTab = SirTab.LISTEN
     }
 
     if (inspectionMode) {
@@ -140,13 +143,18 @@ fun RadioScreen(
         return
     }
 
+    val repository = settingsRepository ?: return
     val viewModel: RadioViewModel = viewModel(
         factory = RadioViewModel.Factory(
             application = context.applicationContext as Application,
-            settingsRepository = settingsRepository ?: return
+            settingsRepository = repository
         )
     )
     val uiState by viewModel.uiState.collectAsState()
+
+    val browserViewModel = remember(repository) {
+        RadioBrowserViewModel(RadioDirectories.create(), repository)
+    }
 
     // Runtime permission requests: POST_NOTIFICATIONS (API 33+), BLUETOOTH_CONNECT (API 31+)
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -166,32 +174,19 @@ fun RadioScreen(
         toRequest.takeIf { it.isNotEmpty() }?.let { permissionLauncher.launch(it.toTypedArray()) }
     }
 
-    RadioUi(
-        modifier = modifier,
-        isConnected = uiState.isConnected,
-        isPlaying = uiState.isPlaying,
-        isBuffering = uiState.isBuffering,
-        isError = uiState.isError,
-        trackTitle = uiState.trackTitle,
-        artist = uiState.artist,
-        sleepTimerLabel = uiState.sleepTimerLabel,
-        showSettingsButton = true,
-        onSettingsClick = { showSettings = true },
-        onToggle = { viewModel.togglePlayback() }
-    )
+    if (castFeatureManager == null) return
 
-    // Settings dialog
-    if (showSettings && castFeatureManager != null) {
-        SettingsSheet(
-            settingsRepository = settingsRepository,
-            castFeatureManager = castFeatureManager,
-            onDismiss = { showSettings = false },
-            onOpenLicenses = {
-                showSettings = false
-                showLicenses = true
-            }
-        )
-    }
+    SirAppShell(
+        modifier = modifier,
+        uiState = uiState,
+        selectedTab = selectedTab,
+        onSelectTab = { selectedTab = it },
+        onToggle = { viewModel.togglePlayback() },
+        browserViewModel = browserViewModel,
+        settingsRepository = repository,
+        castFeatureManager = castFeatureManager,
+        onOpenLicenses = { showLicenses = true }
+    )
 
     // Open Source Licenses
     if (showLicenses) {

@@ -5,7 +5,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.cascadiacollections.sir.CastFeatureManager
 import com.cascadiacollections.sir.CastModuleState
-import com.cascadiacollections.sir.SettingsRepository
+import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.ui.theme.SirTheme
 import io.mockk.every
 import io.mockk.mockk
@@ -18,12 +18,12 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 /**
- * Compose UI tests for [SettingsSheet].
+ * Compose UI tests for [SettingsContent].
  * Validates that settings controls render correctly.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
-class SettingsSheetTest {
+class SettingsScreenTest {
 
     @get:Rule
     val composeRule = createComposeRule()
@@ -36,27 +36,12 @@ class SettingsSheetTest {
         }
 
     @Test
-    fun `settings sheet displays title`() {
+    fun `settings screen displays sleep timer section`() {
         composeRule.setContent {
             SirTheme {
-                SettingsSheet(
+                SettingsContent(
                     settingsRepository = createSettingsRepo(),
-                    castFeatureManager = createMockCastManager(),
-                    onDismiss = {}
-                )
-            }
-        }
-        composeRule.onNodeWithText("Settings").assertIsDisplayed()
-    }
-
-    @Test
-    fun `settings sheet displays sleep timer section`() {
-        composeRule.setContent {
-            SirTheme {
-                SettingsSheet(
-                    settingsRepository = createSettingsRepo(),
-                    castFeatureManager = createMockCastManager(),
-                    onDismiss = {}
+                    castFeatureManager = createMockCastManager()
                 )
             }
         }
@@ -64,13 +49,12 @@ class SettingsSheetTest {
     }
 
     @Test
-    fun `settings sheet displays equalizer section`() {
+    fun `settings screen displays equalizer section`() {
         composeRule.setContent {
             SirTheme {
-                SettingsSheet(
+                SettingsContent(
                     settingsRepository = createSettingsRepo(),
-                    castFeatureManager = createMockCastManager(),
-                    onDismiss = {}
+                    castFeatureManager = createMockCastManager()
                 )
             }
         }
@@ -78,13 +62,12 @@ class SettingsSheetTest {
     }
 
     @Test
-    fun `settings sheet displays Chromecast toggle`() {
+    fun `settings screen displays Chromecast toggle`() {
         composeRule.setContent {
             SirTheme {
-                SettingsSheet(
+                SettingsContent(
                     settingsRepository = createSettingsRepo(),
-                    castFeatureManager = createMockCastManager(),
-                    onDismiss = {}
+                    castFeatureManager = createMockCastManager()
                 )
             }
         }
@@ -92,27 +75,25 @@ class SettingsSheetTest {
     }
 
     @Test
-    fun `settings sheet displays privacy policy link`() {
+    fun `settings screen displays privacy policy link`() {
         composeRule.setContent {
             SirTheme {
-                SettingsSheet(
+                SettingsContent(
                     settingsRepository = createSettingsRepo(),
-                    castFeatureManager = createMockCastManager(),
-                    onDismiss = {}
+                    castFeatureManager = createMockCastManager()
                 )
             }
         }
         composeRule.onNodeWithText("Privacy Policy").assertIsDisplayed()
     }
 
-    @Test
-    fun `settings sheet renders Chromecast section with NotInstalled state`() {
+        @Test
+    fun `settings screen renders Chromecast section with NotInstalled state`() {
         composeRule.setContent {
             SirTheme {
-                SettingsSheet(
+                SettingsContent(
                     settingsRepository = createSettingsRepo(),
-                    castFeatureManager = createMockCastManager(CastModuleState.NotInstalled),
-                    onDismiss = {}
+                    castFeatureManager = createMockCastManager(CastModuleState.NotInstalled)
                 )
             }
         }

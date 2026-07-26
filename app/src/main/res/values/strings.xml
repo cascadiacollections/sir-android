@@ -57,9 +57,7 @@
     <string name="custom_stream_reset">Reset to default stream</string>
 
     <!-- Station Search -->
-    <string name="find_stations">Find Stations</string>
     <string name="search_stations_hint">Search by name or genre</string>
-    <string name="search_results">Results</string>
     <string name="saved_stations">My Stations</string>
     <string name="station_saved">Station saved</string>
     <string name="station_removed">Station removed</string>
@@ -67,6 +65,19 @@
     <string name="station_now_playing">Now playing</string>
     <string name="play_station">Play station</string>
     <string name="play_default_stream">Back to SIR stream</string>
+    <string name="clear_recent_stations">Clear history</string>
+    <string name="clear_search">Clear search</string>
+    <string name="search">Search</string>
+    <string name="save_station">Save station</string>
+    <string name="remove_station">Remove station</string>
+    <string name="browse_empty">Search for a station by name or genre to get started.</string>
+    <string name="library_empty">Stations you save or play will show up here.</string>
+
+    <!-- Navigation -->
+    <string name="tab_listen">Listen</string>
+    <string name="tab_browse">Browse</string>
+    <string name="tab_library">Library</string>
+    <string name="tab_settings">Settings</string>
 
     <!-- Share -->
     <string name="share">Share</string>

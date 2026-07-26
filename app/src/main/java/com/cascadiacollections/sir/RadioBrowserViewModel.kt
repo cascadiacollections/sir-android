@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.directory.search
 import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -122,5 +123,11 @@ class RadioBrowserViewModel(
 
     fun isStationSaved(station: Station): Boolean {
         return _uiState.value.savedStations.any { it.id == station.id }
+    }
+
+    fun clearRecentStations() {
+        viewModelScope.launch {
+            settingsRepository.clearRecentStations()
+        }
     }
 }

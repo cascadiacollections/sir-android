@@ -52,6 +52,8 @@ import com.cascadiacollections.sir.core.playback.EqualizerCurves
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.PlaybackBufferConfig
 import com.cascadiacollections.sir.core.playback.SleepTimerRestore
+import com.cascadiacollections.sir.core.playback.StreamSource
+import com.cascadiacollections.sir.core.playback.StreamSourceResolver
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -60,6 +62,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -95,8 +98,11 @@ class RadioPlaybackService : MediaLibraryService() {
     private val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    // Current stream URL (may be custom in debug builds)
+    // Current stream URL (may be a directory station or a debug override)
     private var currentStreamUrl: String = DEFAULT_STREAM_URL
+
+    // Display title for the current stream; null falls back to the bundled station name
+    private var currentStationTitle: String? = null
 
     // DVR time-shift buffer
     private val replayBuffer = CircularByteBuffer(REPLAY_BUFFER_SIZE)
@@ -137,22 +143,8 @@ class RadioPlaybackService : MediaLibraryService() {
 
         // Load settings asynchronously
         serviceScope.launch {
-            // Apply saved stream quality (before custom URL override so debug URL wins)
-            val savedQuality = settingsRepository.streamQuality.first()
-            if (savedQuality != StreamQuality.HIGH) {
-                currentStreamUrl = savedQuality.url
-            }
-            if (BuildConfig.DEBUG) {
-                settingsRepository.customStreamUrl.first()?.let { customUrl ->
-                    currentStreamUrl = customUrl
-                    Log.d(TAG, "Using custom stream URL: $customUrl")
-                }
-            }
-            // Re-set media item if URL changed
-            if (currentStreamUrl != DEFAULT_STREAM_URL) {
-                player?.setMediaItem(buildMediaItem())
-                player?.prepare()
-            }
+            applyStreamSource(resolveStreamSource())
+
             // Load and apply equalizer preset
             currentEqualizerPreset = settingsRepository.equalizerPreset.first()
 
@@ -171,6 +163,13 @@ class RadioPlaybackService : MediaLibraryService() {
                     settingsRepository.setSleepTimerFiresAt(0L)
                 }
             }
+        }
+
+        // React to the user picking a different station while the service is alive
+        serviceScope.launch {
+            settingsRepository.selectedStation
+                .drop(1)
+                .collect { applyStreamSource(resolveStreamSource()) }
         }
 
         // Initialize wake locks to prevent device sleep during playback
@@ -320,7 +319,7 @@ class RadioPlaybackService : MediaLibraryService() {
                                     MediaMetadata.Builder()
                                         .setIsBrowsable(true)
                                         .setIsPlayable(false)
-                                        .setTitle(getString(R.string.station_name))
+                                        .setTitle(currentStationTitle ?: getString(R.string.station_name))
                                         .build()
                                 )
                                 .build(),
@@ -787,7 +786,7 @@ class RadioPlaybackService : MediaLibraryService() {
         )
         .setMediaMetadata(
             MediaMetadata.Builder()
-                .setTitle(getString(R.string.station_name))
+                .setTitle(currentStationTitle ?: getString(R.string.station_name))
                 .setArtist(getString(R.string.stream_description))
                 .setIsPlayable(true)
                 .build()
@@ -928,6 +927,37 @@ class RadioPlaybackService : MediaLibraryService() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply equalizer preset", e)
         }
+    }
+
+    /**
+     * Resolves the stream to play from the persisted settings. The debug override is
+     * only consulted in debug builds so a release build can never be pointed at an
+     * arbitrary URL by stale preferences.
+     */
+    private suspend fun resolveStreamSource(): StreamSource = StreamSourceResolver.resolve(
+        debugOverrideUrl = if (BuildConfig.DEBUG) settingsRepository.customStreamUrl.first() else null,
+        selectedStation = settingsRepository.selectedStation.first()
+            ?.let { StreamSource(url = it.url, title = it.name, stationId = it.id) },
+        qualityUrl = settingsRepository.streamQuality.first().url,
+        defaultTitle = DEFAULT_STATION_NAME
+    )
+
+    /**
+     * Points the player at [source], restarting playback only when the URL actually
+     * changed so unrelated settings writes do not interrupt listening.
+     */
+    private fun applyStreamSource(source: StreamSource) {
+        currentStationTitle = source.title
+        if (source.url == currentStreamUrl) return
+        currentStreamUrl = source.url
+        replayBuffer.clear()
+        playbackMode = PlaybackMode.Live
+        val wasPlaying = player?.isPlaying == true
+        player?.stop()
+        player?.setMediaItem(buildMediaItem())
+        player?.prepare()
+        if (wasPlaying) player?.play()
+        Log.d(TAG, "Stream source changed to ${source.title ?: source.url}")
     }
 
     private fun applyStreamQuality(quality: StreamQuality) {

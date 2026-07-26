@@ -13,6 +13,7 @@ once.
 ├── :core:model           platform-neutral domain types (Station, StationQuery)
 ├── :core:directory       station catalogue boundary + radio-browser client
 ├── :core:playback        playback policy: equalizer curves, buffering, sleep timer
+├── :core:persistence     favourites/recents collection rules + station serialization
 ├── :cast                 on-demand dynamic feature (Chromecast)
 ├── :libs:media3-timeshift    DVR/time-shift DataSource (publishable)
 └── :libs:okhttp-streaming    streaming-tuned OkHttp client factory (publishable)
@@ -69,6 +70,29 @@ setup, HTTP, wake locks, equalizer, sleep timer and media session in one class.
   documented data (`LIVE_RADIO` is tuned for a ~64 kbps stream).
 - `SleepTimerRestore` decides how a persisted deadline is restored after process
   death, independent of the service lifecycle.
+- `StreamSourceResolver` decides what actually plays, with a fixed precedence:
+  debug stream override > user-selected station > the quality-derived SIR URL. The
+  service applies the result and no-ops when the URL is unchanged, so unrelated
+  settings writes never interrupt playback.
+
+## `:core:persistence`
+
+Collection rules for saved and recently-heard stations, kept out of
+`SettingsRepository` so they are testable without DataStore or Robolectric.
+
+- `StationCodec` encodes/decodes station lists to the single JSON blob DataStore
+  stores. Because `Station`'s serial names match the radio-browser payload, existing
+  `saved_stations` values decode unchanged — no migration was needed.
+- `StationCollections` owns the ordering and de-duplication rules: favourites are
+  append-only and keyed by station id; recents are most-recent-first, de-duplicated by
+  id and capped, so replaying a station moves it to the top rather than duplicating it.
+- `SettingsRepository` is the only DataStore-aware layer. `selectStation` writes the
+  selection and the recents entry in a single transaction so the two can never diverge.
+
+Note for tests: DataStore does real IO on real threads, so `runTest`'s virtual clock
+skips past it and turbine times out. Use `runBlocking` with direct `.first()` /
+`StateFlow.value` reads, and reset the keys under test in `@Before` — the DataStore
+file is shared across tests in a class.
 
 ## Verification
 

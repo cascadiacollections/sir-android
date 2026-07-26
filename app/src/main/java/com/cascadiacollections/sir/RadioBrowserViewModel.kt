@@ -15,7 +15,9 @@ data class RadioBrowserUiState(
     val searchResults: List<Station> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val savedStations: List<Station> = emptyList()
+    val savedStations: List<Station> = emptyList(),
+    val recentStations: List<Station> = emptyList(),
+    val selectedStationId: String? = null
 )
 
 /**
@@ -36,6 +38,16 @@ class RadioBrowserViewModel(
         viewModelScope.launch {
             settingsRepository.savedStations.collect { stations ->
                 _uiState.value = _uiState.value.copy(savedStations = stations)
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.recentStations.collect { stations ->
+                _uiState.value = _uiState.value.copy(recentStations = stations)
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.selectedStation.collect { station ->
+                _uiState.value = _uiState.value.copy(selectedStationId = station?.id)
             }
         }
     }
@@ -72,6 +84,27 @@ class RadioBrowserViewModel(
                         error = e.message ?: "Search failed"
                     )
                 }
+        }
+    }
+
+    /**
+     * Makes [station] the stream being played. The playback service observes the
+     * persisted selection, so no direct hand-off to the service is needed.
+     */
+    fun playStation(station: Station) {
+        if (!station.isPlayable) return
+        viewModelScope.launch {
+            settingsRepository.selectStation(station)
+        }
+    }
+
+    /**
+     * Reverts to the app's own stream. Without this, selecting a directory station
+     * would be a one-way door.
+     */
+    fun playDefaultStream() {
+        viewModelScope.launch {
+            settingsRepository.clearSelectedStation()
         }
     }
 

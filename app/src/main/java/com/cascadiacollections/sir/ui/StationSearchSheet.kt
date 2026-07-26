@@ -3,6 +3,7 @@
 package com.cascadiacollections.sir.ui
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -38,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cascadiacollections.sir.R
 import com.cascadiacollections.sir.RadioBrowserViewModel
+import com.cascadiacollections.sir.core.model.Station
 
 @Composable
 fun StationSearchSheet(
@@ -126,12 +130,12 @@ fun StationSearchSheet(
                         .weight(1f, fill = false)
                 ) {
                     items(uiState.searchResults) { station ->
-                        val isSaved = viewModel.isStationSaved(station)
-
-                        ListItem(
-                            headlineContent = { Text(station.name) },
-                            supportingContent = { Text(station.displayLabel) },
-                            trailingContent = {
+                        StationRow(
+                            station = station,
+                            isPlaying = station.id == uiState.selectedStationId,
+                            onPlay = { viewModel.playStation(station) },
+                            trailing = {
+                                val isSaved = viewModel.isStationSaved(station)
                                 IconButton(
                                     onClick = {
                                         if (isSaved) {
@@ -178,10 +182,11 @@ fun StationSearchSheet(
                         .weight(1f, fill = false)
                 ) {
                     items(uiState.savedStations.take(5)) { station ->
-                        ListItem(
-                            headlineContent = { Text(station.name) },
-                            supportingContent = { Text(station.displayLabel) },
-                            trailingContent = {
+                        StationRow(
+                            station = station,
+                            isPlaying = station.id == uiState.selectedStationId,
+                            onPlay = { viewModel.playStation(station) },
+                            trailing = {
                                 IconButton(
                                     onClick = {
                                         viewModel.removeStation(station.id)
@@ -199,6 +204,76 @@ fun StationSearchSheet(
                     }
                 }
             }
+
+            // Escape hatch back to the app's own stream
+            if (uiState.selectedStationId != null) {
+                TextButton(
+                    onClick = { viewModel.playDefaultStream() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text(stringResource(R.string.play_default_stream))
+                }
+            }
+
+            // Recently played
+            if (uiState.recentStations.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.recent_stations),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                ) {
+                    items(uiState.recentStations.take(5)) { station ->
+                        StationRow(
+                            station = station,
+                            isPlaying = station.id == uiState.selectedStationId,
+                            onPlay = { viewModel.playStation(station) }
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+/**
+ * A single station row. Tapping anywhere on the row starts playback, so the trailing
+ * icon stays free for the list-specific action (save, remove, ...).
+ */
+@Composable
+private fun StationRow(
+    station: Station,
+    isPlaying: Boolean,
+    onPlay: () -> Unit,
+    trailing: @Composable (() -> Unit)? = null
+) {
+    ListItem(
+        modifier = Modifier.clickable(enabled = station.isPlayable, onClick = onPlay),
+        headlineContent = { Text(station.name) },
+        supportingContent = {
+            Text(
+                if (isPlaying) stringResource(R.string.station_now_playing) else station.displayLabel
+            )
+        },
+        leadingContent = {
+            Icon(
+                Icons.Default.PlayArrow,
+                contentDescription = stringResource(R.string.play_station),
+                tint = if (isPlaying) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        },
+        trailingContent = trailing
+    )
 }

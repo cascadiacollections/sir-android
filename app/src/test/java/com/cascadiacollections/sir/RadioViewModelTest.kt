@@ -8,12 +8,13 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,6 +40,12 @@ class RadioViewModelTest {
 
     private val app: Application
         get() = RuntimeEnvironment.getApplication()
+
+    /** DataStore is shared across tests in this class, so reset the timer state. */
+    @Before
+    fun resetSleepTimer() = runBlocking {
+        SettingsRepository(app).setSleepTimerFiresAt(0L)
+    }
 
     private fun createViewModel(): RadioViewModel {
         val settings = SettingsRepository(app)
@@ -124,7 +131,7 @@ class RadioViewModelTest {
     }
 
     @Test
-    fun `sleep timer label clears when timer is cancelled`() = runTest {
+    fun `sleep timer label clears when timer is cancelled`() = runBlocking {
         val settings = SettingsRepository(app)
         val vm = RadioViewModel(app, settings)
 
@@ -136,7 +143,7 @@ class RadioViewModelTest {
     }
 
     @Test
-    fun `sleep timer label updates when timer changes`() = runTest {
+    fun `sleep timer label updates when timer changes`() = runBlocking {
         val settings = SettingsRepository(app)
         val vm = RadioViewModel(app, settings)
 

@@ -176,6 +176,8 @@ dependencies {
     implementation(projects.core.directory)
     // Platform-independent playback policy (equalizer curves, buffering, sleep timer)
     implementation(projects.core.playback)
+    // Favorites/recents collection rules and station serialization
+    implementation(projects.core.persistence)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

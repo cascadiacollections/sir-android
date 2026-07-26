@@ -387,16 +387,17 @@ fun SettingsSheet(
                         Text(stringResource(R.string.save))
                     }
                 }
+            }
 
-                // Find Stations button
-                TextButton(
-                    onClick = { showStationSearch = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                ) {
-                    Text(stringResource(R.string.find_stations))
-                }
+            // Station discovery is a first-class surface, not a debug affordance:
+            // browsing and playing arbitrary stations is core functionality.
+            TextButton(
+                onClick = { showStationSearch = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text(stringResource(R.string.find_stations))
             }
         }
     }

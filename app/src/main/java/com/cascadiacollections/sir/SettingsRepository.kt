@@ -10,12 +10,12 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.core.persistence.StationCodec
+import com.cascadiacollections.sir.core.persistence.StationCollections
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -46,6 +46,8 @@ class SettingsRepository(private val context: Context) {
     private val equalizerPresetKey = intPreferencesKey("equalizer_preset")
     private val customStreamUrlKey = stringPreferencesKey("custom_stream_url")
     private val savedStationsKey = stringPreferencesKey("saved_stations")
+    private val recentStationsKey = stringPreferencesKey("recent_stations")
+    private val selectedStationKey = stringPreferencesKey("selected_station")
 
     val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
         StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
@@ -141,65 +143,91 @@ class SettingsRepository(private val context: Context) {
     }
 
     /**
-     * Flow of saved discovered stations (from radio-browser.info)
+     * Flow of the user's saved (favourite) stations.
      */
     val savedStations: Flow<List<Station>> = context.dataStore.data.map { preferences ->
-        val json = preferences[savedStationsKey] ?: "[]"
-        try {
-            val jsonDecoder = kotlinx.serialization.json.Json {
-                ignoreUnknownKeys = true
-            }
-            jsonDecoder.decodeFromString<List<Station>>(json)
-        } catch (e: Exception) {
-            emptyList()
+        StationCodec.decode(preferences[savedStationsKey])
+    }
+
+    /**
+     * Flow of recently played stations, newest first.
+     */
+    val recentStations: Flow<List<Station>> = context.dataStore.data.map { preferences ->
+        StationCodec.decode(preferences[recentStationsKey])
+    }
+
+    /**
+     * Adds a station to favourites, refreshing directory metadata if already saved.
+     */
+    suspend fun saveStation(station: Station) = editStations(savedStationsKey) { current ->
+        StationCollections.addFavorite(current, station)
+    }
+
+    /**
+     * Removes a favourite by station id.
+     */
+    suspend fun removeStation(stationId: String) = editStations(savedStationsKey) { current ->
+        StationCollections.removeFavorite(current, stationId)
+    }
+
+    /**
+     * Records a station as most recently played.
+     */
+    suspend fun recordRecentStation(station: Station) = editStations(recentStationsKey) { current ->
+        StationCollections.recordRecent(current, station)
+    }
+
+    /**
+     * The station the user last chose to play, or `null` when playing the app's own
+     * stream. Persisted so the choice survives process death and is visible to the
+     * playback service, the widget and the tile without an explicit hand-off.
+     */
+    val selectedStation: Flow<Station?> = context.dataStore.data.map { preferences ->
+        StationCodec.decode(preferences[selectedStationKey]).firstOrNull()
+    }
+
+    /**
+     * Selects [station] for playback and records it as recently played.
+     *
+     * Both writes happen in one transaction so a crash can never leave a station
+     * playing that is missing from the recents list.
+     */
+    suspend fun selectStation(station: Station) {
+        context.dataStore.edit { preferences ->
+            preferences[selectedStationKey] = StationCodec.encode(listOf(station))
+            val recents = StationCollections.recordRecent(
+                StationCodec.decode(preferences[recentStationsKey]),
+                station
+            )
+            preferences[recentStationsKey] = StationCodec.encode(recents)
         }
     }
 
     /**
-     * Add or update a saved station
+     * Reverts to the app's own stream.
      */
-    suspend fun saveStation(station: Station) {
-        context.dataStore.edit { preferences ->
-            val current = try {
-                val json = preferences[savedStationsKey] ?: "[]"
-                val jsonDecoder = kotlinx.serialization.json.Json {
-                    ignoreUnknownKeys = true
-                }
-                jsonDecoder.decodeFromString<List<Station>>(json).toMutableList()
-            } catch (e: Exception) {
-                mutableListOf()
-            }
-
-            // Replace if exists (by id), otherwise add
-            val index = current.indexOfFirst { it.id == station.id }
-            if (index >= 0) {
-                current[index] = station
-            } else {
-                current.add(station)
-            }
-
-            preferences[savedStationsKey] = Json.encodeToString(current)
-        }
+    suspend fun clearSelectedStation() {
+        context.dataStore.edit { preferences -> preferences.remove(selectedStationKey) }
     }
 
     /**
-     * Remove a saved station by id
+     * Clears the recently played list, e.g. from the privacy settings.
      */
-    suspend fun removeStation(stationId: String) {
-        context.dataStore.edit { preferences ->
-            val current = try {
-                val json = preferences[savedStationsKey] ?: "[]"
-                val jsonDecoder = kotlinx.serialization.json.Json {
-                    ignoreUnknownKeys = true
-                }
-                jsonDecoder.decodeFromString<List<Station>>(json).toMutableList()
-            } catch (e: Exception) {
-                mutableListOf()
-            }
+    suspend fun clearRecentStations() {
+        context.dataStore.edit { preferences -> preferences.remove(recentStationsKey) }
+    }
 
-            current.removeAll { it.id == stationId }
-            preferences[savedStationsKey] = Json.encodeToString(current)
+    /**
+     * Read-modify-write inside a single DataStore transaction so concurrent edits
+     * from the UI and the playback service cannot clobber each other.
+     */
+    private suspend fun editStations(
+        key: Preferences.Key<String>,
+        transform: (List<Station>) -> List<Station>
+    ) {
+        context.dataStore.edit { preferences ->
+            val updated = transform(StationCodec.decode(preferences[key]))
+            preferences[key] = StationCodec.encode(updated)
         }
     }
 }
-

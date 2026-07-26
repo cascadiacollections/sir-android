@@ -63,6 +63,10 @@
     <string name="saved_stations">My Stations</string>
     <string name="station_saved">Station saved</string>
     <string name="station_removed">Station removed</string>
+    <string name="recent_stations">Recently Played</string>
+    <string name="station_now_playing">Now playing</string>
+    <string name="play_station">Play station</string>
+    <string name="play_default_stream">Back to SIR stream</string>
 
     <!-- Share -->
     <string name="share">Share</string>

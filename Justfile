@@ -38,4 +38,4 @@ build-full:
 
 # Refactor safety baseline (matches CI's core local checks)
 verify:
-    ./gradlew assembleFossDebug testPlayDebugUnitTest :wear:testDebugUnitTest :core:model:testDebugUnitTest :core:directory:testDebugUnitTest :core:playback:testDebugUnitTest lintPlayDebug --no-daemon --parallel --build-cache
+    ./gradlew assembleFossDebug testPlayDebugUnitTest :wear:testDebugUnitTest :core:model:testDebugUnitTest :core:directory:testDebugUnitTest :core:playback:testDebugUnitTest :core:persistence:testDebugUnitTest lintPlayDebug --no-daemon --parallel --build-cache

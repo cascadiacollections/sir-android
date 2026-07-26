@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import kotlinx.coroutines.flow.first
+import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.ui.theme.Amber40
 import com.cascadiacollections.sir.ui.theme.Amber80
 import com.cascadiacollections.sir.ui.theme.AmberGrey40
@@ -57,6 +59,11 @@ class RadioWidget : GlanceAppWidget() {
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        // provideGlance is suspending, so the persisted selection can be read
+        // directly rather than assuming the SIR stream is what is playing.
+        val stationName = SettingsRepository(context).selectedStation.first()?.name
+            ?.takeIf { it.isNotBlank() }
+            ?: context.getString(R.string.station_name)
         provideContent {
             GlanceTheme(colors = colors) {
                 Row(
@@ -67,7 +74,7 @@ class RadioWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = context.getString(R.string.station_name),
+                        text = stationName,
                         style = TextStyle(
                             color = GlanceTheme.colors.onSurface,
                             fontSize = 18.sp

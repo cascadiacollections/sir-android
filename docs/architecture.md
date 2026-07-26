@@ -129,6 +129,25 @@ relocate that coupling rather than remove it. The screens are already split into
 content-only composables (`ListenScreen`, `BrowseScreen`, `LibraryScreen`,
 `SettingsContent`), which is the prerequisite for the move.
 
+## Platform surfaces
+
+Android Auto, the quick-settings tile, the Glance widget and the Wear app all read from
+the same core APIs as the phone UI rather than assuming the SIR stream is what is
+playing.
+
+- **Android Auto** browses `BROWSE_ROOT_ID` as the SIR stream followed by the saved
+  stations from `SettingsRepository.savedStations`. Choosing one calls `selectStation`,
+  the same persisted selection the phone UI writes, so the two surfaces stay in sync and
+  the choice survives a service restart. Unplayable stations are filtered out.
+- **Quick-settings tile** takes its subtitle from the media session metadata, so it
+  follows a directory station and ICY title updates. It falls back to the app's station
+  name when no controller is connected.
+- **Glance widget** reads `selectedStation` directly — `provideGlance` is suspending, so
+  no controller connection is needed to render the correct name.
+- **Wear** is a standalone player and does not share a session with the phone, but it now
+  takes its URL from `StreamConfig.DEFAULT_STREAM_URL` in `:core:playback` instead of
+  duplicating the literal.
+
 ## Verification
 
 `just verify` is the gate for this refactor: it assembles the FOSS debug variant, runs

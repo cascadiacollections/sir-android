@@ -47,6 +47,7 @@ import com.cascadiacollections.android.media3.timeshift.CircularByteBuffer
 import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
+import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.AudioRoutePolicy
 import com.cascadiacollections.sir.core.playback.EqualizerCurves
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
@@ -72,6 +73,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
 
 class RadioPlaybackService : MediaLibraryService() {
@@ -338,6 +340,8 @@ class RadioPlaybackService : MediaLibraryService() {
                         )
                     )
 
+                // The car browser lists the SIR stream first, then the user's saved
+                // stations, so the library is reachable without touching the phone.
                 override fun onGetChildren(
                     session: MediaLibrarySession,
                     browser: MediaSession.ControllerInfo,
@@ -345,17 +349,55 @@ class RadioPlaybackService : MediaLibraryService() {
                     page: Int,
                     pageSize: Int,
                     params: MediaLibraryService.LibraryParams?
-                ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
-                    if (parentId == BROWSE_ROOT_ID) {
-                        Futures.immediateFuture(
-                            LibraryResult.ofItemList(
-                                ImmutableList.of(buildMediaItem()),
-                                params
-                            )
+                ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+                    if (parentId != BROWSE_ROOT_ID) {
+                        return Futures.immediateFuture(
+                            LibraryResult.ofItemList(ImmutableList.of(), params)
                         )
-                    } else {
-                        Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.of(), params))
                     }
+                    return serviceScope.future {
+                        val stations = settingsRepository.savedStations.first()
+                        val items = ImmutableList.builder<MediaItem>()
+                            .add(buildMediaItem())
+                            .addAll(stations.filter { it.isPlayable }.map(::buildStationMediaItem))
+                            .build()
+                        LibraryResult.ofItemList(items, params)
+                    }
+                }
+
+                override fun onGetItem(
+                    session: MediaLibrarySession,
+                    browser: MediaSession.ControllerInfo,
+                    mediaId: String
+                ): ListenableFuture<LibraryResult<MediaItem>> = serviceScope.future {
+                    val station = settingsRepository.savedStations.first()
+                        .firstOrNull { it.id == mediaId }
+                    if (station == null) {
+                        LibraryResult.ofItem(buildMediaItem(), null)
+                    } else {
+                        LibraryResult.ofItem(buildStationMediaItem(station), null)
+                    }
+                }
+
+                // Selecting a station in the car goes through the same persisted
+                // selection as the phone UI, so both stay in sync and the choice
+                // survives the service being restarted.
+                override fun onAddMediaItems(
+                    mediaSession: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    mediaItems: MutableList<MediaItem>
+                ): ListenableFuture<MutableList<MediaItem>> = serviceScope.future {
+                    val requestedId = mediaItems.firstOrNull()?.mediaId
+                    val station = requestedId
+                        ?.let { id -> settingsRepository.savedStations.first().firstOrNull { it.id == id } }
+                    if (station != null) {
+                        settingsRepository.selectStation(station)
+                        mutableListOf(buildStationMediaItem(station))
+                    } else {
+                        if (requestedId != null) settingsRepository.clearSelectedStation()
+                        mutableListOf(buildMediaItem())
+                    }
+                }
             })
             .setId(MEDIA_SESSION_ID)
             .build()
@@ -781,6 +823,19 @@ class RadioPlaybackService : MediaLibraryService() {
                 .setTitle(currentStationTitle ?: getString(R.string.station_name))
                 .setArtist(getString(R.string.stream_description))
                 .setIsPlayable(true)
+                .build()
+        )
+        .build()
+
+    private fun buildStationMediaItem(station: Station): MediaItem = MediaItem.Builder()
+        .setUri(station.url)
+        .setMediaId(station.id)
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(station.name)
+                .setArtist(station.displayLabel)
+                .setIsPlayable(true)
+                .setIsBrowsable(false)
                 .build()
         )
         .build()

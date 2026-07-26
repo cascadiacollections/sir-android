@@ -40,7 +40,8 @@ dependencies {
     implementation(libs.media3.session)
     implementation(libs.media3.datasource.okhttp)
 
-    // Shared OkHttp client factory for live audio streaming
+    // Shared playback policy (stream URL, retry backoff) and OkHttp client factory
+    implementation(projects.core.playback)
     implementation(project(":libs:okhttp-streaming"))
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)

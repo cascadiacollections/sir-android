@@ -17,38 +17,53 @@ import com.cascadiacollections.sir.core.playback.StreamQuality
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.util.WeakHashMap
 
 /**
- * One [DataStore] per [Context.getApplicationContext].
+ * The single live [DataStore] for the settings file.
  *
- * DataStore requires that a file is owned by a single instance, which the
+ * DataStore requires that a file is owned by one instance at a time, which the
  * `preferencesDataStore` property delegate guarantees by caching one instance forever.
  * That delegate caches it against the *first* context it ever sees, though, which breaks
- * under Robolectric: each test class gets a fresh Application with a fresh files
- * directory, so every class after the first would keep writing through a store pointing
- * at a directory that no longer exists. Keying the cache on the application context keeps
- * the production guarantee (there is only ever one Application) while giving each test
- * Application its own store.
+ * under Robolectric: a test class can get a fresh Application with a fresh files
+ * directory, leaving the cached store writing through a directory that no longer exists.
+ *
+ * So the owning Application is tracked explicitly. In production it is set once and never
+ * changes. When a *different* Application appears, the previous store's scope is cancelled
+ * before the replacement is built — DataStore only releases its claim on the file when
+ * that scope completes, so without the cancel the second store would either contend with
+ * the first or trip the "multiple DataStores active for the same file" check.
+ *
+ * This used to be a `WeakHashMap<Context, DataStore<Preferences>>`, which looked like it
+ * bounded itself but did not: the cached value's `produceFile` lambda closes over the very
+ * context used as the key, so no entry was ever weakly reachable and no scope was ever
+ * cancelled. One strongly-held owner is both smaller and honest about its lifetime.
  */
 private object SettingsDataStore {
 
     private const val FILE_NAME = "settings"
 
-    private val instances = WeakHashMap<Context, DataStore<Preferences>>()
+    private var owner: Context? = null
+    private var ownerScope: CoroutineScope? = null
+    private var instance: DataStore<Preferences>? = null
 
     @Synchronized
     operator fun get(context: Context): DataStore<Preferences> {
         val app = context.applicationContext
-        return instances.getOrPut(app) {
-            PreferenceDataStoreFactory.create(
-                scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-            ) {
-                app.preferencesDataStoreFile(FILE_NAME)
-            }
+        instance?.let { existing -> if (owner === app) return existing }
+
+        ownerScope?.cancel()
+
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val created = PreferenceDataStoreFactory.create(scope = scope) {
+            app.preferencesDataStoreFile(FILE_NAME)
         }
+        owner = app
+        ownerScope = scope
+        instance = created
+        return created
     }
 }
 

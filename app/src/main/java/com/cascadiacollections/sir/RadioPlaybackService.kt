@@ -182,7 +182,12 @@ class RadioPlaybackService : MediaLibraryService() {
         serviceScope.launch {
             settingsRepository.selectedStation
                 .drop(1)
-                .collect { applyStreamSource(resolveStreamSource()) }
+                .collect {
+                    // A selection change is always a deliberate user action — tapping a
+                    // station, or "back to SIR" — so it starts playback rather than
+                    // silently re-pointing a stopped player.
+                    applyStreamSource(resolveStreamSource(), startPlayback = true)
+                }
         }
 
         // Initialize wake locks to prevent device sleep during playback
@@ -392,11 +397,13 @@ class RadioPlaybackService : MediaLibraryService() {
                         ?.let { id -> settingsRepository.savedStations.first().firstOrNull { it.id == id } }
                     if (station != null) {
                         settingsRepository.selectStation(station)
-                        mutableListOf(buildStationMediaItem(station))
-                    } else {
-                        if (requestedId != null) settingsRepository.clearSelectedStation()
-                        mutableListOf(buildMediaItem())
+                    } else if (requestedId != null) {
+                        settingsRepository.clearSelectedStation()
                     }
+                    // Resolve rather than using the station directly, so the car honours
+                    // the same precedence as the phone, and adopt the result here so the
+                    // collector watching the selection no-ops instead of racing us.
+                    mutableListOf(adoptStreamSource(resolveStreamSource()) ?: buildMediaItem())
                 }
             })
             .setId(MEDIA_SESSION_ID)
@@ -941,20 +948,40 @@ class RadioPlaybackService : MediaLibraryService() {
     )
 
     /**
-     * Points the player at [source], restarting playback only when the URL actually
-     * changed so unrelated settings writes do not interrupt listening.
+     * Adopts [source] as the current stream without touching the player, returning the
+     * item the player should be given — or null when [source] is already current.
+     *
+     * Two paths point the player at a new stream: this service reacting to the persisted
+     * selection, and Media3 setting whatever `onAddMediaItems` returns. Both now go
+     * through here, so the bookkeeping happens exactly once and whichever runs second
+     * sees an unchanged URL and no-ops. Previously they each built their own item — one
+     * with the live configuration and one without — and whichever landed last won.
      */
-    private fun applyStreamSource(source: StreamSource) {
+    private fun adoptStreamSource(source: StreamSource): MediaItem? {
         currentStationTitle = source.title
-        if (source.url == currentStreamUrl) return
+        if (source.url == currentStreamUrl) return null
         currentStreamUrl = source.url
         replayBuffer.clear()
         playbackMode = PlaybackMode.Live
+        return buildMediaItem()
+    }
+
+    /**
+     * Points the player at [source], restarting playback only when the URL actually
+     * changed so unrelated settings writes do not interrupt listening.
+     *
+     * [startPlayback] forces playback to begin even from a stopped player. Picking a
+     * station is a request to hear it, but on a cold launch the player is prepared with
+     * `playWhenReady = false`, so inferring intent from "were we already playing" meant
+     * a tap selected the station and then sat silent.
+     */
+    private fun applyStreamSource(source: StreamSource, startPlayback: Boolean = false) {
         val wasPlaying = player?.isPlaying == true
+        val item = adoptStreamSource(source) ?: return
         player?.stop()
-        player?.setMediaItem(buildMediaItem())
+        player?.setMediaItem(item)
         player?.prepare()
-        if (wasPlaying) player?.play()
+        if (wasPlaying || startPlayback) player?.play()
         Log.d(TAG, "Stream source changed to ${source.title ?: source.url}")
     }
 

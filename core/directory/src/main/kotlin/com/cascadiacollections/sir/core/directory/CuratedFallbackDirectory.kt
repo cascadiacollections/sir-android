@@ -15,13 +15,13 @@ class CuratedFallbackDirectory(
 ) : RadioDirectory {
 
     override suspend fun search(query: StationQuery): Result<List<Station>> =
-        delegate.search(query).orCurated { CuratedStations.matching(query.normalizedText) }
+        delegate.search(query).orCurated { CuratedStations.matching(query.normalizedText, curated) }
 
     override suspend fun topStations(limit: Int): Result<List<Station>> =
         delegate.topStations(limit).orCurated { curated.take(limit) }
 
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
-        delegate.stationsByTag(tag, limit).orCurated { CuratedStations.matching(tag).take(limit) }
+        delegate.stationsByTag(tag, limit).orCurated { CuratedStations.matching(tag, curated).take(limit) }
 
     /**
      * Only failures fall back. An empty *successful* response is a real answer ("no

@@ -47,6 +47,30 @@ class CuratedFallbackDirectoryTest {
     }
 
     @Test
+    fun `an injected curated list is used by search, not just top stations`() = runTest {
+        val custom = Station(id = "c1", name = "Custom Jazz", url = "https://example.com/jazz")
+        val directory = CuratedFallbackDirectory(failing, curated = listOf(custom))
+
+        // Previously search filtered CuratedStations.ALL regardless of what was injected,
+        // so a caller configuring the seam got its list for topStations and the built-in
+        // one for search.
+        assertEquals(listOf(custom), directory.search(StationQuery("jazz")).getOrThrow())
+        assertEquals(listOf(custom), directory.topStations(limit = 5).getOrThrow())
+    }
+
+    @Test
+    fun `an injected curated list does not leak the built-in stations`() = runTest {
+        val custom = Station(id = "c1", name = "Custom Jazz", url = "https://example.com/jazz")
+        val directory = CuratedFallbackDirectory(failing, curated = listOf(custom))
+
+        // "worldwide" matches a built-in station but nothing in the injected list, so the
+        // original failure has to survive rather than being answered from ALL.
+        val result = directory.search(StationQuery("worldwide"))
+
+        assertTrue(result.isFailure)
+    }
+
+    @Test
     fun `empty successful response is not masked by curated stations`() = runTest {
         val directory = CuratedFallbackDirectory(FixedDirectory(Result.success(emptyList())))
 

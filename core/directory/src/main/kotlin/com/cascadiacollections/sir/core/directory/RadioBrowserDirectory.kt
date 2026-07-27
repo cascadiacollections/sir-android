@@ -4,6 +4,7 @@ import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
@@ -23,7 +24,11 @@ class RadioBrowserDirectory(
     private val httpClient: OkHttpClient,
     private val mirrorProvider: MirrorProvider = RotatingMirrorProvider(),
     private val userAgent: String = DEFAULT_USER_AGENT,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    /** Wall-clock ceiling on one call's failover across all mirrors. */
+    private val failoverBudgetMs: Long = DEFAULT_FAILOVER_BUDGET_MS,
+    /** Injectable so the budget can be tested without sleeping. */
+    private val nanoTime: () -> Long = System::nanoTime
 ) : RadioDirectory {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -53,9 +58,14 @@ class RadioBrowserDirectory(
         buildPath: (HttpUrl.Builder) -> HttpUrl.Builder
     ): Result<List<Station>> = withContext(ioDispatcher) {
         val clampedLimit = limit.coerceIn(1, StationQuery.MAX_LIMIT)
+        val deadline = nanoTime() + failoverBudgetMs * 1_000_000
         var lastFailure: Throwable? = null
 
         for (mirror in mirrorProvider.mirrors()) {
+            // `execute()` blocks and never observes cancellation, so without this a
+            // search kept issuing requests after the user left the screen.
+            ensureActive()
+
             val base = mirror.toHttpUrlOrNull()?.newBuilder() ?: continue
             val url = buildPath(base)
                 .addQueryParameter("limit", clampedLimit.toString())
@@ -64,7 +74,18 @@ class RadioBrowserDirectory(
 
             val attempt = runCatching { fetch(url) }
             attempt.onSuccess { return@withContext Result.success(it) }
-            lastFailure = attempt.exceptionOrNull()
+
+            val failure = attempt.exceptionOrNull()
+            lastFailure = failure
+
+            // Only transport failures are worth another mirror. A decode error or a 4xx
+            // is a property of the request, so it will fail identically everywhere —
+            // trying all four just multiplied the wait by four before showing the error.
+            if (failure !is IOException) break
+
+            // Each attempt carries its own callTimeout, so a run of slow mirrors could
+            // otherwise hold the search spinner for the sum of all of them.
+            if (nanoTime() >= deadline) break
         }
 
         Result.failure(lastFailure ?: IOException("No usable radio-browser mirror"))
@@ -82,12 +103,21 @@ class RadioBrowserDirectory(
                 throw IOException("radio-browser responded HTTP ${response.code}")
             }
             val body = response.body.string()
-            if (body.isBlank()) return emptyList()
+            // "No results" is `[]`, not an empty body. A blank body is a malfunctioning
+            // mirror, so fail over rather than reporting — and caching — no results.
+            if (body.isBlank()) throw IOException("radio-browser returned an empty body")
             return json.decodeFromString<List<Station>>(body).filter { it.isPlayable }
         }
     }
 
     companion object {
         const val DEFAULT_USER_AGENT: String = "SIR-Android/1.0 (+https://github.com/cascadiacollections/sir-android)"
+
+        /**
+         * Roughly one and a half attempts at the 20s `callTimeout` the directory client
+         * uses — long enough for a slow mirror to answer, short enough that a search box
+         * never spins for the sum of every mirror's timeout.
+         */
+        const val DEFAULT_FAILOVER_BUDGET_MS: Long = 30_000
     }
 }

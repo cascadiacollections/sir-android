@@ -192,37 +192,42 @@ fun SettingsContent(
         Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider()
 
-        // Chromecast toggle
-        val castStatusText = when (castModuleState) {
-            is CastModuleState.Installed -> stringResource(R.string.chromecast_enabled)
-            is CastModuleState.Installing -> {
-                val progress = (castModuleState as CastModuleState.Installing).progress
-                "${stringResource(R.string.chromecast_downloading)} ${(progress * 100).toInt()}%"
-            }
-            is CastModuleState.Failed -> stringResource(R.string.chromecast_not_available)
-            else -> null
-        }
-        ListItem(
-            headlineContent = { Text(stringResource(R.string.enable_chromecast)) },
-            supportingContent = castStatusText?.let { { Text(it) } },
-            trailingContent = {
-                when (castModuleState) {
-                    is CastModuleState.Installing -> LoadingIndicator(modifier = Modifier.size(24.dp))
-                    is CastModuleState.Installed -> Switch(checked = true, onCheckedChange = null, enabled = false)
-                    else -> Switch(
-                        checked = chromecastEnabled,
-                        onCheckedChange = { enabled ->
-                            scope.launch {
-                                settingsRepository.setChromecastEnabled(enabled)
-                                if (enabled) castFeatureManager.installCastModule()
-                            }
-                        }
-                    )
+        // Chromecast toggle. Omitted entirely when the build cannot cast — the FOSS
+        // flavor ships no Play delivery client, so a disabled switch would be a control
+        // the user can never satisfy. The trailing divider goes with it so the section
+        // above does not end in two rules.
+        if (castModuleState !is CastModuleState.Unavailable) {
+            val castStatusText = when (castModuleState) {
+                is CastModuleState.Installed -> stringResource(R.string.chromecast_enabled)
+                is CastModuleState.Installing -> {
+                    val progress = (castModuleState as CastModuleState.Installing).progress
+                    "${stringResource(R.string.chromecast_downloading)} ${(progress * 100).toInt()}%"
                 }
+                is CastModuleState.Failed -> stringResource(R.string.chromecast_not_available)
+                else -> null
             }
-        )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.enable_chromecast)) },
+                supportingContent = castStatusText?.let { { Text(it) } },
+                trailingContent = {
+                    when (castModuleState) {
+                        is CastModuleState.Installing -> LoadingIndicator(modifier = Modifier.size(24.dp))
+                        is CastModuleState.Installed -> Switch(checked = true, onCheckedChange = null, enabled = false)
+                        else -> Switch(
+                            checked = chromecastEnabled,
+                            onCheckedChange = { enabled ->
+                                scope.launch {
+                                    settingsRepository.setChromecastEnabled(enabled)
+                                    if (enabled) castFeatureManager.installCastModule()
+                                }
+                            }
+                        )
+                    }
+                }
+            )
 
-        HorizontalDivider()
+            HorizontalDivider()
+        }
 
         // Privacy Policy
         TextButton(

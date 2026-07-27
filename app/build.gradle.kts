@@ -210,11 +210,15 @@ dependencies {
     // Serialization for API responses
     implementation(libs.kotlinx.serialization.json)
 
-    // Cast device detection (lightweight - actual Cast player in dynamic module)
-    implementation(libs.mediarouter)
+    // Cast device detection (lightweight - actual Cast player in dynamic module).
+    // Play only: without the Cast framework's route provider, discovery finds nothing,
+    // and the FOSS flavor's CastDeviceDetector reports unavailable without scanning.
+    "playImplementation"(libs.mediarouter)
 
-    // Dynamic feature delivery for on-demand Cast module
-    implementation(libs.play.feature.delivery.ktx)
+    // Dynamic feature delivery for on-demand Cast module.
+    // Play only: Play Core is proprietary and split installs require the Play Store,
+    // so shipping this in the FOSS APK added a non-free dependency that could never work.
+    "playImplementation"(libs.play.feature.delivery.ktx)
 
     // Settings persistence
     implementation(libs.datastore.preferences)

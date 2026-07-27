@@ -129,6 +129,46 @@ relocate that coupling rather than remove it. The screens are already split into
 content-only composables (`ListenScreen`, `BrowseScreen`, `LibraryScreen`,
 `SettingsContent`), which is the prerequisite for the move.
 
+## Distribution flavors
+
+The `distribution` dimension has two flavors, `play` and `foss`. They are not a
+packaging detail — they partition which features exist at all.
+
+| | `play` | `foss` |
+|---|---|---|
+| Firebase Analytics / Crashlytics | yes | no |
+| Play Core (`feature-delivery-ktx`) | yes | **no** |
+| `androidx.mediarouter` | yes | **no** |
+| `:cast` dynamic feature | installable on demand | not offered |
+| Chromecast row in settings | shown | **absent** |
+
+Everything else — playback, directory, persistence, Auto, tile, widget — is identical.
+
+Cast is the whole of the difference, and it is structural rather than conditional.
+Split installation is a Play Store service, so a FOSS build can never obtain the module;
+shipping the client anyway put a proprietary dependency in the APK and gave FOSS users a
+toggle whose install could not succeed.
+
+`CastFeatureManager` and `CastDeviceDetector` therefore live in `src/play` and `src/foss`
+as two implementations of one public API. Shared code in `src/main` names them without a
+flavor check and the active source set decides which it gets. The FOSS pair is inert: the
+manager reports `CastModuleState.Unavailable` permanently and the detector never reports a
+receiver.
+
+`Unavailable` is deliberately distinct from `Failed`. A failure invites a retry; this is a
+permanent property of the build, and it is the signal `SettingsContent` uses to omit the
+Chromecast row entirely rather than render a disabled switch.
+
+Play-only tests live in `src/testPlay`; `src/testFoss` holds `FossCastPartitionTest`,
+which fails if the Play implementations are ever moved back into `main`. Both flavors'
+unit tests run in CI and in `just verify` — the FOSS variant is a shipped artifact and
+had never been tested before this split.
+
+Known gap: `dynamicFeatures` is declared once in the `android {}` block and AGP has no
+per-flavor form of it, so `:cast` is still attached to every variant. This does not affect
+`assembleFossRelease` — the artifact published to GitHub Pages — because feature code is
+not part of the base APK. A FOSS *bundle* would still carry it.
+
 ## Platform surfaces
 
 Android Auto, the quick-settings tile, the Glance widget and the Wear app all read from

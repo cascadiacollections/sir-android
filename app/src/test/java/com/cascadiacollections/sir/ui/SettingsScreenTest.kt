@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.cascadiacollections.sir.CastFeatureManager
@@ -99,5 +100,21 @@ class SettingsScreenTest {
         }
         // Chromecast toggle should be interactive when not installed
         composeRule.onNodeWithText("Enable Chromecast").assertIsDisplayed()
+    }
+
+    @Test
+    fun `settings screen omits the Chromecast section when casting is unavailable`() {
+        composeRule.setContent {
+            SirTheme {
+                SettingsContent(
+                    settingsRepository = createSettingsRepo(),
+                    castFeatureManager = createMockCastManager(CastModuleState.Unavailable)
+                )
+            }
+        }
+        // The FOSS build cannot install the module, so the row is absent rather than
+        // present-but-disabled. The rest of the screen still renders.
+        composeRule.onNodeWithText("Enable Chromecast").assertDoesNotExist()
+        composeRule.onNodeWithText("Privacy Policy").assertIsDisplayed()
     }
 }

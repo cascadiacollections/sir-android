@@ -113,7 +113,7 @@ android {
         baseline = file("lint-baseline.xml")
         abortOnError = true
         warningsAsErrors = true
-        disable += setOf("OldTargetApi", "NewerVersionAvailable", "ObsoleteSdkInt", "GradleDependency")
+        disable += setOf("OldTargetApi", "NewerVersionAvailable", "ObsoleteSdkInt", "GradleDependency", "AndroidGradlePluginVersion")
     }
 
     // Dynamic feature modules

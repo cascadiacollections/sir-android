@@ -59,7 +59,6 @@ import com.cascadiacollections.sir.core.playback.SleepTimerRestore
 import com.cascadiacollections.sir.core.playback.StreamConfig
 import com.cascadiacollections.sir.core.playback.StreamMetadata
 import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
-import com.cascadiacollections.sir.core.playback.StreamQuality
 import com.cascadiacollections.sir.core.playback.StreamSource
 import com.cascadiacollections.sir.core.playback.StreamSourceResolver
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
@@ -182,7 +181,12 @@ class RadioPlaybackService : MediaLibraryService() {
         serviceScope.launch {
             settingsRepository.selectedStation
                 .drop(1)
-                .collect { applyStreamSource(resolveStreamSource()) }
+                .collect {
+                    // A selection change is always a deliberate user action — tapping a
+                    // station, or "back to SIR" — so it starts playback rather than
+                    // silently re-pointing a stopped player.
+                    applyStreamSource(resolveStreamSource(), startPlayback = true)
+                }
         }
 
         // Initialize wake locks to prevent device sleep during playback
@@ -392,11 +396,13 @@ class RadioPlaybackService : MediaLibraryService() {
                         ?.let { id -> settingsRepository.savedStations.first().firstOrNull { it.id == id } }
                     if (station != null) {
                         settingsRepository.selectStation(station)
-                        mutableListOf(buildStationMediaItem(station))
-                    } else {
-                        if (requestedId != null) settingsRepository.clearSelectedStation()
-                        mutableListOf(buildMediaItem())
+                    } else if (requestedId != null) {
+                        settingsRepository.clearSelectedStation()
                     }
+                    // Resolve rather than using the station directly, so the car honours
+                    // the same precedence as the phone, and adopt the result here so the
+                    // collector watching the selection no-ops instead of racing us.
+                    mutableListOf(adoptStreamSource(resolveStreamSource()) ?: buildMediaItem())
                 }
             })
             .setId(MEDIA_SESSION_ID)
@@ -550,11 +556,6 @@ class RadioPlaybackService : MediaLibraryService() {
                 applyEqualizerPreset(EqualizerPreset.fromOrdinal(presetOrdinal))
             }
 
-            ACTION_SET_STREAM_QUALITY -> {
-                val qualityOrdinal = intent.getIntExtra(EXTRA_STREAM_QUALITY, 0)
-                val quality = StreamQuality.fromOrdinal(qualityOrdinal)
-                applyStreamQuality(quality)
-            }
         }
         return super.onStartCommand(intent, flags, startId)
     }
@@ -941,36 +942,41 @@ class RadioPlaybackService : MediaLibraryService() {
     )
 
     /**
-     * Points the player at [source], restarting playback only when the URL actually
-     * changed so unrelated settings writes do not interrupt listening.
+     * Adopts [source] as the current stream without touching the player, returning the
+     * item the player should be given — or null when [source] is already current.
+     *
+     * Two paths point the player at a new stream: this service reacting to the persisted
+     * selection, and Media3 setting whatever `onAddMediaItems` returns. Both now go
+     * through here, so the bookkeeping happens exactly once and whichever runs second
+     * sees an unchanged URL and no-ops. Previously they each built their own item — one
+     * with the live configuration and one without — and whichever landed last won.
      */
-    private fun applyStreamSource(source: StreamSource) {
+    private fun adoptStreamSource(source: StreamSource): MediaItem? {
         currentStationTitle = source.title
-        if (source.url == currentStreamUrl) return
+        if (source.url == currentStreamUrl) return null
         currentStreamUrl = source.url
         replayBuffer.clear()
         playbackMode = PlaybackMode.Live
-        val wasPlaying = player?.isPlaying == true
-        player?.stop()
-        player?.setMediaItem(buildMediaItem())
-        player?.prepare()
-        if (wasPlaying) player?.play()
-        Log.d(TAG, "Stream source changed to ${source.title ?: source.url}")
+        return buildMediaItem()
     }
 
-    private fun applyStreamQuality(quality: StreamQuality) {
-        val newUrl = quality.url
-        if (newUrl == currentStreamUrl) return
-        currentStreamUrl = newUrl
-        replayBuffer.clear()
-        playbackMode = PlaybackMode.Live
+    /**
+     * Points the player at [source], restarting playback only when the URL actually
+     * changed so unrelated settings writes do not interrupt listening.
+     *
+     * [startPlayback] forces playback to begin even from a stopped player. Picking a
+     * station is a request to hear it, but on a cold launch the player is prepared with
+     * `playWhenReady = false`, so inferring intent from "were we already playing" meant
+     * a tap selected the station and then sat silent.
+     */
+    private fun applyStreamSource(source: StreamSource, startPlayback: Boolean = false) {
         val wasPlaying = player?.isPlaying == true
+        val item = adoptStreamSource(source) ?: return
         player?.stop()
-        player?.setMediaItem(buildMediaItem())
+        player?.setMediaItem(item)
         player?.prepare()
-        if (wasPlaying) player?.play()
-        serviceScope.launch { settingsRepository.setStreamQuality(quality) }
-        Log.d(TAG, "Stream quality changed to ${quality.label}: $newUrl")
+        if (wasPlaying || startPlayback) player?.play()
+        Log.d(TAG, "Stream source changed to ${source.title ?: source.url}")
     }
 
     private fun releaseEqualizer() {
@@ -1022,12 +1028,5 @@ class RadioPlaybackService : MediaLibraryService() {
         // Intent extras
         const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
-        const val ACTION_SET_STREAM_QUALITY = "com.cascadiacollections.sir.action.SET_STREAM_QUALITY"
-        const val EXTRA_STREAM_QUALITY = "stream_quality_ordinal"
     }
 }
-
-/**
- * Calculate equalizer band levels using a curve function.
- * @param curve Function mapping band position (0.0..1.0) to level multiplier (0.0..1.0)
- */

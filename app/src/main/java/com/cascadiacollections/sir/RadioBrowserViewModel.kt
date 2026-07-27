@@ -7,6 +7,8 @@ import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.directory.search
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +38,9 @@ class RadioBrowserViewModel(
     private val _uiState = MutableStateFlow(RadioBrowserUiState())
     val uiState: StateFlow<RadioBrowserUiState> = _uiState.asStateFlow()
 
+    /** The in-flight browse seed, cancelled as soon as the user runs a real search. */
+    private var seedJob: Job? = null
+
     init {
         viewModelScope.launch {
             settingsRepository.savedStations.collect { stations ->
@@ -52,6 +57,34 @@ class RadioBrowserViewModel(
                 _uiState.value = _uiState.value.copy(selectedStationId = station?.id)
             }
         }
+        loadTopStations()
+    }
+
+    /**
+     * Seeds browse with the directory's most-played stations so the tab opens with
+     * something to listen to rather than an empty prompt.
+     *
+     * A failure here is silent: the curated fallback already answers with bundled
+     * stations when the network is down, and an error banner on a screen the user has
+     * not asked anything of yet is noise. Searching surfaces errors normally.
+     *
+     * The job is retained so [search] can cancel it. Both this and a search write
+     * `isLoading`, so a seed that outlived the user's first search would otherwise clear
+     * the flag underneath it and drop the spinner mid-search.
+     */
+    private fun loadTopStations() {
+        seedJob = viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            val result = directory.topStations()
+            // Cancellation can land between the request returning and this write; without
+            // the check a superseded seed would still publish its results and clear the
+            // loading state that now belongs to the search.
+            ensureActive()
+            _uiState.value = _uiState.value.copy(
+                searchResults = result.getOrDefault(_uiState.value.searchResults),
+                isLoading = false
+            )
+        }
     }
 
     fun updateSearchQuery(query: String) {
@@ -67,6 +100,11 @@ class RadioBrowserViewModel(
             )
             return
         }
+
+        // The user has asked for something specific, so the seed is now irrelevant — and
+        // must not report completion over this search's loading state.
+        seedJob?.cancel()
+        seedJob = null
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)

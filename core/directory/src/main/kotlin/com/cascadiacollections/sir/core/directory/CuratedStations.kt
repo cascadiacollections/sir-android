@@ -52,11 +52,17 @@ object CuratedStations {
         )
     )
 
-    /** Case-insensitive match over curated station names and tags. */
-    fun matching(text: String): List<Station> {
+    /**
+     * Case-insensitive match over station names and tags.
+     *
+     * [stations] defaults to [ALL] but is a parameter so a caller configured with its own
+     * curated set actually gets that set searched — previously this always filtered [ALL],
+     * so an injected list was honoured by `topStations` and silently ignored by `search`.
+     */
+    fun matching(text: String, stations: List<Station> = ALL): List<Station> {
         val needle = text.trim().lowercase()
-        if (needle.isEmpty()) return ALL
-        return ALL.filter { station ->
+        if (needle.isEmpty()) return stations
+        return stations.filter { station ->
             station.name.lowercase().contains(needle) ||
                 station.tagList.any { it.lowercase().contains(needle) }
         }

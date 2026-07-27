@@ -121,8 +121,9 @@ sibling iOS client:
 | `:app` | Composition root, Compose UI, Android surfaces (Auto, Tile, Widget, shortcuts) |
 | `:core:model` | Platform-neutral domain types (`Station`, `StationQuery`) |
 | `:core:directory` | `RadioDirectory` boundary: radio-browser client, mirror rotation, caching, curated fallback |
-| `:core:playback` | Playback policy: equalizer curves, buffer config, sleep timer restore |
-| `:cast` | On-demand Chromecast dynamic feature |
+| `:core:playback` | Playback policy: equalizer curves, buffer config, sleep timer restore, audio route, stream source |
+| `:core:persistence` | Settings store, favourites/recents rules, station serialization |
+| `:cast` | On-demand Chromecast dynamic feature (Play flavor only) |
 | `:libs:media3-timeshift` | DVR/time-shift Media3 `DataSource` (publishable) |
 | `:libs:okhttp-streaming` | Streaming-tuned OkHttp client factory (publishable) |
 

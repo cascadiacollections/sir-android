@@ -4,7 +4,7 @@ plugins {
     id("sir.android.app")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.aboutlibraries.plugin)
-    kotlin("plugin.serialization") version "2.4.0"
+    kotlin("plugin.serialization") version libs.versions.kotlin.get()
     id("jacoco")
 }
 

@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.directory.search
@@ -128,6 +129,16 @@ class RadioBrowserViewModel(
     fun clearRecentStations() {
         viewModelScope.launch {
             settingsRepository.clearRecentStations()
+        }
+    }
+
+    class Factory(
+        private val directory: RadioDirectory,
+        private val settingsRepository: SettingsRepository
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return RadioBrowserViewModel(directory, settingsRepository) as T
         }
     }
 }

@@ -418,6 +418,9 @@ class RadioPlaybackService : MediaLibraryService() {
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) {
+                    // Every transport route ends here — notification, in-app, Auto, Wear,
+                    // Bluetooth — so this is the one place that sees all resumes.
+                    audioRoutePolicy.onPlaybackStarted()
                     playbackLocks?.acquire()
                     startForeground(
                         NOTIFICATION_ID,

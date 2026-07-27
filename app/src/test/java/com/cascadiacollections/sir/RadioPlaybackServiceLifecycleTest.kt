@@ -3,7 +3,6 @@ package com.cascadiacollections.sir
 import android.content.Intent
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.SleepTimerDuration
-import com.cascadiacollections.sir.core.playback.StreamQuality
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -105,15 +104,6 @@ class RadioPlaybackServiceLifecycleTest {
         val intent = Intent().apply {
             action = RadioPlaybackService.ACTION_SET_EQUALIZER
             putExtra(RadioPlaybackService.EXTRA_EQUALIZER_PRESET, EqualizerPreset.BASS_BOOST.ordinal)
-        }
-        service.onStartCommand(intent, 0, 1)
-    }
-
-    @Test
-    fun `onStartCommand with ACTION_SET_STREAM_QUALITY changes stream`() {
-        val intent = Intent().apply {
-            action = RadioPlaybackService.ACTION_SET_STREAM_QUALITY
-            putExtra(RadioPlaybackService.EXTRA_STREAM_QUALITY, StreamQuality.LOW.ordinal)
         }
         service.onStartCommand(intent, 0, 1)
     }

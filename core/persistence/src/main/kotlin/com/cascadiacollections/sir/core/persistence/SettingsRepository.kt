@@ -205,12 +205,9 @@ class SettingsRepository(private val context: Context) {
         StationCollections.removeFavorite(current, stationId)
     }
 
-    /**
-     * Records a station as most recently played.
-     */
-    suspend fun recordRecentStation(station: Station) = editStations(recentStationsKey) { current ->
-        StationCollections.recordRecent(current, station)
-    }
+    // No standalone `recordRecentStation`: recents are written by `selectStation` inside
+    // the same transaction as the selection. A separate entry point could record a play
+    // the selection never saw, which is exactly the divergence that transaction prevents.
 
     /**
      * The station the user last chose to play, or `null` when playing the app's own

@@ -187,7 +187,11 @@ fun SettingsContent(
             }
         }
 
-        // TODO: Re-enable stream quality selector when alternate SHOUTcast mounts are available
+        // No stream quality selector: all three StreamQuality values currently resolve to
+        // the same SHOUTcast mount, so the control could not change anything. The enum and
+        // its persisted value stay — StreamSourceResolver reads them for the default
+        // stream — but the service no longer carries an intent to set them. Restore both
+        // together if alternate mounts appear.
 
         Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider()

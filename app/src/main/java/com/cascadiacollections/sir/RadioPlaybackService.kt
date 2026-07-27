@@ -59,7 +59,6 @@ import com.cascadiacollections.sir.core.playback.SleepTimerRestore
 import com.cascadiacollections.sir.core.playback.StreamConfig
 import com.cascadiacollections.sir.core.playback.StreamMetadata
 import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
-import com.cascadiacollections.sir.core.playback.StreamQuality
 import com.cascadiacollections.sir.core.playback.StreamSource
 import com.cascadiacollections.sir.core.playback.StreamSourceResolver
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
@@ -557,11 +556,6 @@ class RadioPlaybackService : MediaLibraryService() {
                 applyEqualizerPreset(EqualizerPreset.fromOrdinal(presetOrdinal))
             }
 
-            ACTION_SET_STREAM_QUALITY -> {
-                val qualityOrdinal = intent.getIntExtra(EXTRA_STREAM_QUALITY, 0)
-                val quality = StreamQuality.fromOrdinal(qualityOrdinal)
-                applyStreamQuality(quality)
-            }
         }
         return super.onStartCommand(intent, flags, startId)
     }
@@ -985,21 +979,6 @@ class RadioPlaybackService : MediaLibraryService() {
         Log.d(TAG, "Stream source changed to ${source.title ?: source.url}")
     }
 
-    private fun applyStreamQuality(quality: StreamQuality) {
-        val newUrl = quality.url
-        if (newUrl == currentStreamUrl) return
-        currentStreamUrl = newUrl
-        replayBuffer.clear()
-        playbackMode = PlaybackMode.Live
-        val wasPlaying = player?.isPlaying == true
-        player?.stop()
-        player?.setMediaItem(buildMediaItem())
-        player?.prepare()
-        if (wasPlaying) player?.play()
-        serviceScope.launch { settingsRepository.setStreamQuality(quality) }
-        Log.d(TAG, "Stream quality changed to ${quality.label}: $newUrl")
-    }
-
     private fun releaseEqualizer() {
         try {
             equalizer?.release()
@@ -1049,12 +1028,5 @@ class RadioPlaybackService : MediaLibraryService() {
         // Intent extras
         const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
-        const val ACTION_SET_STREAM_QUALITY = "com.cascadiacollections.sir.action.SET_STREAM_QUALITY"
-        const val EXTRA_STREAM_QUALITY = "stream_quality_ordinal"
     }
 }
-
-/**
- * Calculate equalizer band levels using a curve function.
- * @param curve Function mapping band position (0.0..1.0) to level multiplier (0.0..1.0)
- */

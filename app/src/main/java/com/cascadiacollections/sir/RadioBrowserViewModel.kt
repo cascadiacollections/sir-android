@@ -52,6 +52,32 @@ class RadioBrowserViewModel(
                 _uiState.value = _uiState.value.copy(selectedStationId = station?.id)
             }
         }
+        loadTopStations()
+    }
+
+    /**
+     * Seeds browse with the directory's most-played stations so the tab opens with
+     * something to listen to rather than an empty prompt.
+     *
+     * A failure here is silent: the curated fallback already answers with bundled
+     * stations when the network is down, and an error banner on a screen the user has
+     * not asked anything of yet is noise. Searching surfaces errors normally.
+     */
+    private fun loadTopStations() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            val result = directory.topStations()
+            val current = _uiState.value
+            // A search started while this was in flight owns the results list.
+            if (current.searchQuery.isNotBlank()) {
+                _uiState.value = current.copy(isLoading = false)
+                return@launch
+            }
+            _uiState.value = current.copy(
+                searchResults = result.getOrDefault(current.searchResults),
+                isLoading = false
+            )
+        }
     }
 
     fun updateSearchQuery(query: String) {

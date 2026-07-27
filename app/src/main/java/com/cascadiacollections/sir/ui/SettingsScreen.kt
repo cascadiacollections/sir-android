@@ -53,7 +53,6 @@ import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 import com.cascadiacollections.sir.core.playback.StreamConfig
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 /**
  * Settings surface, rendered inline as a tab of the app shell.
  *
@@ -61,6 +60,7 @@ import kotlinx.coroutines.launch
  * Cast dynamic feature, the playback service and `BuildConfig.DEBUG` — extracting it
  * today would move the coupling rather than remove it.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
     settingsRepository: SettingsRepository,

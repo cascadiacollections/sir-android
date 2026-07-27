@@ -32,7 +32,7 @@ deploy: build install
 build-foss:
     ./gradlew assembleFossDebug --no-daemon --console=rich --warning-mode=none
 
-# Build full variant (with Firebase)
+# Build Play variant (with Firebase)
 build-full:
     ./gradlew assemblePlayDebug --no-daemon
 

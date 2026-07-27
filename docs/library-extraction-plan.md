@@ -68,7 +68,8 @@ sir/
 ├── core/                         # Internal domain modules (not published)
 │   ├── model/                    # Station, StationQuery
 │   ├── directory/                # RadioDirectory boundary + radio-browser client
-│   └── playback/                 # Equalizer curves, buffer config, sleep timer
+│   ├── playback/                 # Equalizer curves, buffer config, sleep timer
+│   └── persistence/              # Station serialization + favourites/recents rules
 ├── libs/
 │   ├── media3-timeshift/         # Phase 1
 │   │   ├── build.gradle.kts
@@ -93,7 +94,7 @@ sir/
 
 ## Decision Log
 - `ServiceUtils` — NOT extracted (too trivial, 5 lines of code)
-- `StreamConfig` — NOT extracted (app-specific URL constant)
+- `StreamConfig` — extracted into `:core:playback` (shared stream defaults for app + Wear)
 - `SettingsRepository` — NOT extracted (pattern is generic but DataStore wrappers are trivial; no unique value as library)
 - `RadioWidget` / `RadioTileService` — NOT extracted (fully app-specific)
 

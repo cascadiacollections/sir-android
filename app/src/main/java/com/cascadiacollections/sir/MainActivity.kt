@@ -39,7 +39,6 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
-import com.cascadiacollections.sir.core.directory.RadioDirectories
 import com.cascadiacollections.sir.ui.LicensesScreen
 import com.cascadiacollections.sir.ui.RadioUi
 import com.cascadiacollections.sir.ui.SirAppShell
@@ -53,7 +52,9 @@ class MainActivity : ComponentActivity() {
 
     private val castDeviceDetector by lazy { CastDeviceDetector(this) }
     private val castFeatureManager by lazy { CastFeatureManager(this) }
-    private val settingsRepository by lazy { SettingsRepository(this) }
+    // Application context: the repository is captured by long-lived DataStore collectors,
+    // so holding the Activity here would leak it for the life of those collectors.
+    private val settingsRepository by lazy { SettingsRepository(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -152,9 +153,14 @@ fun RadioScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
 
-    val browserViewModel = remember(repository) {
-        RadioBrowserViewModel(RadioDirectories.create(), repository)
-    }
+    // Must go through the ViewModelStore: a ViewModel built with remember never receives
+    // onCleared(), so its DataStore collectors would outlive every destroyed Activity.
+    val browserViewModel: RadioBrowserViewModel = viewModel(
+        factory = RadioBrowserViewModel.Factory(
+            directory = AppDirectory.instance,
+            settingsRepository = repository
+        )
+    )
 
     // Runtime permission requests: POST_NOTIFICATIONS (API 33+), BLUETOOTH_CONNECT (API 31+)
     val permissionLauncher = rememberLauncherForActivityResult(

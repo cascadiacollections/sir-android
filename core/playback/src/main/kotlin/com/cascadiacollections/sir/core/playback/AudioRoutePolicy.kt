@@ -35,9 +35,23 @@ class AudioRoutePolicy {
     }
 
     /**
-     * Call whenever playback state changes for any other reason (user pressed play or
-     * pause, the stream ended). This clears the claim on the pause so a later route
-     * change cannot resume something the user stopped on purpose.
+     * Call when playback starts, whatever caused it — the notification action, the in-app
+     * transport, Android Auto, Wear, or a Bluetooth AVRCP command.
+     *
+     * Once audio is running again the pause we claimed is over, so any *later* pause
+     * belongs to the user and a reconnect must not undo it. Releasing the claim here
+     * rather than on the pause transition is deliberate: the route-loss pause itself
+     * arrives as a pause, so a pause-side hook would immediately cancel the claim it is
+     * meant to protect.
+     */
+    fun onPlaybackStarted() {
+        pausedByRouteLoss = false
+    }
+
+    /**
+     * Call when the user stops playback outright. Stopping never produces a start event,
+     * so the claim has to be released explicitly or a later reconnect would resume a
+     * stream the user deliberately ended.
      */
     fun onPlaybackStateChangedByUser() {
         pausedByRouteLoss = false

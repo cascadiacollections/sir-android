@@ -2,8 +2,10 @@ package com.cascadiacollections.sir
 
 import android.app.Application
 import android.net.ConnectivityManager
+import androidx.lifecycle.ViewModelStore
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -26,12 +28,21 @@ class RadioViewModelExtendedTest {
     @get:Rule
     val coroutineRule = TestCoroutineRule()
 
+    private val viewModelStore = ViewModelStore()
+
     private val app: Application
         get() = RuntimeEnvironment.getApplication()
 
     private fun createViewModel(): RadioViewModel {
         val settings = SettingsRepository(app)
-        return RadioViewModel(app, settings)
+        return RadioViewModel(app, settings).also {
+            viewModelStore.put("viewModel", it)
+        }
+    }
+
+    @After
+    fun clearViewModels() {
+        viewModelStore.clear()
     }
 
     // ---- RadioUiState field-level tests ----
@@ -127,6 +138,7 @@ class RadioViewModelExtendedTest {
         val settings = SettingsRepository(app)
         val factory = RadioViewModel.Factory(app, settings)
         val vm = factory.create(RadioViewModel::class.java)
+        viewModelStore.put("viewModel", vm)
         assertEquals(RadioViewModel::class.java, vm::class.java)
     }
 

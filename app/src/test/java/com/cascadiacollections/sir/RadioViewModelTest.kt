@@ -3,6 +3,7 @@ package com.cascadiacollections.sir
 import android.app.Application
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import androidx.lifecycle.ViewModelStore
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -10,6 +11,7 @@ import io.mockk.unmockkStatic
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -37,12 +39,21 @@ class RadioViewModelTest {
     @get:Rule
     val coroutineRule = TestCoroutineRule()
 
+    private val viewModelStore = ViewModelStore()
+
     private val app: Application
         get() = RuntimeEnvironment.getApplication()
 
     private fun createViewModel(): RadioViewModel {
         val settings = SettingsRepository(app)
-        return RadioViewModel(app, settings)
+        return RadioViewModel(app, settings).also {
+            viewModelStore.put("viewModel", it)
+        }
+    }
+
+    @After
+    fun clearViewModels() {
+        viewModelStore.clear()
     }
 
     // ---- Initial state ----
@@ -127,6 +138,7 @@ class RadioViewModelTest {
     fun `sleep timer label clears when timer is cancelled`() = runTest {
         val settings = SettingsRepository(app)
         val vm = RadioViewModel(app, settings)
+        viewModelStore.put("viewModel", vm)
 
         settings.setSleepTimerFiresAt(System.currentTimeMillis() + 10 * 60_000L)
         waitUntil { vm.uiState.value.sleepTimerLabel != null }
@@ -139,6 +151,7 @@ class RadioViewModelTest {
     fun `sleep timer label updates when timer changes`() = runTest {
         val settings = SettingsRepository(app)
         val vm = RadioViewModel(app, settings)
+        viewModelStore.put("viewModel", vm)
 
         settings.setSleepTimerFiresAt(System.currentTimeMillis() + 120 * 60_000L)
         waitUntil { vm.uiState.value.sleepTimerLabel != null }
@@ -186,6 +199,7 @@ class RadioViewModelTest {
         val settings = SettingsRepository(app)
         val factory = RadioViewModel.Factory(app, settings)
         val vm = factory.create(RadioViewModel::class.java)
+        viewModelStore.put("viewModel", vm)
         assertTrue(vm is RadioViewModel)
     }
 

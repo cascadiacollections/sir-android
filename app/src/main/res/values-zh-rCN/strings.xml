@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SIR</string>
+    <string name="radio_error">直播流不可用，请稍后重试</string>
+    <string name="play">播放</string>
+    <string name="pause">暂停</string>
+    <string name="cast_feature_title">Chromecast</string>
+    <string name="settings">设置</string>
+    <string name="enable_chromecast">启用 Chromecast</string>
+    <string name="chromecast_enabled">已启用 Chromecast</string>
+    <string name="chromecast_downloading">正在下载 Chromecast 支持…</string>
+    <string name="chromecast_not_available">无法使用 Chromecast</string>
+    <string name="sleep_timer">睡眠定时器</string>
+    <string name="sleep_timer_set">睡眠定时器已设置为 %1$s</string>
+    <string name="sleep_timer_off">睡眠定时器已关闭</string>
+    <string name="equalizer">均衡器</string>
+    <string name="custom_stream_url">自定义直播流地址</string>
+    <string name="custom_stream_hint">输入直播流地址（http/https）</string>
+    <string name="custom_stream_active">正在使用自定义直播流</string>
+    <string name="reset_to_default">恢复默认设置</string>
+    <string name="stream_reconnecting">正在重新连接…</string>
+    <string name="stream_error">直播流不可用——点按重试</string>
+    <string name="metered_network_title">移动数据</string>
+    <string name="metered_network_message">你当前处于按流量计费的网络。播放直播将消耗移动数据。</string>
+    <string name="metered_network_dismiss">知道了</string>
+    <!-- Main UI: titles -->
+    <string name="title_connecting">正在连接 SIR</string>
+    <string name="title_stream_error">直播流错误</string>
+    <string name="title_buffering">正在缓冲…</string>
+    <string name="now_playing">正在播放</string>
+    <string name="tap_to_play">点按任意位置播放</string>
+    <!-- Main UI: subtitles -->
+    <string name="subtitle_connecting">正在启动播放服务</string>
+    <string name="subtitle_reconnecting">正在尝试重新连接</string>
+    <string name="subtitle_buffering">请稍候，直播流正在加载</string>
+    <string name="subtitle_live">SIR • 直播</string>
+    <string name="subtitle_idle">SIR • 网络电台</string>
+    <!-- Main UI: hints / labels -->
+    <string name="tap_to_stop">点按停止</string>
+    <!-- %1$d = minutes remaining -->
+    <string name="sleep_timer_countdown">%1$d 分钟后停止</string>
+    <!-- Settings dialog -->
+    <string name="privacy_policy">隐私政策</string>
+    <string name="open_source_licenses">开源许可证</string>
+    <string name="privacy_policy_url">https://cascadiacollections.github.io/sir-android/privacy/</string>
+    <string name="done">完成</string>
+    <string name="save">保存</string>
+    <string name="debug_options">调试选项</string>
+    <string name="stream_override_presets">直播流覆盖预设</string>
+    <string name="stream_override_default">默认（SIR）</string>
+    <string name="stream_override_custom">自定义（手动输入地址）</string>
+    <string name="custom_stream_saved">自定义直播流已保存。重启应用后生效。</string>
+    <string name="custom_stream_invalid">地址必须以 http:// 或 https:// 开头</string>
+    <string name="custom_stream_reset">恢复默认直播流</string>
+    <!-- Station Search -->
+    <string name="find_stations">查找电台</string>
+    <string name="search_stations_hint">按名称或风格搜索</string>
+    <string name="search_results">搜索结果</string>
+    <string name="saved_stations">我的电台</string>
+    <string name="station_saved">电台已保存</string>
+    <string name="station_removed">电台已移除</string>
+    <!-- Share -->
+    <string name="share">分享</string>
+    <string name="share_now_playing">正在 SIR 上播放：%1$s</string>
+    <!-- App shortcuts -->
+    <string name="shortcut_play_long">播放 SIR 电台</string>
+    <!-- Notification / Service -->
+    <string name="notification_channel_name">电台播放</string>
+    <string name="notification_channel_description">电台播放通知</string>
+    <string name="station_name">SIR</string>
+    <string name="stream_description">直播流</string>
+    <string name="stream_quality">直播流质量</string>
+    <string name="seek_back_30">回放 30 秒</string>
+    <string name="go_live">直播</string>
+    <!-- Widget -->
+    <string name="widget_description">在主屏幕上播放/暂停 SIR 电台</string>
+    <string name="widget_label">SIR 电台</string>
+</resources>

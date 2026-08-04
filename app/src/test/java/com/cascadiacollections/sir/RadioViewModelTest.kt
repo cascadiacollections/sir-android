@@ -42,7 +42,7 @@ class RadioViewModelTest {
 
     private fun createViewModel(): RadioViewModel {
         val settings = SettingsRepository(app)
-        return RadioViewModel(app, settings)
+        return RadioViewModel(app, settings).also { coroutineRule.registerViewModel(it) }
     }
 
     // ---- Initial state ----
@@ -126,7 +126,7 @@ class RadioViewModelTest {
     @Test
     fun `sleep timer label clears when timer is cancelled`() = runTest {
         val settings = SettingsRepository(app)
-        val vm = RadioViewModel(app, settings)
+        val vm = RadioViewModel(app, settings).also { coroutineRule.registerViewModel(it) }
 
         settings.setSleepTimerFiresAt(System.currentTimeMillis() + 10 * 60_000L)
         waitUntil { vm.uiState.value.sleepTimerLabel != null }
@@ -138,7 +138,7 @@ class RadioViewModelTest {
     @Test
     fun `sleep timer label updates when timer changes`() = runTest {
         val settings = SettingsRepository(app)
-        val vm = RadioViewModel(app, settings)
+        val vm = RadioViewModel(app, settings).also { coroutineRule.registerViewModel(it) }
 
         settings.setSleepTimerFiresAt(System.currentTimeMillis() + 120 * 60_000L)
         waitUntil { vm.uiState.value.sleepTimerLabel != null }
@@ -185,7 +185,7 @@ class RadioViewModelTest {
     fun `Factory creates RadioViewModel instance`() {
         val settings = SettingsRepository(app)
         val factory = RadioViewModel.Factory(app, settings)
-        val vm = factory.create(RadioViewModel::class.java)
+        val vm = factory.create(RadioViewModel::class.java).also { coroutineRule.registerViewModel(it) }
         assertTrue(vm is RadioViewModel)
     }
 

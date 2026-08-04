@@ -53,7 +53,7 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build, Lint, and Test
-        run: ./gradlew assemblePlayRelease assembleFossRelease assemblePlayDebug bundlePlayRelease lintPlayDebug testPlayDebugUnitTest :wear:testDebugUnitTest jacocoTestReport --no-daemon --parallel --build-cache
+        run: ./gradlew assemblePlayRelease assembleFossRelease assemblePlayDebug bundlePlayRelease lintPlayDebug testPlayDebugUnitTest testFossDebugUnitTest :wear:testDebugUnitTest :core:model:testDebugUnitTest :core:directory:testDebugUnitTest :core:playback:testDebugUnitTest :core:persistence:testDebugUnitTest jacocoTestReport --no-daemon --parallel --build-cache
         env:
           KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}

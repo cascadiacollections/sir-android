@@ -65,6 +65,11 @@ Extract reusable, clean library APIs from `sir` into FOSS modules publishable un
 ```
 sir/
 ├── app/                          # SIR radio app (depends on libraries)
+├── core/                         # Internal domain modules (not published)
+│   ├── model/                    # Station, StationQuery
+│   ├── directory/                # RadioDirectory boundary + radio-browser client
+│   ├── playback/                 # Equalizer curves, buffer config, sleep timer
+│   └── persistence/              # Station serialization + favourites/recents rules
 ├── libs/
 │   ├── media3-timeshift/         # Phase 1
 │   │   ├── build.gradle.kts
@@ -81,9 +86,15 @@ sir/
 └── benchmark/
 ```
 
+> `core/*` modules are internal seams for the ShoutKit parity refactor (see
+> `architecture.md`). `libs/*` remain the modules targeted for external publication.
+> `EqualizerCurveCalculator` from Phase 3 below has already landed in `:core:playback`
+> as `EqualizerCurves`; publishing it under `com.cascadiacollections.android` is a
+> later, separate step.
+
 ## Decision Log
 - `ServiceUtils` — NOT extracted (too trivial, 5 lines of code)
-- `StreamConfig` — NOT extracted (app-specific URL constant)
+- `StreamConfig` — extracted into `:core:playback` (shared stream defaults for app + Wear)
 - `SettingsRepository` — NOT extracted (pattern is generic but DataStore wrappers are trivial; no unique value as library)
 - `RadioWidget` / `RadioTileService` — NOT extracted (fully app-specific)
 

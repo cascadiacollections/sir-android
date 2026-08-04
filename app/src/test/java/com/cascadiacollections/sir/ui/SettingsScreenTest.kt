@@ -1,7 +1,6 @@
 package com.cascadiacollections.sir.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.cascadiacollections.sir.CastFeatureManager
@@ -88,7 +87,7 @@ class SettingsScreenTest {
         composeRule.onNodeWithText("Privacy Policy").assertIsDisplayed()
     }
 
-        @Test
+    @Test
     fun `settings screen renders Chromecast section with NotInstalled state`() {
         composeRule.setContent {
             SirTheme {

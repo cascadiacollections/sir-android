@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
+import java.util.Locale
 
 /**
  * A small, hand-checked set of stations bundled with the app.
@@ -60,11 +61,14 @@ object CuratedStations {
      * so an injected list was honoured by `topStations` and silently ignored by `search`.
      */
     fun matching(text: String, stations: List<Station> = ALL): List<Station> {
-        val needle = text.trim().lowercase()
+        // Locale.ROOT so a device's locale cannot change which stations match. Under a
+        // Turkish locale the default lowercase() maps 'I' to 'ı', so searching "INDIE"
+        // stopped matching a station tagged "indie".
+        val needle = text.trim().lowercase(Locale.ROOT)
         if (needle.isEmpty()) return stations
         return stations.filter { station ->
-            station.name.lowercase().contains(needle) ||
-                station.tagList.any { it.lowercase().contains(needle) }
+            station.name.lowercase(Locale.ROOT).contains(needle) ||
+                station.tagList.any { it.lowercase(Locale.ROOT).contains(needle) }
         }
     }
 }

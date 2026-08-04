@@ -76,4 +76,32 @@ class EqualizerCurvesTest {
 
         assertTrue(result.all { it == maxLevel })
     }
+
+    @Test
+    fun `a curve overshooting the range clamps to the nearest rail`() {
+        // Narrowing to Short before clamping truncated to 16 bits first, so 40_000 wrapped
+        // to -25_536 and was then clamped to the *bottom* of the range instead of the top.
+        val high = calculateEqualizerLevels(
+            bandCount = 1,
+            minLevel = 0.toShort(),
+            maxLevel = 1_000.toShort(),
+            range = 1_000,
+            curve = { 40f }
+        )
+
+        assertEquals(listOf(1_000.toShort()), high)
+    }
+
+    @Test
+    fun `a curve undershooting the range clamps to the lower rail`() {
+        val low = calculateEqualizerLevels(
+            bandCount = 1,
+            minLevel = 0.toShort(),
+            maxLevel = 1_000.toShort(),
+            range = 1_000,
+            curve = { -40f }
+        )
+
+        assertEquals(listOf(0.toShort()), low)
+    }
 }

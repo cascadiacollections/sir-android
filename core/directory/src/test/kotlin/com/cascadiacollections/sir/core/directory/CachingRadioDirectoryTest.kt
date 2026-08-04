@@ -25,8 +25,12 @@ private class RecordingDirectory(
         return result
     }
 
+    var lastTopLimit: Int? = null
+        private set
+
     override suspend fun topStations(limit: Int): Result<List<Station>> {
         topCalls++
+        lastTopLimit = limit
         return result
     }
 
@@ -112,5 +116,19 @@ class CachingRadioDirectoryTest {
 
         cache.search(StationQuery("b"))
         assertEquals(4, delegate.searchCalls)
+    }
+
+    @Test
+    fun `limits beyond the maximum share one cache entry`() = runTest {
+        val delegate = RecordingDirectory(Result.success(listOf(station)))
+        val cache = CachingRadioDirectory(delegate, clock = { 0L })
+
+        // The network directory clamps to MAX_LIMIT, so these are the same request and
+        // must not be stored under two keys.
+        cache.topStations(1_000)
+        cache.topStations(StationQuery.MAX_LIMIT)
+
+        assertEquals(1, delegate.topCalls)
+        assertEquals(StationQuery.MAX_LIMIT, delegate.lastTopLimit)
     }
 }

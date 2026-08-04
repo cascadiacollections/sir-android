@@ -47,5 +47,10 @@ fun calculateEqualizerLevels(
     curve: (Float) -> Float
 ): List<Short> = List(bandCount) { band ->
     val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
-    (minLevel + range * curve(position)).toInt().toShort().coerceIn(minLevel, maxLevel)
+    // Clamp as Int and narrow afterwards. Narrowing first truncated to 16 bits before
+    // the clamp could act, so a curve overshooting the device's range wrapped around and
+    // was then clamped to the *opposite* rail — a bass boost pinned to minimum gain.
+    (minLevel + range * curve(position)).toInt()
+        .coerceIn(minLevel.toInt(), maxLevel.toInt())
+        .toShort()
 }

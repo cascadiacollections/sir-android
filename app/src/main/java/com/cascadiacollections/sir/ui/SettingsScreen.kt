@@ -368,9 +368,14 @@ fun SettingsContent(
                 }
                 TextButton(
                     onClick = {
-                        if (customStreamText.startsWith("http://") || customStreamText.startsWith("https://")) {
+                        // Pasted URLs routinely carry surrounding whitespace. Untrimmed it
+                        // both failed the scheme check on a leading space and, on a trailing
+                        // one, was persisted into the stream URL where it only surfaced later
+                        // as a playback failure.
+                        val candidate = customStreamText.trim()
+                        if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
                             scope.launch {
-                                settingsRepository.setCustomStreamUrl(customStreamText)
+                                settingsRepository.setCustomStreamUrl(candidate)
                                 Toast.makeText(context, resources.getString(R.string.custom_stream_saved), Toast.LENGTH_LONG).show()
                             }
                         } else {

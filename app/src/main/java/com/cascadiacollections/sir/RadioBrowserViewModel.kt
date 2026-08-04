@@ -12,6 +12,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class RadioBrowserUiState(
@@ -42,19 +43,24 @@ class RadioBrowserViewModel(
     private var seedJob: Job? = null
 
     init {
+        // These three collectors, the browse seed and search all write _uiState
+        // concurrently. `update` applies each change to the value current at the moment
+        // it commits; `value = value.copy(...)` read, copied and wrote as three separate
+        // steps, so two collectors emitting together could each build on the same
+        // snapshot and the second would silently drop the first's field.
         viewModelScope.launch {
             settingsRepository.savedStations.collect { stations ->
-                _uiState.value = _uiState.value.copy(savedStations = stations)
+                _uiState.update { it.copy(savedStations = stations) }
             }
         }
         viewModelScope.launch {
             settingsRepository.recentStations.collect { stations ->
-                _uiState.value = _uiState.value.copy(recentStations = stations)
+                _uiState.update { it.copy(recentStations = stations) }
             }
         }
         viewModelScope.launch {
             settingsRepository.selectedStation.collect { station ->
-                _uiState.value = _uiState.value.copy(selectedStationId = station?.id)
+                _uiState.update { it.copy(selectedStationId = station?.id) }
             }
         }
         loadTopStations()
@@ -74,30 +80,31 @@ class RadioBrowserViewModel(
      */
     private fun loadTopStations() {
         seedJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.update { it.copy(isLoading = true) }
             val result = directory.topStations()
             // Cancellation can land between the request returning and this write; without
             // the check a superseded seed would still publish its results and clear the
             // loading state that now belongs to the search.
             ensureActive()
-            _uiState.value = _uiState.value.copy(
-                searchResults = result.getOrDefault(_uiState.value.searchResults),
-                isLoading = false
-            )
+            _uiState.update { current ->
+                current.copy(
+                    searchResults = result.getOrDefault(current.searchResults),
+                    isLoading = false
+                )
+            }
         }
     }
 
     fun updateSearchQuery(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        _uiState.update { it.copy(searchQuery = query) }
     }
 
     fun search() {
         val query = _uiState.value.searchQuery.trim()
         if (query.isEmpty()) {
-            _uiState.value = _uiState.value.copy(
-                searchResults = emptyList(),
-                error = "Enter a search query"
-            )
+            _uiState.update {
+                it.copy(searchResults = emptyList(), error = "Enter a search query")
+            }
             return
         }
 
@@ -107,22 +114,26 @@ class RadioBrowserViewModel(
         seedJob = null
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             directory.search(query)
                 .onSuccess { stations ->
-                    _uiState.value = _uiState.value.copy(
-                        searchResults = stations,
-                        isLoading = false,
-                        error = if (stations.isEmpty()) "No stations found" else null
-                    )
+                    _uiState.update {
+                        it.copy(
+                            searchResults = stations,
+                            isLoading = false,
+                            error = if (stations.isEmpty()) "No stations found" else null
+                        )
+                    }
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(
-                        searchResults = emptyList(),
-                        isLoading = false,
-                        error = e.message ?: "Search failed"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            searchResults = emptyList(),
+                            isLoading = false,
+                            error = e.message ?: "Search failed"
+                        )
+                    }
                 }
         }
     }

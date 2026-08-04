@@ -4,6 +4,7 @@ import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.Locale
 
 /**
  * In-memory, time-bounded cache in front of another [RadioDirectory].
@@ -25,15 +26,28 @@ class CachingRadioDirectory(
     private val entries = LinkedHashMap<String, Entry>(0, 0.75f, true)
 
     override suspend fun search(query: StationQuery): Result<List<Station>> =
-        cached("search:${query.normalizedText.lowercase()}:${query.effectiveLimit}") {
+        cached("search:${query.normalizedText.lowercase(Locale.ROOT)}:${query.effectiveLimit}") {
             delegate.search(query)
         }
 
-    override suspend fun topStations(limit: Int): Result<List<Station>> =
-        cached("top:$limit") { delegate.topStations(limit) }
+    override suspend fun topStations(limit: Int): Result<List<Station>> {
+        val clamped = clampLimit(limit)
+        return cached("top:$clamped") { delegate.topStations(clamped) }
+    }
 
-    override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
-        cached("tag:${tag.trim().lowercase()}:$limit") { delegate.stationsByTag(tag, limit) }
+    override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> {
+        val clamped = clampLimit(limit)
+        return cached("tag:${tag.trim().lowercase(Locale.ROOT)}:$clamped") {
+            delegate.stationsByTag(tag, clamped)
+        }
+    }
+
+    /**
+     * Applies the same clamp the network directory applies, so a caller asking for 1000
+     * shares the cache entry with one asking for [StationQuery.MAX_LIMIT] instead of
+     * storing a second copy of an identical response under its own key.
+     */
+    private fun clampLimit(limit: Int): Int = limit.coerceIn(1, StationQuery.MAX_LIMIT)
 
     /** Drops every cached entry, e.g. after a user-initiated refresh. */
     suspend fun invalidate() = mutex.withLock { entries.clear() }

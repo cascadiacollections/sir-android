@@ -7,7 +7,7 @@ package com.cascadiacollections.sir.core.playback
  * position (0.0 = lowest frequency band, 1.0 = highest) to a normalized gain in the
  * device's supported millibel range. Keeping the curve on the preset removes the
  * `when` block that previously lived inside the playback service and makes every
- * every preset independently testable without an Android `AudioEffect`.
+ * preset independently testable without an Android `AudioEffect`.
  *
  * [NORMAL] has no curve: it means "flat", i.e. 0 mB on every band, which is not the
  * same as the midpoint of an asymmetric band level range.

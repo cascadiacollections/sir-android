@@ -60,7 +60,10 @@ class StreamMetadataResolver(
             )
         }
 
-        val artist = raw.artist?.takeUnless { it in staticArtists }
+        // Blank is treated as "unknown", matching title and station. Keeping "" here
+        // overwrote a known artist with an empty subtitle and reported it as a change,
+        // rebuilding the notification for nothing.
+        val artist = raw.artist?.takeUnless { it.isBlank() || it in staticArtists }
         val next = StreamMetadata(trackTitle = raw.title, artist = artist, station = station)
         return StreamMetadataUpdate(metadata = next, notifyChanged = next != previous)
     }

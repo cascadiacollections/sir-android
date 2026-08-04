@@ -2,6 +2,7 @@ package com.cascadiacollections.sir.core.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.util.Locale
 
 /**
  * Platform-neutral radio station.
@@ -23,12 +24,21 @@ data class Station(
     val countryCode: String = "",
     val tags: String = ""
 ) {
-    /** Human readable label including codec/bitrate when the directory reported them. */
+    /**
+     * Human readable label including codec/bitrate when the directory reported them.
+     *
+     * radio-browser leaves `bitrate` at 0 for plenty of entries, so it is only shown
+     * when positive — otherwise the label claimed "0kbps", which reads as a broken
+     * stream rather than as an unknown value.
+     */
     val displayLabel: String
-        get() = if (codec.isNotEmpty()) {
-            "$name (${codec.uppercase()}, ${bitrate}kbps)"
-        } else {
-            name
+        get() {
+            if (codec.isEmpty()) return name
+            // Locale.ROOT: a codec is a format token, not prose. Under a Turkish locale
+            // the default uppercase() maps 'i' to the dotted 'İ', so "vorbis" rendered as
+            // "VORBİS" on those devices and as "VORBIS" everywhere else.
+            val codecLabel = codec.uppercase(Locale.ROOT)
+            return if (bitrate > 0) "$name ($codecLabel, ${bitrate}kbps)" else "$name ($codecLabel)"
         }
 
     /** Tags split into a trimmed, non-empty list. */

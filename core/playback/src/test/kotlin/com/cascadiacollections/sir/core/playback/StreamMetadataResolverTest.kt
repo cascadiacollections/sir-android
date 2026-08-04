@@ -89,4 +89,29 @@ class StreamMetadataResolverTest {
 
         assertFalse(update.notifyChanged)
     }
+
+    @Test
+    fun `a blank artist is treated as unknown rather than overwriting a known one`() {
+        val previous = StreamMetadata(trackTitle = "Old", artist = "Band", station = "SIR FM")
+
+        val update = resolver.resolve(
+            previous,
+            RawStreamMetadata(title = "Song", artist = "   ", station = "SIR FM"),
+        )
+
+        // Keeping "" replaced a real artist with an empty subtitle in the notification.
+        assertNull(update.metadata.artist)
+        assertEquals("Song", update.metadata.trackTitle)
+    }
+
+    @Test
+    fun `a repeated blank artist does not keep reporting a change`() {
+        val raw = RawStreamMetadata(title = "Song", artist = "", station = "SIR FM")
+        val first = resolver.resolve(StreamMetadata(), raw)
+
+        val second = resolver.resolve(first.metadata, raw)
+
+        assertTrue(first.notifyChanged)
+        assertFalse(second.notifyChanged)
+    }
 }

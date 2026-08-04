@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class StationTest {
 
@@ -46,5 +47,27 @@ class StationTest {
     @Test
     fun `tag list drops blanks and whitespace`() {
         assertEquals(listOf("a", "b"), Station(tags = " a , ,b , ").tagList)
+    }
+
+    @Test
+    fun `display label omits bitrate when the directory did not report one`() {
+        // radio-browser leaves bitrate at 0 for many entries; "0kbps" reads as broken.
+        val station = Station(name = "Test FM", codec = "aac")
+
+        assertEquals("Test FM (AAC)", station.displayLabel)
+    }
+
+    @Test
+    fun `display label does not depend on the device locale`() {
+        val previous = Locale.getDefault()
+        Locale.setDefault(Locale.forLanguageTag("tr-TR"))
+        try {
+            // A Turkish locale uppercases 'i' to the dotted 'İ', mangling the codec token.
+            val station = Station(name = "Test FM", codec = "vorbis", bitrate = 64)
+
+            assertEquals("Test FM (VORBIS, 64kbps)", station.displayLabel)
+        } finally {
+            Locale.setDefault(previous)
+        }
     }
 }

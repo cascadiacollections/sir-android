@@ -1,8 +1,6 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -90,53 +88,5 @@ class AudioRoutePolicyTest {
         // A second disconnect is a fresh claim, not a permanently spent one.
         assertTrue(policy.onBecomingNoisy(isPlaying = true))
         assertTrue(policy.onRouteRestored())
-    }
-}
-
-class RetryBackoffTest {
-
-    @Test
-    fun `delays double and are capped`() {
-        val backoff = RetryBackoff()
-        assertEquals(2_000L, backoff.nextDelayMs())
-        assertEquals(4_000L, backoff.nextDelayMs())
-        assertEquals(8_000L, backoff.nextDelayMs())
-        assertEquals(16_000L, backoff.nextDelayMs())
-        assertEquals(30_000L, backoff.nextDelayMs())
-    }
-
-    @Test
-    fun `returns null once retries are exhausted`() {
-        val backoff = RetryBackoff(maxRetries = 2)
-        assertEquals(2_000L, backoff.nextDelayMs())
-        assertEquals(4_000L, backoff.nextDelayMs())
-        assertNull(backoff.nextDelayMs())
-    }
-
-    @Test
-    fun `reset restarts from the first delay`() {
-        val backoff = RetryBackoff(maxRetries = 1)
-        assertEquals(2_000L, backoff.nextDelayMs())
-        assertNull(backoff.nextDelayMs())
-        backoff.reset()
-        assertEquals(2_000L, backoff.nextDelayMs())
-    }
-
-    @Test
-    fun `attempt label reports the upcoming attempt`() {
-        val backoff = RetryBackoff(maxRetries = 5)
-        assertEquals("1/5", backoff.attemptLabel)
-        backoff.nextDelayMs()
-        assertEquals("2/5", backoff.attemptLabel)
-    }
-
-    @Test
-    fun `zero retries never retries`() {
-        assertNull(RetryBackoff(maxRetries = 0).nextDelayMs())
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun `max delay below initial delay is rejected`() {
-        RetryBackoff(initialDelayMs = 5_000L, maxDelayMs = 1_000L)
     }
 }

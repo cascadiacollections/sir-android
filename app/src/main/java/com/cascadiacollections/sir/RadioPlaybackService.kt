@@ -922,7 +922,7 @@ class RadioPlaybackService : MediaLibraryService() {
                 settingsRepository.setEqualizerPreset(preset)
             }
 
-            Log.d(TAG, "Applied equalizer preset: ${preset.label}")
+            Log.d(TAG, "Applied equalizer preset: ${preset.name}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply equalizer preset", e)
         }

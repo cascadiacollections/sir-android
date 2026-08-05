@@ -1,14 +1,16 @@
 package com.cascadiacollections.sir.core.playback
 
+import androidx.annotation.StringRes
+
 /**
  * Available sleep timer durations, in minutes.
  */
-enum class SleepTimerDuration(val minutes: Int, val label: String) {
-    OFF(0, "Off"),
-    FIFTEEN(15, "15 minutes"),
-    THIRTY(30, "30 minutes"),
-    SIXTY(60, "1 hour"),
-    NINETY(90, "1.5 hours");
+enum class SleepTimerDuration(val minutes: Int, @StringRes val labelRes: Int) {
+    OFF(0, R.string.sleep_timer_duration_off),
+    FIFTEEN(15, R.string.sleep_timer_duration_15m),
+    THIRTY(30, R.string.sleep_timer_duration_30m),
+    SIXTY(60, R.string.sleep_timer_duration_1h),
+    NINETY(90, R.string.sleep_timer_duration_1h30m);
 
     val isActive: Boolean get() = minutes > 0
 

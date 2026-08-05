@@ -33,6 +33,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.PlaybackStatsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.CommandButton
@@ -412,13 +413,41 @@ class RadioPlaybackService : MediaLibraryService() {
             // empty list crashes the legacy PlaybackStateCompat stub.
 
         // Now add listeners after mediaSession is created
+        // Media3 already measures what a tap-to-audio trace would: join time and
+        // rebuffering, reported when a playback session ends (a station switch, or the
+        // player being released). Logged rather than wired to analytics so the `foss`
+        // flavor gets the same numbers; `:benchmark` and logcat can both read them.
+        exoPlayer.addAnalyticsListener(
+            PlaybackStatsListener(/* keepHistory = */ false) { _, stats ->
+                Log.i(
+                    TAG_PLAYBACK_STATS,
+                    "joinMs=${stats.getTotalJoinTimeMs()} " +
+                        "playbackMs=${stats.getTotalPlayTimeMs()} " +
+                        "rebuffers=${stats.totalRebufferCount} " +
+                        "rebufferMs=${stats.getTotalRebufferTimeMs()} " +
+                        "maxRebufferMs=${stats.maxRebufferTimeMs} " +
+                        "fatalErrors=${stats.fatalErrorCount}"
+                )
+            }
+        )
+
         player?.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) {
-                    retryBackoff.reset()
-                    if (player?.playWhenReady == true) {
-                        updateCustomLayout()
+                when (playbackState) {
+                    Player.STATE_READY -> {
+                        retryBackoff.reset()
+                        if (player?.playWhenReady == true) {
+                            updateCustomLayout()
+                        }
                     }
+
+                    Player.STATE_ENDED -> handleUnexpectedEnd()
+
+                    // Named rather than left to an `else` because lint checks a `when` over
+                    // an @IntDef for completeness. Neither needs a decision here: buffering
+                    // is already reflected by the session, and idle only follows a stop we
+                    // asked for or a re-prepare on its way to buffering.
+                    Player.STATE_BUFFERING, Player.STATE_IDLE -> Unit
                 }
             }
 
@@ -449,19 +478,32 @@ class RadioPlaybackService : MediaLibraryService() {
                 )
                 Log.d(TAG, "Stream metadata: $raw")
 
-                val update = metadataResolver.resolve(streamMetadata, raw)
+                val update = metadataResolver.resolve(
+                    previous = streamMetadata,
+                    raw = raw,
+                    stationName = currentStationTitle ?: getString(R.string.station_name),
+                )
                 streamMetadata = update.metadata
                 if (update.notifyChanged) updateNotificationSafe()
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                Log.e(TAG, "Player error (attempt ${retryBackoff.attemptLabel})", error)
+                val failure = error.toStreamFailure()
+                Log.e(TAG, "Player error (attempt ${retryBackoff.attemptLabel}, $failure)", error)
+                if (!failure.isRetryable) {
+                    // A station that answers 404, or sends a codec this device can't
+                    // decode, fails identically on every attempt. Spending the backoff on
+                    // it held a wake lock for about a minute to show the same message.
+                    retryBackoff.reset()
+                    updateNotificationSafe(getString(failure.messageRes()))
+                    return
+                }
                 val delayMs = retryBackoff.nextDelayMs()
                 if (delayMs != null) {
                     updateNotificationSafe(getString(R.string.stream_reconnecting))
                     sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
                 } else {
-                    updateNotificationSafe(getString(R.string.radio_error))
+                    updateNotificationSafe(getString(failure.messageRes()))
                 }
             }
         })
@@ -718,6 +760,31 @@ class RadioPlaybackService : MediaLibraryService() {
         )
 
         return builder.build()
+    }
+
+    /**
+     * A live stream has no end, so `STATE_ENDED` means the server closed the connection.
+     *
+     * That arrives *without* an `onPlayerError`, so nothing else here would notice: the
+     * player sat ended, the notification kept claiming the station was on, and the reconnect
+     * backoff — which only ran from the error path — never saw it. Rejoin through the same
+     * bounded schedule a player error uses. (ShoutKit reached this from the other side: its
+     * engine reports an unrequested stop as a retryable failure. See
+     * `docs/audioplayer-dependency-synergies.md`.)
+     */
+    private fun handleUnexpectedEnd() {
+        // Only when audio was wanted. A deliberate stop leaves the player idle rather than
+        // ended, but a paused player must not be restarted by this either.
+        if (player?.playWhenReady != true) return
+
+        Log.w(TAG, "Live stream ended unexpectedly (attempt ${retryBackoff.attemptLabel})")
+        val delayMs = retryBackoff.nextDelayMs()
+        if (delayMs != null) {
+            updateNotificationSafe(getString(R.string.stream_reconnecting))
+            sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
+        } else {
+            updateNotificationSafe(getString(R.string.radio_error))
+        }
     }
 
     /**
@@ -991,6 +1058,9 @@ class RadioPlaybackService : MediaLibraryService() {
 
     companion object {
         private const val TAG = "RadioPlaybackService"
+
+        /** Distinct tag so join/rebuffer numbers can be scraped without the rest of the log. */
+        private const val TAG_PLAYBACK_STATS = "SirPlaybackStats"
 
         // Stream configuration
         private const val DEFAULT_STREAM_URL = StreamConfig.DEFAULT_STREAM_URL

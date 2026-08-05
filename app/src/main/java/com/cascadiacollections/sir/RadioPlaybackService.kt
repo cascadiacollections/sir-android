@@ -106,6 +106,9 @@ class RadioPlaybackService : MediaLibraryService() {
     // Equalizer
     private var equalizer: Equalizer? = null
     private var currentEqualizerPreset: EqualizerPreset = EqualizerPreset.NORMAL
+    // Generated ourselves (see initializePlayer) so the equalizer can be
+    // constructed without racing renderer initialization.
+    private var audioSessionId: Int = C.AUDIO_SESSION_ID_UNSET
 
     // Settings and coroutine scope
     private val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
@@ -240,6 +243,12 @@ class RadioPlaybackService : MediaLibraryService() {
         val mediaSourceFactory = DefaultMediaSourceFactory(context)
             .setDataSourceFactory(timeShiftFactory)
 
+        // Generate the audio session id ourselves so it's available immediately,
+        // avoiding a race with renderer initialization (player.audioSessionId can
+        // be C.AUDIO_SESSION_ID_UNSET right after prepare()).
+        val audioSessionId = audioManager.generateAudioSessionId()
+        this.audioSessionId = audioSessionId
+
         // Create optimized ExoPlayer
         val exoPlayer = ExoPlayer.Builder(context)
             .setLoadControl(loadControl)
@@ -253,6 +262,7 @@ class RadioPlaybackService : MediaLibraryService() {
                     .build(),
                 true  // Handle audio focus automatically
             )
+            .setAudioSessionId(audioSessionId)
             .setHandleAudioBecomingNoisy(false)  // We handle this manually for more control
             .setWakeMode(C.WAKE_MODE_NETWORK)    // Keep CPU and network active
             .build()
@@ -952,13 +962,13 @@ class RadioPlaybackService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     private fun initializeEqualizer() {
         try {
-            val audioSessionId = player?.audioSessionId ?: return
-            if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
+            val sessionId = audioSessionId
+            if (sessionId == C.AUDIO_SESSION_ID_UNSET) {
                 Log.w(TAG, "Audio session ID not set, skipping equalizer init")
                 return
             }
 
-            equalizer = Equalizer(0, audioSessionId).apply {
+            equalizer = Equalizer(0, sessionId).apply {
                 enabled = true
             }
             applyEqualizerPreset(currentEqualizerPreset)

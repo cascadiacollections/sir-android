@@ -126,6 +126,19 @@ class RadioPlaybackServiceLifecycleTest {
     }
 
     @Test
+    fun `player is created with a valid non-unset audio session id`() {
+        val mockControllerInfo: androidx.media3.session.MediaSession.ControllerInfo =
+            io.mockk.mockk(relaxed = true)
+        val session = service.onGetSession(mockControllerInfo)
+        val audioSessionId = session?.player?.audioSessionId
+        assertNotNull(audioSessionId)
+        org.junit.Assert.assertNotEquals(
+            androidx.media3.common.C.AUDIO_SESSION_ID_UNSET,
+            audioSessionId
+        )
+    }
+
+    @Test
     fun `service handles unknown action gracefully`() {
         val intent = Intent().apply {
             action = "com.example.UNKNOWN_ACTION"

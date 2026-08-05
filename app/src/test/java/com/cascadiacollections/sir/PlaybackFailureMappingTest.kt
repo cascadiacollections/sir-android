@@ -1,10 +1,16 @@
 package com.cascadiacollections.sir
 
+import android.net.Uri
+import android.os.SystemClock
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import java.io.IOException
 import org.junit.Assert.assertEquals
@@ -149,4 +155,41 @@ class PlaybackFailureMappingTest {
             assertTrue("no message for $failure", failure.messageRes() != 0)
         }
     }
+
+    @Test
+    fun `load policy retries transient errors twice with explicit delays`() {
+        val policy = StreamLoadErrorHandlingPolicy()
+
+        assertEquals(2_000L, policy.getRetryDelayMsFor(loadError(IOException(), errorCount = 1)))
+        assertEquals(4_000L, policy.getRetryDelayMsFor(loadError(IOException(), errorCount = 2)))
+        assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(loadError(IOException(), errorCount = 3)))
+    }
+
+    @Test
+    fun `load policy does not retry unavailable stations`() {
+        val policy = StreamLoadErrorHandlingPolicy()
+
+        assertEquals(
+            C.TIME_UNSET,
+            policy.getRetryDelayMsFor(loadError(invalidResponseCode(404), errorCount = 1))
+        )
+    }
+
+    private fun loadError(
+        exception: IOException,
+        errorCount: Int,
+    ) = LoadErrorHandlingPolicy.LoadErrorInfo(
+        LoadEventInfo(
+            LoadEventInfo.getNewId(),
+            DataSpec.Builder().setUri("https://stream.example/live").build(),
+            Uri.parse("https://stream.example/live"),
+            emptyMap(),
+            SystemClock.elapsedRealtime(),
+            0,
+            0,
+        ),
+        MediaLoadData(C.DATA_TYPE_MEDIA),
+        exception,
+        errorCount,
+    )
 }

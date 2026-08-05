@@ -2,6 +2,9 @@ package com.cascadiacollections.sir
 
 import android.content.Intent
 import android.media.AudioManager
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.SleepTimerDuration
+import com.cascadiacollections.sir.core.playback.StreamConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -59,8 +62,7 @@ class RadioPlaybackServiceBehaviorTest {
             RadioPlaybackService.ACTION_SEEK_BACK,
             RadioPlaybackService.ACTION_GO_LIVE,
             RadioPlaybackService.ACTION_SET_SLEEP_TIMER,
-            RadioPlaybackService.ACTION_SET_EQUALIZER,
-            RadioPlaybackService.ACTION_SET_STREAM_QUALITY
+            RadioPlaybackService.ACTION_SET_EQUALIZER
         )
         assertEquals(actions.size, actions.toSet().size)
     }
@@ -69,8 +71,7 @@ class RadioPlaybackServiceBehaviorTest {
     fun `all public extra key constants are distinct`() {
         val extras = listOf(
             RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,
-            RadioPlaybackService.EXTRA_EQUALIZER_PRESET,
-            RadioPlaybackService.EXTRA_STREAM_QUALITY
+            RadioPlaybackService.EXTRA_EQUALIZER_PRESET
         )
         assertEquals(extras.size, extras.toSet().size)
     }
@@ -107,20 +108,6 @@ class RadioPlaybackServiceBehaviorTest {
         assertEquals(
             EqualizerPreset.BASS_BOOST.ordinal,
             intent.getIntExtra(RadioPlaybackService.EXTRA_EQUALIZER_PRESET, 0)
-        )
-    }
-
-    @Test
-    fun `stream quality intent carries correct extras`() {
-        val context = RuntimeEnvironment.getApplication()
-        val intent = Intent(context, RadioPlaybackService::class.java).apply {
-            action = RadioPlaybackService.ACTION_SET_STREAM_QUALITY
-            putExtra(RadioPlaybackService.EXTRA_STREAM_QUALITY, StreamQuality.LOW.ordinal)
-        }
-        assertEquals(RadioPlaybackService.ACTION_SET_STREAM_QUALITY, intent.action)
-        assertEquals(
-            StreamQuality.LOW.ordinal,
-            intent.getIntExtra(RadioPlaybackService.EXTRA_STREAM_QUALITY, 0)
         )
     }
 

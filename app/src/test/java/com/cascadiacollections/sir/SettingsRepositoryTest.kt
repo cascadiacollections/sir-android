@@ -3,6 +3,8 @@ package com.cascadiacollections.sir
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 
 class SettingsRepositoryTest {
 

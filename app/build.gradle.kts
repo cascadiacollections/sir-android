@@ -4,7 +4,7 @@ plugins {
     id("sir.android.app")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.aboutlibraries.plugin)
-    kotlin("plugin.serialization") version libs.versions.kotlin.get()
+    alias(libs.plugins.kotlin.serialization)
     id("jacoco")
 }
 
@@ -171,6 +171,14 @@ tasks.configureEach {
 }
 
 dependencies {
+    // Core domain + station directory boundary (radio-browser client, caching, curated fallback)
+    implementation(projects.core.model)
+    implementation(projects.core.directory)
+    // Platform-independent playback policy (equalizer curves, buffering, sleep timer)
+    implementation(projects.core.playback)
+    // Favorites/recents collection rules and station serialization
+    implementation(projects.core.persistence)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -202,11 +210,15 @@ dependencies {
     // Serialization for API responses
     implementation(libs.kotlinx.serialization.json)
 
-    // Cast device detection (lightweight - actual Cast player in dynamic module)
-    implementation(libs.mediarouter)
+    // Cast device detection (lightweight - actual Cast player in dynamic module).
+    // Play only: without the Cast framework's route provider, discovery finds nothing,
+    // and the FOSS flavor's CastDeviceDetector reports unavailable without scanning.
+    "playImplementation"(libs.mediarouter)
 
-    // Dynamic feature delivery for on-demand Cast module
-    implementation(libs.play.feature.delivery.ktx)
+    // Dynamic feature delivery for on-demand Cast module.
+    // Play only: Play Core is proprietary and split installs require the Play Store,
+    // so shipping this in the FOSS APK added a non-free dependency that could never work.
+    "playImplementation"(libs.play.feature.delivery.ktx)
 
     // Settings persistence
     implementation(libs.datastore.preferences)

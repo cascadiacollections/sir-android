@@ -6,6 +6,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -28,6 +29,7 @@ class RadioTileService : TileService() {
                 ctrl.addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) = syncTile()
                     override fun onPlaybackStateChanged(state: Int) = syncTile()
+                    override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) = syncTile()
                 })
                 syncTile()
             } catch (e: Exception) {
@@ -67,7 +69,11 @@ class RadioTileService : TileService() {
         tile.state = if (playing) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         tile.label = getString(if (playing) R.string.pause else R.string.play)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            tile.subtitle = getString(R.string.station_name)
+            // Reflect the station actually playing, which is not always SIR's own
+            // stream now that a directory station can be selected.
+            tile.subtitle = controller?.mediaMetadata?.title?.toString()
+                ?.takeIf { it.isNotBlank() }
+                ?: getString(R.string.station_name)
         }
         tile.updateTile()
     }

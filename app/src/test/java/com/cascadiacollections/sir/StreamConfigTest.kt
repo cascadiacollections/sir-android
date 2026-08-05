@@ -1,5 +1,7 @@
 package com.cascadiacollections.sir
 
+import com.cascadiacollections.sir.core.playback.StreamConfig
+import com.cascadiacollections.sir.core.playback.StreamQuality
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

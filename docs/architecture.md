@@ -115,6 +115,10 @@ setup, HTTP, wake locks, equalizer, sleep timer and media session in one class.
   idempotent — double-acquiring corrupts the refcount and leaks the lock past playback,
   which surfaces as battery drain rather than a crash.
 
+Which playback policy is worth porting from ShoutKit's `AudioPlayer`-backed engine, and
+which of it Media3 already owns so we should be deleting rather than writing, is
+catalogued in `audioplayer-dependency-synergies.md`.
+
 ## `:core:persistence`
 
 Collection rules for saved and recently-heard stations, kept out of

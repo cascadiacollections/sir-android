@@ -1,9 +1,9 @@
 <resources>
-    <string name="app_name">SIR</string>
+    <string name="app_name" translatable="false">SIR</string>
     <string name="radio_error">Stream unavailable, retry shortly</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>
-    <string name="cast_feature_title">Chromecast</string>
+    <string name="cast_feature_title" translatable="false">Chromecast</string>
     <string name="settings">Settings</string>
     <string name="enable_chromecast">Enable Chromecast</string>
     <string name="chromecast_enabled">Chromecast enabled</string>
@@ -45,7 +45,7 @@
     <!-- Settings dialog -->
     <string name="privacy_policy">Privacy Policy</string>
     <string name="open_source_licenses">Open Source Licenses</string>
-    <string name="privacy_policy_url">https://cascadiacollections.github.io/sir-android/privacy/</string>
+    <string name="privacy_policy_url" translatable="false">https://cascadiacollections.github.io/sir-android/privacy/</string>
     <string name="done">Done</string>
     <string name="save">Save</string>
     <string name="debug_options">Debug Options</string>
@@ -89,7 +89,7 @@
     <!-- Notification / Service -->
     <string name="notification_channel_name">Radio Playback</string>
     <string name="notification_channel_description">Notifications for radio playback</string>
-    <string name="station_name">SIR</string>
+    <string name="station_name" translatable="false">SIR</string>
     <string name="stream_description">Live stream</string>
     <string name="stream_quality">Stream Quality</string>
     <string name="seek_back_30">Replay 30s</string>

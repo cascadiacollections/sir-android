@@ -442,6 +442,12 @@ class RadioPlaybackService : MediaLibraryService() {
                     }
 
                     Player.STATE_ENDED -> handleUnexpectedEnd()
+
+                    // Named rather than left to an `else` because lint checks a `when` over
+                    // an @IntDef for completeness. Neither needs a decision here: buffering
+                    // is already reflected by the session, and idle only follows a stop we
+                    // asked for or a re-prepare on its way to buffering.
+                    Player.STATE_BUFFERING, Player.STATE_IDLE -> Unit
                 }
             }
 

@@ -53,12 +53,26 @@
     <string name="custom_stream_invalid">地址必须以 http:// 或 https:// 开头</string>
     <string name="custom_stream_reset">恢复默认直播流</string>
     <!-- Station Search -->
-    <string name="find_stations">查找电台</string>
     <string name="search_stations_hint">按名称或风格搜索</string>
-    <string name="search_results">搜索结果</string>
     <string name="saved_stations">我的电台</string>
     <string name="station_saved">电台已保存</string>
     <string name="station_removed">电台已移除</string>
+    <string name="recent_stations">最近播放</string>
+    <string name="station_now_playing">正在播放</string>
+    <string name="play_station">播放电台</string>
+    <string name="play_default_stream">返回 SIR 直播流</string>
+    <string name="clear_recent_stations">清除播放记录</string>
+    <string name="clear_search">清除搜索内容</string>
+    <string name="search">搜索</string>
+    <string name="save_station">保存电台</string>
+    <string name="remove_station">移除电台</string>
+    <string name="browse_empty">按名称或风格搜索电台即可开始。</string>
+    <string name="library_empty">你保存或播放过的电台会显示在这里。</string>
+    <!-- Navigation -->
+    <string name="tab_listen">收听</string>
+    <string name="tab_browse">浏览</string>
+    <string name="tab_library">电台库</string>
+    <string name="tab_settings">设置</string>
     <!-- Share -->
     <string name="share">分享</string>
     <string name="share_now_playing">正在 SIR 上播放：%1$s</string>

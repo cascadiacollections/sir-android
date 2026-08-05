@@ -19,6 +19,9 @@
     <string name="custom_stream_active">正在使用自定义直播流</string>
     <string name="reset_to_default">恢复默认设置</string>
     <string name="stream_reconnecting">正在重新连接…</string>
+    <string name="stream_no_connection">无法连接到直播流——请检查网络连接</string>
+    <string name="stream_station_unavailable">该电台当前不可用</string>
+    <string name="stream_unplayable">此设备无法播放该电台的直播流</string>
     <string name="stream_error">直播流不可用——点按重试</string>
     <string name="metered_network_title">移动数据</string>
     <string name="metered_network_message">你当前处于按流量计费的网络。播放直播将消耗移动数据。</string>

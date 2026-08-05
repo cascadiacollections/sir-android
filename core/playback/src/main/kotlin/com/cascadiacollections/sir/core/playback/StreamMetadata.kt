@@ -36,6 +36,11 @@ data class StreamMetadataUpdate(
 /**
  * Interprets ICY metadata updates.
  *
+ * The raw title arrives as whatever the broadcaster put on the wire — Media3 passes
+ * `StreamTitle` through untouched — so it goes through [IcyMetadataParser] to separate
+ * artist from title and then [SongTitleFilter] to reject junk, before any of it is treated
+ * as the current track.
+ *
  * @param staticTitles titles the stream emits as a constant placeholder rather than as
  *   the current track. These are never treated as track info.
  * @param staticArtists the same, for the artist field.
@@ -45,26 +50,46 @@ class StreamMetadataResolver(
     private val staticArtists: Set<String> = emptySet(),
 ) {
 
+    /**
+     * @param stationName the station's display name, used by [SongTitleFilter] to reject a
+     *   title that is only the station plugging itself. Defaults to whatever the stream
+     *   reports as its station.
+     */
     fun resolve(
         previous: StreamMetadata,
         raw: RawStreamMetadata,
+        stationName: String? = null,
     ): StreamMetadataUpdate {
         val station = raw.station?.takeUnless { it.isBlank() } ?: previous.station
         val stationChanged = !raw.station.isNullOrBlank() && previous.station != raw.station
 
+        /** Nothing usable in this update: keep the last known track, note only the station. */
+        fun unchanged() = StreamMetadataUpdate(
+            metadata = previous.copy(station = station),
+            notifyChanged = stationChanged,
+        )
+
         val isStaticTitle = raw.title.isNullOrBlank() || raw.title in staticTitles
-        if (isStaticTitle) {
-            return StreamMetadataUpdate(
-                metadata = previous.copy(station = station),
-                notifyChanged = stationChanged,
-            )
-        }
+        if (isStaticTitle) return unchanged()
+
+        val parsed = IcyMetadataParser.parseTrack(raw.title)
+        // The parser suppresses ad-break cues and undecomposable wire format outright; a
+        // placeholder can also surface only after the artist half is split off.
+        val parsedTitle = parsed.title?.takeUnless { it in staticTitles } ?: return unchanged()
 
         // Blank is treated as "unknown", matching title and station. Keeping "" here
         // overwrote a known artist with an empty subtitle and reported it as a change,
         // rebuilding the notification for nothing.
-        val artist = raw.artist?.takeUnless { it.isBlank() || it in staticArtists }
-        val next = StreamMetadata(trackTitle = raw.title, artist = artist, station = station)
+        val artist = (parsed.artist ?: raw.artist)
+            ?.takeUnless { it.isBlank() || it in staticArtists }
+
+        // Filtered on the effective pair rather than the parsed one: an artist the player
+        // reported is still an artist, and it is what tells a one-token title like "1901"
+        // apart from a placeholder ID.
+        val track = IcyTrack(title = parsedTitle, artist = artist)
+        if (!SongTitleFilter.isLikelySongTitle(track, stationName ?: station)) return unchanged()
+
+        val next = StreamMetadata(trackTitle = parsedTitle, artist = artist, station = station)
         return StreamMetadataUpdate(metadata = next, notifyChanged = next != previous)
     }
 }

@@ -4,8 +4,9 @@ An exploration of what SIR's playback stack should take from — and deliberatel
 from — ShoutKit's iOS playback engine, now that ShoutKit runs on AudioStreaming's
 `AudioPlayer` rather than `AVPlayer`.
 
-Nothing here is implemented. It is a survey with recommendations, sized and ordered, so
-the follow-up work can be picked off individually.
+A1–A3 and B3 have since landed on this branch; each is marked below, and the rest are
+filed as issues. The rest of the document is the survey as written, so the reasoning behind
+each decision stays with the decision.
 
 ## The asymmetry that shapes everything below
 
@@ -47,6 +48,9 @@ established by `RetryBackoff`, `AudioRoutePolicy` and `StreamMetadataResolver`.
 
 ### A1. ICY metadata is never parsed into artist + title
 
+> **Landed.** `IcyMetadataParser` + `SongTitleFilter` in `:core:playback`, wired ahead of
+> `StreamMetadataResolver`.
+
 Verified against Media3 1.10.1: `IcyInfo.populateMediaMetadata` does exactly one thing —
 
 ```java
@@ -79,6 +83,8 @@ Roughly 250 lines of Kotlin plus tests.
 
 ### A2. An unexpectedly ended live stream is not treated as a drop
 
+> **Landed.** `RadioPlaybackService.handleUnexpectedEnd()`.
+
 This was ShoutKit's hardest-won lesson (`DECISIONS.md`, 2026-07-24): AudioStreaming
 reports `.stopped` both for a requested stop and for its end-of-stream path, which a live
 stream reaches whenever the server closes the connection. Swallowing it left a dead stream
@@ -96,6 +102,9 @@ through the existing `RetryBackoff` + `prepare()` path. That is
 value.
 
 ### A3. Every failure is retried identically, including the permanent ones
+
+> **Landed.** `StreamFailure` + `StreamFailureClassifier` in `:core:playback`, with the
+> Media3 mapping in `:app`'s `PlaybackFailureMapping`.
 
 `onPlayerError` currently takes any `PlaybackException` and retries five times on a
 doubling 2s→30s schedule (~62s of wake-locked retrying) before showing a generic
@@ -168,6 +177,9 @@ WiFi lock and drop the wake lock. (This is the one claim below that I could not 
 source — the class moved between Media3 versions.)
 
 ### B3. Tap-to-audio latency: the dependency already measures it
+
+> **Landed** in part: a `PlaybackStatsListener` now logs join and rebuffer numbers under the
+> `SirPlaybackStats` tag. Routing them to Firebase on the `play` flavor is filed separately.
 
 ShoutKit had to build `TapToAudioLatencyTrace` (`OSSignposter` intervals, resolve →
 output-start → first-playing timings) because nothing on the iOS side reports it. Media3
@@ -265,15 +277,15 @@ ship on reasoning alone.
 
 ## Suggested order
 
-| # | Item | Why first | Rough size |
-|---|------|-----------|-----------|
-| 1 | A1 ICY parse + junk filter | Only item listeners see on every track, on every surface | ~250 lines + tests |
-| 2 | A2 `STATE_ENDED` as a drop | Bug-shaped; the fix is a branch and a decision | small |
-| 3 | A3 Typed failure classification | Unblocks B4 and improves the error copy | ~120 lines + tests |
-| 4 | B3 `PlaybackStatsListener` | Cheap, and it is the measurement A4/B6 need | ~15 lines |
-| 5 | A4 Stall ceiling | Battery, and reuses A3's plumbing | ~60 lines + tests |
-| 6 | B1 / B2 Notification + locks | Deletion, but needs on-device verification | net negative |
-| 7 | B4 / B5 / B6 | Each wants a measurement before it lands | varies |
+| # | Item | Why first | Status |
+|---|------|-----------|--------|
+| 1 | A1 ICY parse + junk filter | Only item listeners see on every track, on every surface | landed |
+| 2 | A2 `STATE_ENDED` as a drop | Bug-shaped; the fix is a branch and a decision | landed |
+| 3 | A3 Typed failure classification | Unblocks B4 and improves the error copy | landed |
+| 4 | B3 `PlaybackStatsListener` | Cheap, and it is the measurement A4/B6 need | landed (logging only) |
+| 5 | A4 Stall ceiling | Battery, and reuses A3's plumbing | filed |
+| 6 | B1 / B2 Notification + locks | Deletion, but needs on-device verification | filed |
+| 7 | B4 / B5 / B6 | Each wants a measurement before it lands | filed |
 
 ## Verification notes
 

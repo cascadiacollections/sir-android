@@ -102,6 +102,19 @@ setup, HTTP, wake locks, equalizer, sleep timer and media session in one class.
   placeholder title instead of the current track, so the resolver knows which titles and
   artists are static and reports whether anything user-visible actually changed — the
   service then rebuilds the notification only when it must.
+
+  It is also where the raw wire value is turned into a track. Media3 passes `StreamTitle`
+  through untouched — `IcyInfo.populateMediaMetadata` sets `title` and never `artist` — so
+  `IcyMetadataParser` splits the pair and `SongTitleFilter` decides whether the result is
+  plausibly a song at all. Both are ports of ShoutKit's equivalents and both are pure
+  string logic, so the dialects (classic ICY, broadcaster HLS, Triton cue metadata, and
+  iHeart's cue block nested inside a classic ICY field) are covered by plain JVM tests.
+  A rejected update is dropped rather than blanked, so the last good track stays on screen.
+- `StreamFailure` types why a stream stopped and whether retrying it can help, so a station
+  answering 404 fails immediately instead of holding a wake lock through the whole backoff.
+  The Media3 half of the mapping lives in `:app` (`PlaybackFailureMapping`) because this
+  module deliberately has no player dependency; the policy — which kinds are retryable, and
+  that 408/429/5xx are the exceptions to "a 4xx is permanent" — is tested here without one.
 - `AudioRoutePolicy` is the noisy/resume state machine. Pausing on
   `ACTION_AUDIO_BECOMING_NOISY` is mandatory; resuming when the route returns is only
   correct if *we* paused. The claim is released when playback **starts** again, from

@@ -114,4 +114,89 @@ class StreamMetadataResolverTest {
         assertTrue(first.notifyChanged)
         assertFalse(second.notifyChanged)
     }
+
+    @Test
+    fun `a combined ICY title is split into artist and track`() {
+        // What Media3 actually hands us: the raw StreamTitle, artist and all.
+        val update = resolver.resolve(
+            StreamMetadata(),
+            RawStreamMetadata(title = "Fleetwood Mac - Dreams", station = "SIR FM"),
+        )
+
+        assertEquals("Dreams", update.metadata.trackTitle)
+        assertEquals("Fleetwood Mac", update.metadata.artist)
+        assertTrue(update.notifyChanged)
+    }
+
+    @Test
+    fun `a parsed artist wins over the artist the player reported`() {
+        // The player's artist field carries our own MediaItem metadata for most streams,
+        // so the one parsed out of the stream title is the better answer.
+        val update = resolver.resolve(
+            StreamMetadata(),
+            RawStreamMetadata(title = "Prince - Kiss", artist = "Live Internet Radio"),
+        )
+
+        assertEquals("Kiss", update.metadata.trackTitle)
+        assertEquals("Prince", update.metadata.artist)
+    }
+
+    @Test
+    fun `an ad break cue keeps the previous track on screen`() {
+        val previous = StreamMetadata(trackTitle = "Dreams", artist = "Fleetwood Mac")
+
+        val update = resolver.resolve(previous, RawStreamMetadata(title = "Spot Block End"))
+
+        assertEquals("Dreams", update.metadata.trackTitle)
+        assertEquals("Fleetwood Mac", update.metadata.artist)
+        assertFalse(update.notifyChanged)
+    }
+
+    @Test
+    fun `junk that survives parsing is filtered out`() {
+        val previous = StreamMetadata(trackTitle = "Dreams")
+
+        val update = resolver.resolve(previous, RawStreamMetadata(title = "https://sir.example"))
+
+        assertEquals("Dreams", update.metadata.trackTitle)
+        assertFalse(update.notifyChanged)
+    }
+
+    @Test
+    fun `the station plugging itself is not treated as a track`() {
+        val previous = StreamMetadata(trackTitle = "Dreams")
+
+        val update = resolver.resolve(
+            previous,
+            RawStreamMetadata(title = "KEXP 90.3 FM"),
+            stationName = "KEXP903FM",
+        )
+
+        assertEquals("Dreams", update.metadata.trackTitle)
+        assertFalse(update.notifyChanged)
+    }
+
+    @Test
+    fun `a placeholder hiding behind an artist half is still rejected`() {
+        val previous = StreamMetadata(trackTitle = "Dreams")
+
+        val update = resolver.resolve(previous, RawStreamMetadata(title = "SIR FM - Will Radio Stream"))
+
+        assertEquals("Dreams", update.metadata.trackTitle)
+        assertFalse(update.notifyChanged)
+    }
+
+    @Test
+    fun `a station change is still reported when the title is junk`() {
+        val previous = StreamMetadata(trackTitle = "Dreams", station = "Old")
+
+        val update = resolver.resolve(
+            previous,
+            RawStreamMetadata(title = "Spot Block End", station = "New"),
+        )
+
+        assertEquals("New", update.metadata.station)
+        assertEquals("Dreams", update.metadata.trackTitle)
+        assertTrue(update.notifyChanged)
+    }
 }

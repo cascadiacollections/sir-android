@@ -126,7 +126,6 @@ class RadioPlaybackService : MediaLibraryService() {
     // DVR time-shift buffer
     private val replayBuffer = CircularByteBuffer(REPLAY_BUFFER_SIZE)
     private var playbackMode: PlaybackMode = PlaybackMode.Live
-    @OptIn(UnstableApi::class)
     private var timeShiftDataSourceFactory: TimeShiftDataSource.Factory? = null
 
     private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {
@@ -280,13 +279,15 @@ class RadioPlaybackService : MediaLibraryService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)    // Keep CPU and network active
             .build()
             .apply {
-                // Builder has no audio-session setter; assign the pre-generated id on the player
-                // so the renderer adopts it before the first prepare().
-                setAudioSessionId(generatedAudioSessionId)
                 repeatMode = Player.REPEAT_MODE_OFF  // Live stream doesn't repeat
                 playWhenReady = false  // Don't auto-play on creation
             }
         player = exoPlayer
+
+        // Builder has no audio-session setter, so assign the pre-generated id on the player,
+        // before the first prepare() so the renderer adopts it. Kept out of the apply block
+        // above because lint does not carry this method's opt-in into that lambda.
+        exoPlayer.setAudioSessionId(generatedAudioSessionId)
 
         exoPlayer.setMediaItem(buildMediaItem())
 

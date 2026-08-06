@@ -18,7 +18,7 @@ internal class StreamLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(MA
 
     override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long =
         if (
-            loadErrorInfo.exception.toStreamFailure().isRetryable &&
+            loadErrorInfo.toStreamFailure().isRetryable &&
             loadErrorInfo.errorCount <= MAX_LOAD_RETRIES
         ) {
             loadErrorInfo.errorCount * RETRY_DELAY_MS

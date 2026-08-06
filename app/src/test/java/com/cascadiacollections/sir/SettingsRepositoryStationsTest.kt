@@ -107,6 +107,29 @@ class SettingsRepositoryStationsTest {
     }
 
     @Test
+    fun `play counts do not accumulate for unsaved stations`() = runBlocking {
+        val repo = repo()
+        repo.selectStation(station("never-saved"))
+        repo.saveStation(station("saved"))
+        repo.selectStation(station("saved"))
+
+        assertEquals(listOf("saved"), repo.mostPlayedSavedStations.first().map { it.id })
+    }
+
+    @Test
+    fun `unsaving a station drops its play count`() = runBlocking {
+        val repo = repo()
+        repo.saveStation(station("a"))
+        repo.saveStation(station("b"))
+        repo.selectStation(station("a"))
+        repo.selectStation(station("a"))
+        repo.removeStation("a")
+        repo.saveStation(station("a"))
+
+        assertEquals(listOf("a", "b"), repo.mostPlayedSavedStations.first().map { it.id }.sorted())
+    }
+
+    @Test
     fun `connection prewarming is disabled by default`() = runBlocking {
         val repo = repo()
 

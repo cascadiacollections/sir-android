@@ -220,10 +220,20 @@ class SettingsRepository(private val context: Context) {
     }
 
     /**
-     * Removes a favourite by station id.
+     * Removes a favourite by station id, dropping its play count with it rather than
+     * leaving a stale entry for `selectStation` to prune on some later, unrelated call.
      */
-    suspend fun removeStation(stationId: String) = editStations(savedStationsKey) { current ->
-        StationCollections.removeFavorite(current, stationId)
+    suspend fun removeStation(stationId: String) {
+        context.dataStore.edit { preferences ->
+            val updated = StationCollections.removeFavorite(
+                StationCodec.decode(preferences[savedStationsKey]),
+                stationId
+            )
+            preferences[savedStationsKey] = StationCodec.encode(updated)
+            preferences[stationPlayCountsKey] = Json.encodeToString(
+                decodePlayCounts(preferences[stationPlayCountsKey]) - stationId
+            )
+        }
     }
 
     // No standalone `recordRecentStation`: recents are written by `selectStation` inside
@@ -248,12 +258,21 @@ class SettingsRepository(private val context: Context) {
     suspend fun selectStation(station: Station) {
         context.dataStore.edit { preferences ->
             preferences[selectedStationKey] = StationCodec.encode(listOf(station))
-            val counts = decodePlayCounts(preferences[stationPlayCountsKey])
-            preferences[stationPlayCountsKey] = Json.encodeToString(
+
+            // Play counts exist only to rank `mostPlayedSavedStations`, so they are bounded
+            // to currently-saved stations: unsaving one drops its count on the next
+            // selection instead of leaving the map to grow across every station ever played.
+            val savedIds = StationCodec.decode(preferences[savedStationsKey]).map { it.id }.toSet()
+            val counts = decodePlayCounts(preferences[stationPlayCountsKey]).filterKeys { it in savedIds }
+            val updatedCounts = if (station.id in savedIds) {
                 counts + (station.id to (counts[station.id]?.let {
                     if (it == Int.MAX_VALUE) it else it + 1
                 } ?: 1))
-            )
+            } else {
+                counts
+            }
+            preferences[stationPlayCountsKey] = Json.encodeToString(updatedCounts)
+
             val recents = StationCollections.recordRecent(
                 StationCodec.decode(preferences[recentStationsKey]),
                 station

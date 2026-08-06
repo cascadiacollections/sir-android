@@ -2,6 +2,7 @@ package com.cascadiacollections.sir.core.persistence
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -230,9 +231,7 @@ class SettingsRepository(private val context: Context) {
                 stationId
             )
             preferences[savedStationsKey] = StationCodec.encode(updated)
-            preferences[stationPlayCountsKey] = Json.encodeToString(
-                decodePlayCounts(preferences[stationPlayCountsKey]) - stationId
-            )
+            preferences.putPlayCounts(decodePlayCounts(preferences[stationPlayCountsKey]) - stationId)
         }
     }
 
@@ -271,7 +270,7 @@ class SettingsRepository(private val context: Context) {
             } else {
                 counts
             }
-            preferences[stationPlayCountsKey] = Json.encodeToString(updatedCounts)
+            preferences.putPlayCounts(updatedCounts)
 
             val recents = StationCollections.recordRecent(
                 StationCodec.decode(preferences[recentStationsKey]),
@@ -314,4 +313,9 @@ class SettingsRepository(private val context: Context) {
         raw?.let { runCatching { Json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
             ?.filterValues { it >= 0 }
             ?: emptyMap()
+
+    /** Removes the preference entirely once empty rather than persisting an empty "{}". */
+    private fun MutablePreferences.putPlayCounts(counts: Map<String, Int>) {
+        if (counts.isEmpty()) remove(stationPlayCountsKey) else this[stationPlayCountsKey] = Json.encodeToString(counts)
+    }
 }

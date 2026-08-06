@@ -20,6 +20,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.Json
 
 /**
  * The single live [DataStore] for the settings file.
@@ -83,6 +84,8 @@ class SettingsRepository(private val context: Context) {
     private val savedStationsKey = stringPreferencesKey("saved_stations")
     private val recentStationsKey = stringPreferencesKey("recent_stations")
     private val selectedStationKey = stringPreferencesKey("selected_station")
+    private val stationPlayCountsKey = stringPreferencesKey("station_play_counts")
+    private val connectionPrewarmingEnabledKey = booleanPreferencesKey("connection_prewarming_enabled")
 
     val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
         StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
@@ -184,6 +187,24 @@ class SettingsRepository(private val context: Context) {
         StationCodec.decode(preferences[savedStationsKey])
     }
 
+    /** Saved stations ordered by play count, with saved order breaking ties. */
+    val mostPlayedSavedStations: Flow<List<Station>> = context.dataStore.data.map { preferences ->
+        val counts = decodePlayCounts(preferences[stationPlayCountsKey])
+        StationCodec.decode(preferences[savedStationsKey])
+            .sortedByDescending { counts[it.id] ?: 0 }
+    }
+
+    /** Whether speculative connection prewarming is enabled. Disabled until measured. */
+    val connectionPrewarmingEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[connectionPrewarmingEnabledKey] ?: false
+    }
+
+    suspend fun setConnectionPrewarmingEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[connectionPrewarmingEnabledKey] = enabled
+        }
+    }
+
     /**
      * Flow of recently played stations, newest first.
      */
@@ -227,6 +248,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun selectStation(station: Station) {
         context.dataStore.edit { preferences ->
             preferences[selectedStationKey] = StationCodec.encode(listOf(station))
+            val counts = decodePlayCounts(preferences[stationPlayCountsKey])
+            preferences[stationPlayCountsKey] = Json.encodeToString(
+                counts + (station.id to (counts[station.id]?.let {
+                    if (it == Int.MAX_VALUE) it else it + 1
+                } ?: 1))
+            )
             val recents = StationCollections.recordRecent(
                 StationCodec.decode(preferences[recentStationsKey]),
                 station
@@ -262,4 +289,10 @@ class SettingsRepository(private val context: Context) {
             preferences[key] = StationCodec.encode(updated)
         }
     }
+
+    /** Play counts keyed by station id; unreadable or negative entries are discarded. */
+    private fun decodePlayCounts(raw: String?): Map<String, Int> =
+        raw?.let { runCatching { Json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
+            ?.filterValues { it >= 0 }
+            ?: emptyMap()
 }

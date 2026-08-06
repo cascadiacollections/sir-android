@@ -246,7 +246,16 @@ class RadioPlaybackService : MediaLibraryService() {
         // Generate the audio session id ourselves so it's available immediately,
         // avoiding a race with renderer initialization (player.audioSessionId can
         // be C.AUDIO_SESSION_ID_UNSET right after prepare()).
+        //
+        // generateAudioSessionId() reports failure as AudioManager.ERROR, which is not a
+        // usable session id. Fall back to UNSET so the player generates its own; the
+        // equalizer then skips attaching rather than binding to an invalid session.
         val generatedAudioSessionId = audioManager.generateAudioSessionId()
+            .takeIf { it != AudioManager.ERROR }
+            ?: C.AUDIO_SESSION_ID_UNSET
+        if (generatedAudioSessionId == C.AUDIO_SESSION_ID_UNSET) {
+            Log.w(TAG, "generateAudioSessionId() failed; equalizer will be unavailable")
+        }
         audioSessionId = generatedAudioSessionId
 
         // Create optimized ExoPlayer

@@ -95,6 +95,25 @@ class SettingsRepositoryStationsTest {
     }
 
     @Test
+    fun `most played saved stations are ordered by selection count`() = runBlocking {
+        val repo = repo()
+        repo.saveStation(station("rank-a"))
+        repo.saveStation(station("rank-b"))
+        repo.selectStation(station("rank-b"))
+        repo.selectStation(station("rank-a"))
+        repo.selectStation(station("rank-b"))
+
+        assertEquals(listOf("rank-b", "rank-a"), repo.mostPlayedSavedStations.first().map { it.id })
+    }
+
+    @Test
+    fun `connection prewarming is disabled by default`() = runBlocking {
+        val repo = repo()
+
+        assertEquals(false, repo.connectionPrewarmingEnabled.first())
+    }
+
+    @Test
     fun `clearing the selection reverts to the default stream`() = runBlocking {
         val repo = repo()
         repo.selectStation(station("a"))

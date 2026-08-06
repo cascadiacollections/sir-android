@@ -1,5 +1,7 @@
 package com.cascadiacollections.sir.core.playback
 
+import androidx.annotation.StringRes
+
 /**
  * Central stream configuration shared by the app, widget, tile and Wear modules, so the
  * stream URL is not duplicated across `RadioPlaybackService`, [StreamQuality] and
@@ -45,10 +47,10 @@ object StreamConfig {
  * highest available bitrate for `/stream`. Add alternate mount paths here if the station
  * ever exposes them (e.g. `/stream_lo` for 64 kbps).
  */
-enum class StreamQuality(val label: String, val url: String) {
-    HIGH("High (default)", StreamConfig.DEFAULT_STREAM_URL),
-    MEDIUM("Medium", StreamConfig.DEFAULT_STREAM_URL),
-    LOW("Low", StreamConfig.DEFAULT_STREAM_URL);
+enum class StreamQuality(@StringRes val labelRes: Int, val url: String) {
+    HIGH(R.string.stream_quality_high, StreamConfig.DEFAULT_STREAM_URL),
+    MEDIUM(R.string.stream_quality_medium, StreamConfig.DEFAULT_STREAM_URL),
+    LOW(R.string.stream_quality_low, StreamConfig.DEFAULT_STREAM_URL);
 
     companion object {
         fun fromOrdinal(ordinal: Int): StreamQuality = entries.getOrNull(ordinal) ?: HIGH

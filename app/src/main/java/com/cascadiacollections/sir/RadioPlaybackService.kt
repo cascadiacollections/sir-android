@@ -33,6 +33,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.PlaybackStatsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.CommandButton
@@ -61,11 +62,9 @@ import com.cascadiacollections.sir.core.playback.StreamMetadata
 import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
 import com.cascadiacollections.sir.core.playback.StreamSource
 import com.cascadiacollections.sir.core.playback.StreamSourceResolver
-import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -83,7 +82,10 @@ class RadioPlaybackService : MediaLibraryService() {
     private var isNoisyReceiverRegistered = false
     private var isRouteReceiverRegistered = false
     private val audioRoutePolicy = AudioRoutePolicy()
-    private val retryBackoff = RetryBackoff()
+    // Each prepare makes three load attempts, so six total load attempts permit one re-prepare.
+    private val retryBackoff = RetryBackoff(
+        maxRetries = StreamLoadErrorHandlingPolicy.MAX_PREPARE_ATTEMPTS - 1
+    )
 
     // Locks to keep device active during playback
     private var playbackLocks: PlaybackLocks? = null
@@ -105,6 +107,11 @@ class RadioPlaybackService : MediaLibraryService() {
     // Equalizer
     private var equalizer: Equalizer? = null
     private var currentEqualizerPreset: EqualizerPreset = EqualizerPreset.NORMAL
+    // Generated ourselves in onCreate so the equalizer can be constructed without racing
+    // renderer initialization. Media3's C.AUDIO_SESSION_ID_UNSET is @UnstableApi and is
+    // defined as this exact constant, so using the platform one keeps the property
+    // declaration free of an opt-in requirement.
+    private var audioSessionId: Int = AudioManager.AUDIO_SESSION_ID_GENERATE
 
     // Settings and coroutine scope
     private val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
@@ -204,18 +211,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .build()
 
         // OkHttp client optimized for live audio streaming
-        val okHttpClient = StreamingHttpClientFactory.newBuilder()
-            .writeTimeout(10, TimeUnit.SECONDS)
-            .apply {
-                if (BuildConfig.DEBUG) {
-                    addInterceptor(
-                        okhttp3.logging.HttpLoggingInterceptor().setLevel(
-                            okhttp3.logging.HttpLoggingInterceptor.Level.HEADERS
-                        )
-                    )
-                }
-            }
-            .build()
+        val okHttpClient = StreamingHttpClientProvider.client
 
         // OkHttp data source for better HTTP performance (HTTP/2, connection reuse)
         val httpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
@@ -238,6 +234,22 @@ class RadioPlaybackService : MediaLibraryService() {
         // Media source factory with time-shift data source
         val mediaSourceFactory = DefaultMediaSourceFactory(context)
             .setDataSourceFactory(timeShiftFactory)
+            .setLoadErrorHandlingPolicy(StreamLoadErrorHandlingPolicy())
+
+        // Generate the audio session id ourselves so it's available immediately,
+        // avoiding a race with renderer initialization (player.audioSessionId can
+        // be C.AUDIO_SESSION_ID_UNSET right after prepare()).
+        //
+        // generateAudioSessionId() reports failure as AudioManager.ERROR, which is not a
+        // usable session id. Fall back to UNSET so the player generates its own; the
+        // equalizer then skips attaching rather than binding to an invalid session.
+        val generatedAudioSessionId = audioManager.generateAudioSessionId()
+            .takeIf { it != AudioManager.ERROR }
+            ?: C.AUDIO_SESSION_ID_UNSET
+        if (generatedAudioSessionId == C.AUDIO_SESSION_ID_UNSET) {
+            Log.w(TAG, "generateAudioSessionId() failed; equalizer will be unavailable")
+        }
+        audioSessionId = generatedAudioSessionId
 
         // Create optimized ExoPlayer
         val exoPlayer = ExoPlayer.Builder(context)
@@ -260,6 +272,11 @@ class RadioPlaybackService : MediaLibraryService() {
                 playWhenReady = false  // Don't auto-play on creation
             }
         player = exoPlayer
+
+        // Builder has no audio-session setter, so assign the pre-generated id on the player,
+        // before the first prepare() so the renderer adopts it. Kept out of the apply block
+        // above because lint does not carry this method's opt-in into that lambda.
+        exoPlayer.setAudioSessionId(generatedAudioSessionId)
 
         exoPlayer.setMediaItem(buildMediaItem())
 
@@ -412,13 +429,41 @@ class RadioPlaybackService : MediaLibraryService() {
             // empty list crashes the legacy PlaybackStateCompat stub.
 
         // Now add listeners after mediaSession is created
+        // Media3 already measures what a tap-to-audio trace would: join time and
+        // rebuffering, reported when a playback session ends (a station switch, or the
+        // player being released). Logged rather than wired to analytics so the `foss`
+        // flavor gets the same numbers; `:benchmark` and logcat can both read them.
+        exoPlayer.addAnalyticsListener(
+            PlaybackStatsListener(/* keepHistory = */ false) { _, stats ->
+                Log.i(
+                    TAG_PLAYBACK_STATS,
+                    "joinMs=${stats.getTotalJoinTimeMs()} " +
+                        "playbackMs=${stats.getTotalPlayTimeMs()} " +
+                        "rebuffers=${stats.totalRebufferCount} " +
+                        "rebufferMs=${stats.getTotalRebufferTimeMs()} " +
+                        "maxRebufferMs=${stats.maxRebufferTimeMs} " +
+                        "fatalErrors=${stats.fatalErrorCount}"
+                )
+            }
+        )
+
         player?.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) {
-                    retryBackoff.reset()
-                    if (player?.playWhenReady == true) {
-                        updateCustomLayout()
+                when (playbackState) {
+                    Player.STATE_READY -> {
+                        retryBackoff.reset()
+                        if (player?.playWhenReady == true) {
+                            updateCustomLayout()
+                        }
                     }
+
+                    Player.STATE_ENDED -> handleUnexpectedEnd()
+
+                    // Named rather than left to an `else` because lint checks a `when` over
+                    // an @IntDef for completeness. Neither needs a decision here: buffering
+                    // is already reflected by the session, and idle only follows a stop we
+                    // asked for or a re-prepare on its way to buffering.
+                    Player.STATE_BUFFERING, Player.STATE_IDLE -> Unit
                 }
             }
 
@@ -449,19 +494,32 @@ class RadioPlaybackService : MediaLibraryService() {
                 )
                 Log.d(TAG, "Stream metadata: $raw")
 
-                val update = metadataResolver.resolve(streamMetadata, raw)
+                val update = metadataResolver.resolve(
+                    previous = streamMetadata,
+                    raw = raw,
+                    stationName = currentStationTitle ?: getString(R.string.station_name),
+                )
                 streamMetadata = update.metadata
                 if (update.notifyChanged) updateNotificationSafe()
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                Log.e(TAG, "Player error (attempt ${retryBackoff.attemptLabel})", error)
+                val failure = error.toStreamFailure()
+                Log.e(TAG, "Player error (attempt ${retryBackoff.attemptLabel}, $failure)", error)
+                if (!failure.isRetryable) {
+                    // A station that answers 404, or sends a codec this device can't
+                    // decode, fails identically on every attempt. Spending the backoff on
+                    // it held a wake lock for about a minute to show the same message.
+                    retryBackoff.reset()
+                    updateNotificationSafe(getString(failure.messageRes()))
+                    return
+                }
                 val delayMs = retryBackoff.nextDelayMs()
                 if (delayMs != null) {
                     updateNotificationSafe(getString(R.string.stream_reconnecting))
                     sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
                 } else {
-                    updateNotificationSafe(getString(R.string.radio_error))
+                    updateNotificationSafe(getString(failure.messageRes()))
                 }
             }
         })
@@ -721,6 +779,31 @@ class RadioPlaybackService : MediaLibraryService() {
     }
 
     /**
+     * A live stream has no end, so `STATE_ENDED` means the server closed the connection.
+     *
+     * That arrives *without* an `onPlayerError`, so nothing else here would notice: the
+     * player sat ended, the notification kept claiming the station was on, and the reconnect
+     * backoff — which only ran from the error path — never saw it. Rejoin through the same
+     * bounded schedule a player error uses. (ShoutKit reached this from the other side: its
+     * engine reports an unrequested stop as a retryable failure. See
+     * `docs/audioplayer-dependency-synergies.md`.)
+     */
+    private fun handleUnexpectedEnd() {
+        // Only when audio was wanted. A deliberate stop leaves the player idle rather than
+        // ended, but a paused player must not be restarted by this either.
+        if (player?.playWhenReady != true) return
+
+        Log.w(TAG, "Live stream ended unexpectedly (attempt ${retryBackoff.attemptLabel})")
+        val delayMs = retryBackoff.nextDelayMs()
+        if (delayMs != null) {
+            updateNotificationSafe(getString(R.string.stream_reconnecting))
+            sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
+        } else {
+            updateNotificationSafe(getString(R.string.radio_error))
+        }
+    }
+
+    /**
      * Force ExoPlayer to discard its internal decoded buffer and re-read from
      * the [CircularByteBuffer] at the current read cursor position.
      * Without this, ExoPlayer's 60s internal buffer would keep playing stale
@@ -885,13 +968,13 @@ class RadioPlaybackService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     private fun initializeEqualizer() {
         try {
-            val audioSessionId = player?.audioSessionId ?: return
-            if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
+            val sessionId = audioSessionId
+            if (sessionId == C.AUDIO_SESSION_ID_UNSET) {
                 Log.w(TAG, "Audio session ID not set, skipping equalizer init")
                 return
             }
 
-            equalizer = Equalizer(0, audioSessionId).apply {
+            equalizer = Equalizer(0, sessionId).apply {
                 enabled = true
             }
             applyEqualizerPreset(currentEqualizerPreset)
@@ -922,7 +1005,7 @@ class RadioPlaybackService : MediaLibraryService() {
                 settingsRepository.setEqualizerPreset(preset)
             }
 
-            Log.d(TAG, "Applied equalizer preset: ${preset.label}")
+            Log.d(TAG, "Applied equalizer preset: ${preset.name}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply equalizer preset", e)
         }
@@ -991,6 +1074,9 @@ class RadioPlaybackService : MediaLibraryService() {
 
     companion object {
         private const val TAG = "RadioPlaybackService"
+
+        /** Distinct tag so join/rebuffer numbers can be scraped without the rest of the log. */
+        private const val TAG_PLAYBACK_STATS = "SirPlaybackStats"
 
         // Stream configuration
         private const val DEFAULT_STREAM_URL = StreamConfig.DEFAULT_STREAM_URL

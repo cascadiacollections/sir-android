@@ -200,6 +200,9 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
     implementation(libs.media3.datasource.okhttp)
+    // Declared for HttpDataSource.InvalidResponseCodeException, which the failure
+    // classification reads directly rather than relying on a transitive dependency.
+    implementation(libs.media3.datasource)
 
     // OkHttp with BOM for consistent versioning
     implementation(platform(libs.okhttp.bom))

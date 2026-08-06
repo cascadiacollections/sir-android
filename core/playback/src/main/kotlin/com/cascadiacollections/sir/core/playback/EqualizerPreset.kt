@@ -1,5 +1,7 @@
 package com.cascadiacollections.sir.core.playback
 
+import androidx.annotation.StringRes
+
 /**
  * Audio equalizer presets.
  *
@@ -13,19 +15,19 @@ package com.cascadiacollections.sir.core.playback
  * same as the midpoint of an asymmetric band level range.
  */
 enum class EqualizerPreset(
-    val label: String,
+    @StringRes val labelRes: Int,
     val curve: ((Float) -> Float)?
 ) {
-    NORMAL("Normal", null),
-    BASS_BOOST("Bass Boost", { position -> (1f - position) * TILT }),
-    VOCAL("Vocal/Podcast", { position ->
+    NORMAL(R.string.equalizer_preset_normal, null),
+    BASS_BOOST(R.string.equalizer_preset_bass_boost, { position -> (1f - position) * TILT }),
+    VOCAL(R.string.equalizer_preset_vocal, { position ->
         when {
             position < 0.3f -> 0.1f // cut bass
             position < 0.7f -> 0.7f // boost mids
             else -> 0.4f // slight boost highs
         }
     }),
-    TREBLE("Treble Boost", { position -> position * TILT });
+    TREBLE(R.string.equalizer_preset_treble, { position -> position * TILT });
 
     companion object {
         /** Slope applied by the tilt-shaped presets. */

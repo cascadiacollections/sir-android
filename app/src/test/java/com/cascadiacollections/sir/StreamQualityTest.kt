@@ -32,23 +32,23 @@ class StreamQualityTest {
     }
 
     @Test
-    fun `StreamQuality labels are all non-blank`() {
+    fun `StreamQuality labelRes are all valid resource ids`() {
         StreamQuality.entries.forEach { quality ->
-            assertTrue("Label for $quality should not be blank", quality.label.isNotBlank())
+            assertTrue("labelRes for $quality should be a valid resource id", quality.labelRes != 0)
         }
     }
 
     @Test
-    fun `StreamQuality labels are all unique`() {
-        val labels = StreamQuality.entries.map { it.label }
-        assertEquals(labels.size, labels.toSet().size)
+    fun `StreamQuality labelRes are all unique`() {
+        val labelResIds = StreamQuality.entries.map { it.labelRes }
+        assertEquals(labelResIds.size, labelResIds.toSet().size)
     }
 
     @Test
     fun `StreamQuality URLs are valid HTTPS`() {
         StreamQuality.entries.forEach { quality ->
             assertTrue(
-                "URL for ${quality.label} should start with https://",
+                "URL for $quality should start with https://",
                 quality.url.startsWith("https://")
             )
         }

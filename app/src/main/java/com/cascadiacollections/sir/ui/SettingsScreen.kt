@@ -104,7 +104,7 @@ fun SettingsContent(
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
             OutlinedTextField(
-                value = sleepTimerDuration.label,
+                value = stringResource(sleepTimerDuration.labelRes),
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sleepTimerExpanded) },
@@ -118,7 +118,7 @@ fun SettingsContent(
             ) {
                 SleepTimerDuration.entries.forEach { duration ->
                     DropdownMenuItem(
-                        text = { Text(duration.label) },
+                        text = { Text(stringResource(duration.labelRes)) },
                         onClick = {
                             sleepTimerExpanded = false
                             scope.launch {
@@ -131,7 +131,7 @@ fun SettingsContent(
                                 )
                                 val message = if (duration == SleepTimerDuration.OFF)
                                     resources.getString(R.string.sleep_timer_off)
-                                else resources.getString(R.string.sleep_timer_set, duration.label)
+                                else resources.getString(R.string.sleep_timer_set, resources.getString(duration.labelRes))
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                             }
                         }
@@ -155,7 +155,7 @@ fun SettingsContent(
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
             OutlinedTextField(
-                value = equalizerPreset.label,
+                value = stringResource(equalizerPreset.labelRes),
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = equalizerExpanded) },
@@ -169,7 +169,7 @@ fun SettingsContent(
             ) {
                 EqualizerPreset.entries.forEach { preset ->
                     DropdownMenuItem(
-                        text = { Text(preset.label) },
+                        text = { Text(stringResource(preset.labelRes)) },
                         onClick = {
                             equalizerExpanded = false
                             scope.launch {

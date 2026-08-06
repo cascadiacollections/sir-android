@@ -107,9 +107,11 @@ class RadioPlaybackService : MediaLibraryService() {
     // Equalizer
     private var equalizer: Equalizer? = null
     private var currentEqualizerPreset: EqualizerPreset = EqualizerPreset.NORMAL
-    // Generated ourselves (see initializePlayer) so the equalizer can be
-    // constructed without racing renderer initialization.
-    private var audioSessionId: Int = C.AUDIO_SESSION_ID_UNSET
+    // Generated ourselves in onCreate so the equalizer can be constructed without racing
+    // renderer initialization. Media3's C.AUDIO_SESSION_ID_UNSET is @UnstableApi and is
+    // defined as this exact constant, so using the platform one keeps the property
+    // declaration free of an opt-in requirement.
+    private var audioSessionId: Int = AudioManager.AUDIO_SESSION_ID_GENERATE
 
     // Settings and coroutine scope
     private val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }

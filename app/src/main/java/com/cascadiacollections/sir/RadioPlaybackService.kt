@@ -62,11 +62,9 @@ import com.cascadiacollections.sir.core.playback.StreamMetadata
 import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
 import com.cascadiacollections.sir.core.playback.StreamSource
 import com.cascadiacollections.sir.core.playback.StreamSourceResolver
-import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -211,18 +209,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .build()
 
         // OkHttp client optimized for live audio streaming
-        val okHttpClient = StreamingHttpClientFactory.newBuilder()
-            .writeTimeout(10, TimeUnit.SECONDS)
-            .apply {
-                if (BuildConfig.DEBUG) {
-                    addInterceptor(
-                        okhttp3.logging.HttpLoggingInterceptor().setLevel(
-                            okhttp3.logging.HttpLoggingInterceptor.Level.HEADERS
-                        )
-                    )
-                }
-            }
-            .build()
+        val okHttpClient = StreamingHttpClientProvider.client
 
         // OkHttp data source for better HTTP performance (HTTP/2, connection reuse)
         val httpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)

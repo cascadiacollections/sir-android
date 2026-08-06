@@ -82,7 +82,10 @@ class RadioPlaybackService : MediaLibraryService() {
     private var isNoisyReceiverRegistered = false
     private var isRouteReceiverRegistered = false
     private val audioRoutePolicy = AudioRoutePolicy()
-    private val retryBackoff = RetryBackoff()
+    // Each prepare makes three load attempts, so six total load attempts permit one re-prepare.
+    private val retryBackoff = RetryBackoff(
+        maxRetries = StreamLoadErrorHandlingPolicy.MAX_PREPARE_ATTEMPTS - 1
+    )
 
     // Locks to keep device active during playback
     private var playbackLocks: PlaybackLocks? = null
@@ -226,6 +229,7 @@ class RadioPlaybackService : MediaLibraryService() {
         // Media source factory with time-shift data source
         val mediaSourceFactory = DefaultMediaSourceFactory(context)
             .setDataSourceFactory(timeShiftFactory)
+            .setLoadErrorHandlingPolicy(StreamLoadErrorHandlingPolicy())
 
         // Create optimized ExoPlayer
         val exoPlayer = ExoPlayer.Builder(context)

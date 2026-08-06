@@ -5,9 +5,12 @@ import androidx.annotation.StringRes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.cascadiacollections.sir.core.playback.StreamErrorKind
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import com.cascadiacollections.sir.core.playback.StreamFailureClassifier
+import java.io.FileNotFoundException
+import java.io.IOException
 
 /**
  * Translates Media3's error vocabulary into `:core:playback`'s [StreamFailure].
@@ -19,6 +22,13 @@ import com.cascadiacollections.sir.core.playback.StreamFailureClassifier
  */
 @OptIn(UnstableApi::class)
 internal fun PlaybackException.toStreamFailure(): StreamFailure =
+    StreamFailureClassifier.classify(errorKind(), httpResponseCode())
+
+@OptIn(UnstableApi::class)
+internal fun LoadErrorHandlingPolicy.LoadErrorInfo.toStreamFailure(): StreamFailure =
+    exception.toStreamFailure()
+
+private fun IOException.toStreamFailure(): StreamFailure =
     StreamFailureClassifier.classify(errorKind(), httpResponseCode())
 
 private fun PlaybackException.errorKind(): StreamErrorKind = when (errorCode) {
@@ -48,10 +58,25 @@ private fun PlaybackException.errorKind(): StreamErrorKind = when (errorCode) {
  */
 @OptIn(UnstableApi::class)
 private fun PlaybackException.httpResponseCode(): Int? {
-    var candidate: Throwable? = cause
+    return cause.httpResponseCode()
+}
+
+private fun IOException.errorKind(): StreamErrorKind = when {
+    findCause<HttpDataSource.InvalidResponseCodeException>() != null -> StreamErrorKind.BAD_HTTP_STATUS
+    findCause<HttpDataSource.InvalidContentTypeException>() != null -> StreamErrorKind.BAD_CONTENT_TYPE
+    findCause<FileNotFoundException>() != null -> StreamErrorKind.NOT_FOUND
+    findCause<HttpDataSource.CleartextNotPermittedException>() != null -> StreamErrorKind.UNPLAYABLE
+    else -> StreamErrorKind.IO
+}
+
+private fun Throwable?.httpResponseCode(): Int? =
+    findCause<HttpDataSource.InvalidResponseCodeException>()?.responseCode
+
+private inline fun <reified T : Throwable> Throwable?.findCause(): T? {
+    var candidate = this
     var depth = 0
     while (candidate != null && depth < MAX_CAUSE_DEPTH) {
-        if (candidate is HttpDataSource.InvalidResponseCodeException) return candidate.responseCode
+        if (candidate is T) return candidate
         candidate = candidate.cause
         depth++
     }

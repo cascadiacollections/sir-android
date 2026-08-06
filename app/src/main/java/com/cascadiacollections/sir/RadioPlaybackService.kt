@@ -107,6 +107,11 @@ class RadioPlaybackService : MediaLibraryService() {
     // Equalizer
     private var equalizer: Equalizer? = null
     private var currentEqualizerPreset: EqualizerPreset = EqualizerPreset.NORMAL
+    // Generated ourselves in onCreate so the equalizer can be constructed without racing
+    // renderer initialization. Media3's C.AUDIO_SESSION_ID_UNSET is @UnstableApi and is
+    // defined as this exact constant, so using the platform one keeps the property
+    // declaration free of an opt-in requirement.
+    private var audioSessionId: Int = AudioManager.AUDIO_SESSION_ID_GENERATE
 
     // Settings and coroutine scope
     private val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
@@ -231,6 +236,21 @@ class RadioPlaybackService : MediaLibraryService() {
             .setDataSourceFactory(timeShiftFactory)
             .setLoadErrorHandlingPolicy(StreamLoadErrorHandlingPolicy())
 
+        // Generate the audio session id ourselves so it's available immediately,
+        // avoiding a race with renderer initialization (player.audioSessionId can
+        // be C.AUDIO_SESSION_ID_UNSET right after prepare()).
+        //
+        // generateAudioSessionId() reports failure as AudioManager.ERROR, which is not a
+        // usable session id. Fall back to UNSET so the player generates its own; the
+        // equalizer then skips attaching rather than binding to an invalid session.
+        val generatedAudioSessionId = audioManager.generateAudioSessionId()
+            .takeIf { it != AudioManager.ERROR }
+            ?: C.AUDIO_SESSION_ID_UNSET
+        if (generatedAudioSessionId == C.AUDIO_SESSION_ID_UNSET) {
+            Log.w(TAG, "generateAudioSessionId() failed; equalizer will be unavailable")
+        }
+        audioSessionId = generatedAudioSessionId
+
         // Create optimized ExoPlayer
         val exoPlayer = ExoPlayer.Builder(context)
             .setLoadControl(loadControl)
@@ -252,6 +272,11 @@ class RadioPlaybackService : MediaLibraryService() {
                 playWhenReady = false  // Don't auto-play on creation
             }
         player = exoPlayer
+
+        // Builder has no audio-session setter, so assign the pre-generated id on the player,
+        // before the first prepare() so the renderer adopts it. Kept out of the apply block
+        // above because lint does not carry this method's opt-in into that lambda.
+        exoPlayer.setAudioSessionId(generatedAudioSessionId)
 
         exoPlayer.setMediaItem(buildMediaItem())
 
@@ -943,13 +968,13 @@ class RadioPlaybackService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     private fun initializeEqualizer() {
         try {
-            val audioSessionId = player?.audioSessionId ?: return
-            if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
+            val sessionId = audioSessionId
+            if (sessionId == C.AUDIO_SESSION_ID_UNSET) {
                 Log.w(TAG, "Audio session ID not set, skipping equalizer init")
                 return
             }
 
-            equalizer = Equalizer(0, audioSessionId).apply {
+            equalizer = Equalizer(0, sessionId).apply {
                 enabled = true
             }
             applyEqualizerPreset(currentEqualizerPreset)

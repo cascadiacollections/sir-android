@@ -1,9 +1,9 @@
 package com.cascadiacollections.sir.okhttp.streaming
 
 import android.os.Process
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.toHttpUrlOrNull
 
 /**
  * Opens short-lived requests to likely stream hosts so their DNS and connection-pool entries

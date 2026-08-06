@@ -288,10 +288,11 @@ class SettingsRepository(private val context: Context) {
             val updated = transform(StationCodec.decode(preferences[key]))
             preferences[key] = StationCodec.encode(updated)
         }
-
-        private fun decodePlayCounts(raw: String?): Map<String, Int> =
-            raw?.let { runCatching { Json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
-                ?.filterValues { it >= 0 }
-                ?: emptyMap()
     }
+
+    /** Play counts keyed by station id; unreadable or negative entries are discarded. */
+    private fun decodePlayCounts(raw: String?): Map<String, Int> =
+        raw?.let { runCatching { Json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
+            ?.filterValues { it >= 0 }
+            ?: emptyMap()
 }

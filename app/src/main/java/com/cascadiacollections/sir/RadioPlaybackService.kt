@@ -246,8 +246,8 @@ class RadioPlaybackService : MediaLibraryService() {
         // Generate the audio session id ourselves so it's available immediately,
         // avoiding a race with renderer initialization (player.audioSessionId can
         // be C.AUDIO_SESSION_ID_UNSET right after prepare()).
-        val audioSessionId = audioManager.generateAudioSessionId()
-        this.audioSessionId = audioSessionId
+        val generatedAudioSessionId = audioManager.generateAudioSessionId()
+        audioSessionId = generatedAudioSessionId
 
         // Create optimized ExoPlayer
         val exoPlayer = ExoPlayer.Builder(context)
@@ -262,11 +262,13 @@ class RadioPlaybackService : MediaLibraryService() {
                     .build(),
                 true  // Handle audio focus automatically
             )
-            .setAudioSessionId(audioSessionId)
             .setHandleAudioBecomingNoisy(false)  // We handle this manually for more control
             .setWakeMode(C.WAKE_MODE_NETWORK)    // Keep CPU and network active
             .build()
             .apply {
+                // Builder has no audio-session setter; assign the pre-generated id on the player
+                // so the renderer adopts it before the first prepare().
+                setAudioSessionId(generatedAudioSessionId)
                 repeatMode = Player.REPEAT_MODE_OFF  // Live stream doesn't repeat
                 playWhenReady = false  // Don't auto-play on creation
             }

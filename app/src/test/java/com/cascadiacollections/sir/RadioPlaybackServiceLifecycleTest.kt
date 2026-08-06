@@ -1,10 +1,15 @@
 package com.cascadiacollections.sir
 
 import android.content.Intent
+import androidx.annotation.OptIn
+import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
@@ -126,16 +131,15 @@ class RadioPlaybackServiceLifecycleTest {
     }
 
     @Test
+    @OptIn(UnstableApi::class)
     fun `player is created with a valid non-unset audio session id`() {
         val mockControllerInfo: androidx.media3.session.MediaSession.ControllerInfo =
             io.mockk.mockk(relaxed = true)
         val session = service.onGetSession(mockControllerInfo)
-        val audioSessionId = session?.player?.audioSessionId
-        assertNotNull(audioSessionId)
-        org.junit.Assert.assertNotEquals(
-            androidx.media3.common.C.AUDIO_SESSION_ID_UNSET,
-            audioSessionId
-        )
+        // MediaSession exposes the player as Player; the session id lives on ExoPlayer.
+        val exoPlayer = session?.player as? ExoPlayer
+        assertNotNull(exoPlayer)
+        assertNotEquals(C.AUDIO_SESSION_ID_UNSET, exoPlayer!!.audioSessionId)
     }
 
     @Test

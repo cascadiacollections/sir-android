@@ -123,6 +123,7 @@ class RadioPlaybackService : MediaLibraryService() {
     // DVR time-shift buffer
     private val replayBuffer = CircularByteBuffer(REPLAY_BUFFER_SIZE)
     private var playbackMode: PlaybackMode = PlaybackMode.Live
+    @OptIn(UnstableApi::class)
     private var timeShiftDataSourceFactory: TimeShiftDataSource.Factory? = null
 
     private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {

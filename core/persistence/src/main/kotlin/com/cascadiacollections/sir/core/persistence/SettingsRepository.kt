@@ -2,6 +2,7 @@ package com.cascadiacollections.sir.core.persistence
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -220,10 +221,18 @@ class SettingsRepository(private val context: Context) {
     }
 
     /**
-     * Removes a favourite by station id.
+     * Removes a favourite by station id, dropping its play count with it rather than
+     * leaving a stale entry for `selectStation` to prune on some later, unrelated call.
      */
-    suspend fun removeStation(stationId: String) = editStations(savedStationsKey) { current ->
-        StationCollections.removeFavorite(current, stationId)
+    suspend fun removeStation(stationId: String) {
+        context.dataStore.edit { preferences ->
+            val updated = StationCollections.removeFavorite(
+                StationCodec.decode(preferences[savedStationsKey]),
+                stationId
+            )
+            preferences[savedStationsKey] = StationCodec.encode(updated)
+            preferences.putPlayCounts(decodePlayCounts(preferences[stationPlayCountsKey]) - stationId)
+        }
     }
 
     // No standalone `recordRecentStation`: recents are written by `selectStation` inside
@@ -248,12 +257,21 @@ class SettingsRepository(private val context: Context) {
     suspend fun selectStation(station: Station) {
         context.dataStore.edit { preferences ->
             preferences[selectedStationKey] = StationCodec.encode(listOf(station))
-            val counts = decodePlayCounts(preferences[stationPlayCountsKey])
-            preferences[stationPlayCountsKey] = Json.encodeToString(
+
+            // Play counts exist only to rank `mostPlayedSavedStations`, so they are bounded
+            // to currently-saved stations: unsaving one drops its count on the next
+            // selection instead of leaving the map to grow across every station ever played.
+            val savedIds = StationCodec.decode(preferences[savedStationsKey]).map { it.id }.toSet()
+            val counts = decodePlayCounts(preferences[stationPlayCountsKey]).filterKeys { it in savedIds }
+            val updatedCounts = if (station.id in savedIds) {
                 counts + (station.id to (counts[station.id]?.let {
                     if (it == Int.MAX_VALUE) it else it + 1
                 } ?: 1))
-            )
+            } else {
+                counts
+            }
+            preferences.putPlayCounts(updatedCounts)
+
             val recents = StationCollections.recordRecent(
                 StationCodec.decode(preferences[recentStationsKey]),
                 station
@@ -295,4 +313,9 @@ class SettingsRepository(private val context: Context) {
         raw?.let { runCatching { Json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
             ?.filterValues { it >= 0 }
             ?: emptyMap()
+
+    /** Removes the preference entirely once empty rather than persisting an empty "{}". */
+    private fun MutablePreferences.putPlayCounts(counts: Map<String, Int>) {
+        if (counts.isEmpty()) remove(stationPlayCountsKey) else this[stationPlayCountsKey] = Json.encodeToString(counts)
+    }
 }

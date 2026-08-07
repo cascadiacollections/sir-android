@@ -126,6 +126,13 @@ class RadioPlaybackService : MediaLibraryService() {
     // DVR time-shift buffer
     private val replayBuffer = CircularByteBuffer(REPLAY_BUFFER_SIZE)
     private var playbackMode: PlaybackMode = PlaybackMode.Live
+
+    // Opted in explicitly rather than left to lint-baseline.xml's single UnsafeOptInUsageError
+    // slot: that slot is matched by message text alone, so it silently absorbs whichever
+    // unannotated media3 opt-in usage lint finds first and reports any other as a build
+    // failure pointing at an unrelated line. Annotating this declaration means it produces
+    // no finding of its own, leaving the baseline slot free to flag a genuinely new one.
+    @OptIn(UnstableApi::class)
     private var timeShiftDataSourceFactory: TimeShiftDataSource.Factory? = null
 
     private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {

@@ -34,7 +34,7 @@ mockk = "1.14.11"
 turbine = "1.2.1"
 uiautomator = "2.4.0"
 wearCompose = "1.7.0-alpha07"
-wearComposeMaterial3 = "1.7.0-alpha07"
+wearComposeMaterial3 = "1.7.0-beta01"
 androidxAnnotation = "1.9.1"
 
 [libraries]

@@ -9,7 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -39,9 +39,11 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
 import com.cascadiacollections.sir.ui.LicensesScreen
+import com.cascadiacollections.sir.ui.RadioDestination
 import com.cascadiacollections.sir.ui.RadioUi
 import com.cascadiacollections.sir.ui.SettingsSheet
 import com.cascadiacollections.sir.ui.theme.SirTheme
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 private const val ACTION_SHORTCUT_PLAY = "com.cascadiacollections.sir.SHORTCUT_PLAY"
@@ -102,9 +104,8 @@ fun RadioScreen(
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
 
-    // Settings dialog state
-    var showSettings by rememberSaveable { mutableStateOf(false) }
-    var showLicenses by rememberSaveable { mutableStateOf(false) }
+    // Overlay destination state
+    var destination by rememberSaveable { mutableStateOf(RadioDestination.None) }
 
     // Cast state
     val castDevicesAvailable by castDeviceDetector?.castDevicesAvailable?.collectAsState()
@@ -122,9 +123,15 @@ fun RadioScreen(
         }
     }
 
-    // Predictive back gesture: dismiss settings dialog with system back animation (API 33+)
-    BackHandler(enabled = showSettings) {
-        showSettings = false
+    // Predictive back gesture: dismiss the active overlay (Settings or Licenses) with the
+    // system back animation.
+    PredictiveBackHandler(enabled = destination != RadioDestination.None) { progress ->
+        try {
+            progress.collect { }
+            destination = RadioDestination.None
+        } catch (e: CancellationException) {
+            // Gesture cancelled — leave the overlay open.
+        }
     }
 
     if (inspectionMode) {
@@ -176,26 +183,23 @@ fun RadioScreen(
         artist = uiState.artist,
         sleepTimerLabel = uiState.sleepTimerLabel,
         showSettingsButton = true,
-        onSettingsClick = { showSettings = true },
+        onSettingsClick = { destination = RadioDestination.Settings },
         onToggle = { viewModel.togglePlayback() }
     )
 
     // Settings dialog
-    if (showSettings && castFeatureManager != null) {
+    if (destination == RadioDestination.Settings && castFeatureManager != null) {
         SettingsSheet(
             settingsRepository = settingsRepository,
             castFeatureManager = castFeatureManager,
-            onDismiss = { showSettings = false },
-            onOpenLicenses = {
-                showSettings = false
-                showLicenses = true
-            }
+            onDismiss = { destination = RadioDestination.None },
+            onOpenLicenses = { destination = RadioDestination.Licenses }
         )
     }
 
     // Open Source Licenses
-    if (showLicenses) {
-        LicensesScreen(onBack = { showLicenses = false })
+    if (destination == RadioDestination.Licenses) {
+        LicensesScreen(onBack = { destination = RadioDestination.None })
     }
 
     // Metered network warning dialog (shown once per session on cellular)

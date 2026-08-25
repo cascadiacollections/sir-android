@@ -51,6 +51,9 @@ dependencies {
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
 
+    // Shared media-notification accent color (kept in sync with the app/wear modules)
+    implementation(project(":libs:notification-colors"))
+
     implementation(libs.kotlinx.coroutines.guava)
 
     testImplementation(libs.junit)

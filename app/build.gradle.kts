@@ -192,6 +192,9 @@ dependencies {
     // Shared OkHttp client factory for live audio streaming
     implementation(project(":libs:okhttp-streaming"))
 
+    // Shared media-notification accent color (kept in sync with the app/wear modules)
+    implementation(project(":libs:notification-colors"))
+
     // Media3 with OkHttp for optimized HTTP streaming (no UI module - audio only)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)

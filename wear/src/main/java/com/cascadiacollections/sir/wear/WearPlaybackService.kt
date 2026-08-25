@@ -4,12 +4,15 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -23,6 +26,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
+import com.cascadiacollections.sir.notificationcolors.AppNotificationColors
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 
 private const val TAG = "WearPlaybackService"
@@ -37,6 +41,8 @@ class WearPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private val handler = Handler(Looper.getMainLooper())
     private var retryCount = 0
+    private var currentTrackTitle: String? = null
+    private var currentArtist: String? = null
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -79,6 +85,16 @@ class WearPlaybackService : MediaSessionService() {
                                 prepare()
                             }, delayMs)
                         }
+                    }
+
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        updateNotification()
+                    }
+
+                    override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                        currentTrackTitle = mediaMetadata.title?.toString()
+                        currentArtist = mediaMetadata.artist?.toString()
+                        updateNotification()
                     }
                 })
                 setMediaItem(buildMediaItem())
@@ -126,14 +142,30 @@ class WearPlaybackService : MediaSessionService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.station_name))
-            .setContentText(getString(R.string.stream_description))
+            .setContentTitle(currentTrackTitle ?: getString(R.string.station_name))
+            .setContentText(currentArtist ?: getString(R.string.stream_description))
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentIntent(openIntent)
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setColorized(true)
+            .setColor(AppNotificationColors.ACCENT)
             .setStyle(MediaStyleNotificationHelper.MediaStyle(session))
             .build()
+    }
+
+    private fun updateNotification() {
+        if (mediaSession == null) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w(TAG, "POST_NOTIFICATIONS permission missing; cannot update notification")
+            return
+        }
+        NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, buildNotification())
     }
 
     private fun createNotificationChannel() {

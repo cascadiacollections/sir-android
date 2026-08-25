@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3WindowSizeClassApi::class)
 
 package com.cascadiacollections.sir
 
@@ -20,6 +20,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,9 +78,11 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
+            val windowSizeClass = calculateWindowSizeClass(this)
             SirTheme {
                 RadioScreen(
                     modifier = Modifier.fillMaxSize(),
+                    windowWidthSizeClass = windowSizeClass.widthSizeClass,
                     castDeviceDetector = castDeviceDetector,
                     castFeatureManager = castFeatureManager,
                     settingsRepository = settingsRepository
@@ -97,6 +102,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun RadioScreen(
     modifier: Modifier = Modifier,
+    windowWidthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     castDeviceDetector: CastDeviceDetector? = null,
     castFeatureManager: CastFeatureManager? = null,
     settingsRepository: SettingsRepository? = null
@@ -137,6 +143,7 @@ fun RadioScreen(
     if (inspectionMode) {
         RadioUi(
             modifier = modifier,
+            windowWidthSizeClass = windowWidthSizeClass,
             isConnected = true,
             isPlaying = false,
             isBuffering = false,
@@ -175,6 +182,7 @@ fun RadioScreen(
 
     RadioUi(
         modifier = modifier,
+        windowWidthSizeClass = windowWidthSizeClass,
         isConnected = uiState.isConnected,
         isPlaying = uiState.isPlaying,
         isBuffering = uiState.isBuffering,
@@ -230,6 +238,7 @@ fun RadioScreenPreview() {
     SirTheme {
         RadioUi(
             modifier = Modifier.fillMaxSize(),
+            windowWidthSizeClass = WindowWidthSizeClass.Compact,
             isConnected = true,
             isPlaying = false,
             isBuffering = false,
@@ -246,6 +255,45 @@ fun RadioScreenPlayingPreview() {
     SirTheme {
         RadioUi(
             modifier = Modifier.fillMaxSize(),
+            windowWidthSizeClass = WindowWidthSizeClass.Compact,
+            isConnected = true,
+            isPlaying = true,
+            isBuffering = false,
+            trackTitle = "Sweet Home Alabama",
+            artist = "Lynyrd Skynyrd",
+            showSettingsButton = true,
+            onSettingsClick = {},
+            onToggle = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Medium width (e.g. unfolded phone)", widthDp = 700, heightDp = 900)
+@Composable
+fun RadioScreenMediumWidthPreview() {
+    SirTheme {
+        RadioUi(
+            modifier = Modifier.fillMaxSize(),
+            windowWidthSizeClass = WindowWidthSizeClass.Medium,
+            isConnected = true,
+            isPlaying = true,
+            isBuffering = false,
+            trackTitle = "Sweet Home Alabama",
+            artist = "Lynyrd Skynyrd",
+            showSettingsButton = true,
+            onSettingsClick = {},
+            onToggle = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Expanded width (e.g. tablet)", widthDp = 1000, heightDp = 900)
+@Composable
+fun RadioScreenExpandedWidthPreview() {
+    SirTheme {
+        RadioUi(
+            modifier = Modifier.fillMaxSize(),
+            windowWidthSizeClass = WindowWidthSizeClass.Expanded,
             isConnected = true,
             isPlaying = true,
             isBuffering = false,

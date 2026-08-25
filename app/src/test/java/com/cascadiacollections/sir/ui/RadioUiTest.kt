@@ -1,6 +1,8 @@
 package com.cascadiacollections.sir.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,6 +21,7 @@ import org.robolectric.annotation.Config
  * Compose UI tests for [RadioUi].
  * Validates rendering for different playback states.
  */
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class RadioUiTest {
@@ -210,5 +213,36 @@ class RadioUiTest {
         }
         composeRule.onNodeWithContentDescription("Play").performClick()
         assertTrue(toggled)
+    }
+
+    @Test
+    fun `renders without crashing at compact window width size class`() {
+        assertRendersAtWindowWidthSizeClass(WindowWidthSizeClass.Compact)
+    }
+
+    @Test
+    fun `renders without crashing at medium window width size class`() {
+        assertRendersAtWindowWidthSizeClass(WindowWidthSizeClass.Medium)
+    }
+
+    @Test
+    fun `renders without crashing at expanded window width size class`() {
+        assertRendersAtWindowWidthSizeClass(WindowWidthSizeClass.Expanded)
+    }
+
+    private fun assertRendersAtWindowWidthSizeClass(sizeClass: WindowWidthSizeClass) {
+        composeRule.setContent {
+            SirTheme {
+                RadioUi(
+                    modifier = Modifier.fillMaxSize(),
+                    windowWidthSizeClass = sizeClass,
+                    isConnected = true,
+                    isPlaying = false,
+                    isBuffering = false,
+                    onToggle = {}
+                )
+            }
+        }
+        composeRule.onNodeWithText("SIR").assertIsDisplayed()
     }
 }

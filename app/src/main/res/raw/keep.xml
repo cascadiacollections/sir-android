@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  res/xml/actions.xml is discovered by App Actions tooling via filename convention, not
+  referenced from a manifest <meta-data> or from code, so lint's resource-usage graph can't see
+  it's used. This keeps R2/lint from flagging (and R8 from stripping) it.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@xml/actions" />

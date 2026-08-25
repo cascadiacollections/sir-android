@@ -60,6 +60,14 @@
     <!-- App shortcuts -->
     <string name="shortcut_play_long">Play SIR Radio</string>
 
+    <!-- App Actions -->
+    <string-array name="play_feature_synonyms">
+        <item>play</item>
+        <item>start</item>
+        <item>listen</item>
+        <item>tune in</item>
+    </string-array>
+
     <!-- Notification / Service -->
     <string name="notification_channel_name">Radio Playback</string>
     <string name="notification_channel_description">Notifications for radio playback</string>

@@ -10,6 +10,5 @@
             android:action="com.cascadiacollections.sir.SHORTCUT_PLAY"
             android:targetPackage="com.cascadiacollections.sir"
             android:targetClass="com.cascadiacollections.sir.MainActivity" />
-        <categories android:name="android.shortcut.conversation" />
     </shortcut>
 </shortcuts>

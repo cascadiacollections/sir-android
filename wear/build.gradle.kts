@@ -35,6 +35,12 @@ dependencies {
     implementation(libs.wear.compose.foundation)
     implementation(libs.androidx.compose.material.icons.extended)
 
+    // Wear Tile (quick-glance play/pause surface)
+    implementation(libs.androidx.wear.tiles)
+    implementation(libs.androidx.wear.protolayout)
+    implementation(libs.androidx.wear.protolayout.material)
+    debugImplementation(libs.androidx.wear.tiles.tooling.preview)
+
     // Media3 for standalone streaming
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)

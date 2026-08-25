@@ -11,17 +11,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * State of the Cast dynamic feature module
- */
-sealed interface CastModuleState {
-    data object NotInstalled : CastModuleState
-    data class Installing(val progress: Float) : CastModuleState
-    data object Installed : CastModuleState
-    data class Failed(val errorCode: Int) : CastModuleState
-}
-
-/**
  * Manages the Cast dynamic feature module installation and lifecycle.
+ *
+ * Play flavor only. Split installation is a Play Store service, so the FOSS flavor
+ * provides an inert implementation of this same API instead — see
+ * `src/foss/.../CastFeatureManager.kt`. Keep the two public surfaces identical; `main`
+ * compiles against whichever one the active flavor supplies.
  */
 class CastFeatureManager(context: Context) {
 

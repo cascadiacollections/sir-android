@@ -3,6 +3,8 @@ package com.cascadiacollections.sir
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 
 class SettingsRepositoryTest {
 
@@ -53,9 +55,9 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun `SleepTimerDuration labels are all non-blank`() {
+    fun `SleepTimerDuration labelRes are all valid resource ids`() {
         SleepTimerDuration.entries.forEach { duration ->
-            assertTrue("Label for $duration should not be blank", duration.label.isNotBlank())
+            assertTrue("labelRes for $duration should be a valid resource id", duration.labelRes != 0)
         }
     }
 
@@ -85,12 +87,12 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun `EqualizerPreset labels are all unique and non-blank`() {
-        val labels = EqualizerPreset.entries.map { it.label }
-        labels.forEach { label ->
-            assertTrue("Label should not be blank", label.isNotBlank())
+    fun `EqualizerPreset labelRes are all unique and valid`() {
+        val labelResIds = EqualizerPreset.entries.map { it.labelRes }
+        labelResIds.forEach { labelRes ->
+            assertTrue("labelRes should be a valid resource id", labelRes != 0)
         }
-        assertEquals(labels.size, labels.toSet().size)
+        assertEquals(labelResIds.size, labelResIds.toSet().size)
     }
 
     @Test

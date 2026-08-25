@@ -4,6 +4,7 @@ plugins {
     id("sir.android.app")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.aboutlibraries.plugin)
+    alias(libs.plugins.kotlin.serialization)
     id("jacoco")
 }
 
@@ -112,10 +113,6 @@ android {
         baseline = file("lint-baseline.xml")
         abortOnError = true
         warningsAsErrors = true
-        // Suppress opinionated checks handled by Dependabot or intentional SDK choices.
-        // GradleDependency is disabled because AGP/lint flags new compileSdk versions
-        // (e.g. API 37) before the matching platform is downloadable via sdkmanager,
-        // which would otherwise block CI on a transient upstream timing issue.
         disable += setOf("OldTargetApi", "NewerVersionAvailable", "ObsoleteSdkInt", "GradleDependency")
     }
 
@@ -174,6 +171,14 @@ tasks.configureEach {
 }
 
 dependencies {
+    // Core domain + station directory boundary (radio-browser client, caching, curated fallback)
+    implementation(projects.core.model)
+    implementation(projects.core.directory)
+    // Platform-independent playback policy (equalizer curves, buffering, sleep timer)
+    implementation(projects.core.playback)
+    // Favorites/recents collection rules and station serialization
+    implementation(projects.core.persistence)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -195,6 +200,9 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
     implementation(libs.media3.datasource.okhttp)
+    // Declared for HttpDataSource.InvalidResponseCodeException, which the failure
+    // classification reads directly rather than relying on a transitive dependency.
+    implementation(libs.media3.datasource)
 
     // OkHttp with BOM for consistent versioning
     implementation(platform(libs.okhttp.bom))
@@ -202,11 +210,18 @@ dependencies {
     // Logging interceptor - guarded by BuildConfig.DEBUG at runtime, stripped by R8 in release
     implementation(libs.okhttp.logging.interceptor)
 
-    // Cast device detection (lightweight - actual Cast player in dynamic module)
-    implementation(libs.mediarouter)
+    // Serialization for API responses
+    implementation(libs.kotlinx.serialization.json)
 
-    // Dynamic feature delivery for on-demand Cast module
-    implementation(libs.play.feature.delivery.ktx)
+    // Cast device detection (lightweight - actual Cast player in dynamic module).
+    // Play only: without the Cast framework's route provider, discovery finds nothing,
+    // and the FOSS flavor's CastDeviceDetector reports unavailable without scanning.
+    "playImplementation"(libs.mediarouter)
+
+    // Dynamic feature delivery for on-demand Cast module.
+    // Play only: Play Core is proprietary and split installs require the Play Store,
+    // so shipping this in the FOSS APK added a non-free dependency that could never work.
+    "playImplementation"(libs.play.feature.delivery.ktx)
 
     // Settings persistence
     implementation(libs.datastore.preferences)

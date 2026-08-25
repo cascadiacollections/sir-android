@@ -1,9 +1,15 @@
 package com.cascadiacollections.sir
 
 import android.content.Intent
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -107,15 +113,6 @@ class RadioPlaybackServiceLifecycleTest {
     }
 
     @Test
-    fun `onStartCommand with ACTION_SET_STREAM_QUALITY changes stream`() {
-        val intent = Intent().apply {
-            action = RadioPlaybackService.ACTION_SET_STREAM_QUALITY
-            putExtra(RadioPlaybackService.EXTRA_STREAM_QUALITY, StreamQuality.LOW.ordinal)
-        }
-        service.onStartCommand(intent, 0, 1)
-    }
-
-    @Test
     fun `onStartCommand with ACTION_STOP returns START_NOT_STICKY`() {
         val intent = Intent().apply {
             action = "com.cascadiacollections.sir.action.STOP"
@@ -130,6 +127,21 @@ class RadioPlaybackServiceLifecycleTest {
             action = "com.cascadiacollections.sir.action.PAUSE"
         }
         service.onStartCommand(intent, 0, 1)
+    }
+
+    @Test
+    @OptIn(UnstableApi::class)
+    fun `player never receives a failed audio session id`() {
+        val mockControllerInfo: androidx.media3.session.MediaSession.ControllerInfo =
+            io.mockk.mockk(relaxed = true)
+        val session = service.onGetSession(mockControllerInfo)
+        // MediaSession exposes the player as Player; the session id lives on ExoPlayer.
+        val exoPlayer = session?.player as? ExoPlayer
+        assertNotNull(exoPlayer)
+        // AudioManager.ERROR must be normalised to UNSET before it reaches the player, so the
+        // id is never negative. It is not asserted positive because the emulated audio stack
+        // has no real session to hand out.
+        assertTrue(exoPlayer!!.audioSessionId >= 0)
     }
 
     @Test

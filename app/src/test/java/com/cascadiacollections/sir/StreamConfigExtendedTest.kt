@@ -1,5 +1,6 @@
 package com.cascadiacollections.sir
 
+import com.cascadiacollections.sir.core.playback.StreamConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,5 +30,11 @@ class StreamConfigExtendedTest {
         val url = java.net.URL(StreamConfig.DEFAULT_STREAM_URL)
         assertEquals("https", url.protocol)
         assertTrue(url.host.isNotEmpty())
+    }
+
+    @Test
+    fun `fallback stream URLs are unique`() {
+        val urls = StreamConfig.FALLBACK_TEST_STREAMS.map { it.url }
+        assertEquals(urls.size, urls.toSet().size)
     }
 }

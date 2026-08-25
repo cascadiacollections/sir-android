@@ -42,12 +42,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cascadiacollections.sir.R
 import kotlinx.coroutines.delay
 
+/**
+ * The full-screen listen surface, including its own app bar.
+ *
+ * Kept as the entry point used by previews and screenshot tests; the tabbed shell
+ * renders [ListenScreen] directly instead, because the shell owns the scaffold.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RadioUi(
@@ -63,31 +70,8 @@ fun RadioUi(
     onSettingsClick: () -> Unit = {},
     onToggle: () -> Unit
 ) {
-    // Widen margins on medium/expanded screens (Pixel 10 Pro Fold, tablets) so the
-    // centered content doesn't span the full display width at ≥ 600dp.
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val horizontalPadding = if (screenWidthDp >= 600) 72.dp else 24.dp
-
-    val title = when {
-        !isConnected           -> stringResource(R.string.title_connecting)
-        isError && isBuffering -> stringResource(R.string.stream_reconnecting)
-        isError                -> stringResource(R.string.title_stream_error)
-        isBuffering            -> stringResource(R.string.title_buffering)
-        isPlaying              -> trackTitle?.takeIf { it.isNotBlank() }
-                                      ?: stringResource(R.string.now_playing)
-        else                   -> stringResource(R.string.station_name)
-    }
-    val subtitle = when {
-        !isConnected           -> stringResource(R.string.subtitle_connecting)
-        isError && isBuffering -> stringResource(R.string.subtitle_reconnecting)
-        isError                -> stringResource(R.string.stream_error)
-        isBuffering            -> stringResource(R.string.subtitle_buffering)
-        isPlaying              -> artist?.takeIf { it.isNotBlank() }
-                                      ?: stringResource(R.string.subtitle_live)
-        else                   -> stringResource(R.string.subtitle_idle)
-    }
-
     val context = LocalContext.current
+    val resources = LocalResources.current
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -102,7 +86,7 @@ fun RadioUi(
                                     Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         putExtra(Intent.EXTRA_TEXT,
-                                            context.getString(R.string.share_now_playing, shareText))
+                                            resources.getString(R.string.share_now_playing, shareText))
                                     }, null
                                 ))
                             }) {
@@ -129,61 +113,113 @@ fun RadioUi(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Column(
+        ListenScreen(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            isConnected = isConnected,
+            isPlaying = isPlaying,
+            isBuffering = isBuffering,
+            isError = isError,
+            trackTitle = trackTitle,
+            artist = artist,
+            sleepTimerLabel = sleepTimerLabel,
+            onToggle = onToggle
+        )
+    }
+}
+
+/**
+ * The listen surface without any scaffolding, so it can be dropped into the tabbed
+ * shell (which owns the app bar, mini player and navigation bar) as well as into
+ * [RadioUi].
+ */
+@Composable
+fun ListenScreen(
+    modifier: Modifier = Modifier,
+    isConnected: Boolean,
+    isPlaying: Boolean,
+    isBuffering: Boolean,
+    isError: Boolean = false,
+    trackTitle: String? = null,
+    artist: String? = null,
+    sleepTimerLabel: String? = null,
+    onToggle: () -> Unit
+) {
+    // Widen margins on medium/expanded screens (Pixel 10 Pro Fold, tablets) so the
+    // centered content doesn't span the full display width at >= 600dp.
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val horizontalPadding = if (screenWidthDp >= 600) 72.dp else 24.dp
+
+    val title = when {
+        !isConnected           -> stringResource(R.string.title_connecting)
+        isError && isBuffering -> stringResource(R.string.stream_reconnecting)
+        isError                -> stringResource(R.string.title_stream_error)
+        isBuffering            -> stringResource(R.string.title_buffering)
+        isPlaying              -> trackTitle?.takeIf { it.isNotBlank() }
+                                      ?: stringResource(R.string.now_playing)
+        else                   -> stringResource(R.string.station_name)
+    }
+    val subtitle = when {
+        !isConnected           -> stringResource(R.string.subtitle_connecting)
+        isError && isBuffering -> stringResource(R.string.subtitle_reconnecting)
+        isError                -> stringResource(R.string.stream_error)
+        isBuffering            -> stringResource(R.string.subtitle_buffering)
+        isPlaying              -> artist?.takeIf { it.isNotBlank() }
+                                      ?: stringResource(R.string.subtitle_live)
+        else                   -> stringResource(R.string.subtitle_idle)
+    }
+
+    Column(modifier = modifier) {
+        if (isBuffering) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = horizontalPadding, vertical = 24.dp),
+            contentAlignment = Alignment.Center
         ) {
-            if (isBuffering) {
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth()
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    textAlign = TextAlign.Center
                 )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = horizontalPadding, vertical = 24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 12.dp),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                StreamVisualizer(
+                    isPlaying = isPlaying,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                LargeFloatingActionButton(
+                    onClick = onToggle,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+                sleepTimerLabel?.let { label ->
                     Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        textAlign = TextAlign.Center
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 12.dp),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    StreamVisualizer(
-                        isPlaying = isPlaying,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(32.dp))
-                    LargeFloatingActionButton(
-                        onClick = onToggle,
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-                    sleepTimerLabel?.let { label ->
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
         }

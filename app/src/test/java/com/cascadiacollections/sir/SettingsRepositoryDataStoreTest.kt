@@ -1,10 +1,16 @@
 package com.cascadiacollections.sir
 
-import app.cash.turbine.test
-import kotlinx.coroutines.test.runTest
+import com.cascadiacollections.sir.core.persistence.SettingsRepository
+import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.SleepTimerDuration
+import com.cascadiacollections.sir.core.playback.StreamQuality
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -14,6 +20,12 @@ import org.robolectric.annotation.Config
 /**
  * Tests for [SettingsRepository] DataStore read/write round-trips.
  * Uses Robolectric for a real Application context that DataStore needs.
+ *
+ * These deliberately use [runBlocking] and read the flow with [first] rather than
+ * `runTest` + turbine: DataStore does real IO on real threads, so `runTest`'s virtual
+ * clock races ahead of the write and `awaitItem()` times out whenever the machine is
+ * under load. The DataStore file is also shared across tests in this class, hence the
+ * [reset] in `@Before`.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -21,139 +33,109 @@ class SettingsRepositoryDataStoreTest {
 
     private fun createRepo() = SettingsRepository(RuntimeEnvironment.getApplication())
 
-    @Test
-    fun `streamQuality defaults to HIGH`() = runTest {
+    @Before
+    fun reset() = runBlocking {
         val repo = createRepo()
-        repo.streamQuality.test {
-            assertEquals(StreamQuality.HIGH, awaitItem())
-        }
-    }
-
-    @Test
-    fun `setStreamQuality persists and emits updated quality`() = runTest {
-        val repo = createRepo()
-        repo.streamQuality.test {
-            assertEquals(StreamQuality.HIGH, awaitItem())
-            repo.setStreamQuality(StreamQuality.LOW)
-            assertEquals(StreamQuality.LOW, awaitItem())
-        }
-    }
-
-    @Test
-    fun `chromecastEnabled defaults to false`() = runTest {
-        val repo = createRepo()
-        repo.chromecastEnabled.test {
-            assertFalse(awaitItem())
-        }
-    }
-
-    @Test
-    fun `setChromecastEnabled persists and emits true`() = runTest {
-        val repo = createRepo()
-        repo.chromecastEnabled.test {
-            assertFalse(awaitItem())
-            repo.setChromecastEnabled(true)
-            assertEquals(true, awaitItem())
-        }
-    }
-
-    @Test
-    fun `sleepTimerDuration defaults to OFF`() = runTest {
-        val repo = createRepo()
-        repo.sleepTimerDuration.test {
-            assertEquals(SleepTimerDuration.OFF, awaitItem())
-        }
-    }
-
-    @Test
-    fun `setSleepTimerDuration persists and emits updated duration`() = runTest {
-        val repo = createRepo()
-        repo.sleepTimerDuration.test {
-            assertEquals(SleepTimerDuration.OFF, awaitItem())
-            repo.setSleepTimerDuration(SleepTimerDuration.THIRTY)
-            assertEquals(SleepTimerDuration.THIRTY, awaitItem())
-        }
-    }
-
-    @Test
-    fun `sleepTimerFiresAt defaults to 0`() = runTest {
-        val repo = createRepo()
-        repo.sleepTimerFiresAt.test {
-            assertEquals(0L, awaitItem())
-        }
-    }
-
-    @Test
-    fun `setSleepTimerFiresAt with positive value persists it`() = runTest {
-        val repo = createRepo()
-        repo.sleepTimerFiresAt.test {
-            assertEquals(0L, awaitItem())
-            repo.setSleepTimerFiresAt(1234567890L)
-            assertEquals(1234567890L, awaitItem())
-        }
-    }
-
-    @Test
-    fun `setSleepTimerFiresAt with 0 removes the key`() = runTest {
-        val repo = createRepo()
-        repo.sleepTimerFiresAt.test {
-            assertEquals(0L, awaitItem())
-            repo.setSleepTimerFiresAt(9999L)
-            assertEquals(9999L, awaitItem())
-            repo.setSleepTimerFiresAt(0L)
-            assertEquals(0L, awaitItem())
-        }
-    }
-
-    @Test
-    fun `equalizerPreset defaults to NORMAL`() = runTest {
-        val repo = createRepo()
-        repo.equalizerPreset.test {
-            assertEquals(EqualizerPreset.NORMAL, awaitItem())
-        }
-    }
-
-    @Test
-    fun `setEqualizerPreset persists and emits updated preset`() = runTest {
-        val repo = createRepo()
-        repo.equalizerPreset.test {
-            assertEquals(EqualizerPreset.NORMAL, awaitItem())
-            repo.setEqualizerPreset(EqualizerPreset.BASS_BOOST)
-            assertEquals(EqualizerPreset.BASS_BOOST, awaitItem())
-        }
-    }
-
-    @Test
-    fun `setCustomStreamUrl with URL persists it`() = runTest {
-        val repo = createRepo()
-        // Clear any prior state
+        repo.setStreamQuality(StreamQuality.HIGH)
+        repo.setChromecastEnabled(false)
+        repo.setSleepTimerDuration(SleepTimerDuration.OFF)
+        repo.setSleepTimerFiresAt(0L)
+        repo.setEqualizerPreset(EqualizerPreset.NORMAL)
         repo.setCustomStreamUrl(null)
-        repo.customStreamUrl.test {
-            assertNull(awaitItem())
-            repo.setCustomStreamUrl("https://example.com/stream")
-            assertEquals("https://example.com/stream", awaitItem())
-        }
     }
 
     @Test
-    fun `setCustomStreamUrl with null removes key`() = runTest {
+    fun `streamQuality defaults to HIGH`() = runBlocking {
+        assertEquals(StreamQuality.HIGH, createRepo().streamQuality.first())
+    }
+
+    @Test
+    fun `setStreamQuality persists and emits updated quality`() = runBlocking {
+        val repo = createRepo()
+        repo.setStreamQuality(StreamQuality.LOW)
+        assertEquals(StreamQuality.LOW, repo.streamQuality.first())
+    }
+
+    @Test
+    fun `chromecastEnabled defaults to false`() = runBlocking {
+        assertFalse(createRepo().chromecastEnabled.first())
+    }
+
+    @Test
+    fun `setChromecastEnabled persists and emits true`() = runBlocking {
+        val repo = createRepo()
+        repo.setChromecastEnabled(true)
+        assertTrue(repo.chromecastEnabled.first())
+    }
+
+    @Test
+    fun `sleepTimerDuration defaults to OFF`() = runBlocking {
+        assertEquals(SleepTimerDuration.OFF, createRepo().sleepTimerDuration.first())
+    }
+
+    @Test
+    fun `setSleepTimerDuration persists and emits updated duration`() = runBlocking {
+        val repo = createRepo()
+        repo.setSleepTimerDuration(SleepTimerDuration.THIRTY)
+        assertEquals(SleepTimerDuration.THIRTY, repo.sleepTimerDuration.first())
+    }
+
+    @Test
+    fun `sleepTimerFiresAt defaults to 0`() = runBlocking {
+        assertEquals(0L, createRepo().sleepTimerFiresAt.first())
+    }
+
+    @Test
+    fun `setSleepTimerFiresAt with positive value persists it`() = runBlocking {
+        val repo = createRepo()
+        repo.setSleepTimerFiresAt(1234567890L)
+        assertEquals(1234567890L, repo.sleepTimerFiresAt.first())
+    }
+
+    @Test
+    fun `setSleepTimerFiresAt with 0 removes the key`() = runBlocking {
+        val repo = createRepo()
+        repo.setSleepTimerFiresAt(9999L)
+        assertEquals(9999L, repo.sleepTimerFiresAt.first())
+        repo.setSleepTimerFiresAt(0L)
+        assertEquals(0L, repo.sleepTimerFiresAt.first())
+    }
+
+    @Test
+    fun `equalizerPreset defaults to NORMAL`() = runBlocking {
+        assertEquals(EqualizerPreset.NORMAL, createRepo().equalizerPreset.first())
+    }
+
+    @Test
+    fun `setEqualizerPreset persists and emits updated preset`() = runBlocking {
+        val repo = createRepo()
+        repo.setEqualizerPreset(EqualizerPreset.BASS_BOOST)
+        assertEquals(EqualizerPreset.BASS_BOOST, repo.equalizerPreset.first())
+    }
+
+    @Test
+    fun `setCustomStreamUrl with URL persists it`() = runBlocking {
+        val repo = createRepo()
+        assertNull(repo.customStreamUrl.first())
+        repo.setCustomStreamUrl("https://example.com/stream")
+        assertEquals("https://example.com/stream", repo.customStreamUrl.first())
+    }
+
+    @Test
+    fun `setCustomStreamUrl with null removes key`() = runBlocking {
         val repo = createRepo()
         repo.setCustomStreamUrl("https://example.com/test")
-        repo.customStreamUrl.test {
-            assertEquals("https://example.com/test", awaitItem())
-            repo.setCustomStreamUrl(null)
-            assertNull(awaitItem())
-        }
+        assertEquals("https://example.com/test", repo.customStreamUrl.first())
+        repo.setCustomStreamUrl(null)
+        assertNull(repo.customStreamUrl.first())
     }
 
     @Test
-    fun `setCustomStreamUrl with blank removes key`() = runTest {
+    fun `setCustomStreamUrl with blank removes key`() = runBlocking {
         val repo = createRepo()
         repo.setCustomStreamUrl("https://example.com/test2")
-        repo.customStreamUrl.test {
-            assertEquals("https://example.com/test2", awaitItem())
-            repo.setCustomStreamUrl("   ")
-            assertNull(awaitItem())
-        }
+        assertEquals("https://example.com/test2", repo.customStreamUrl.first())
+        repo.setCustomStreamUrl("   ")
+        assertNull(repo.customStreamUrl.first())
     }
 }

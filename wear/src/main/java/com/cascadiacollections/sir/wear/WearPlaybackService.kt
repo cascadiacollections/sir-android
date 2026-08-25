@@ -23,10 +23,11 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
+import com.cascadiacollections.sir.core.playback.StreamConfig
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 
 private const val TAG = "WearPlaybackService"
-private const val STREAM_URL = "https://broadcast.shoutcheap.com/proxy/willradio/stream"
+private const val STREAM_URL = StreamConfig.DEFAULT_STREAM_URL
 private const val SESSION_ID = "sir_wear_session"
 private const val CHANNEL_ID = "wear_radio_playback"
 private const val NOTIFICATION_ID = 2001

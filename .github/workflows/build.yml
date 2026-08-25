@@ -24,21 +24,25 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up mise
-        uses: jdx/mise-action@v4
+        uses: jdx/mise-action@v4.2.5
         with:
           install: true
           cache: true
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v6.3.0
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Install Android SDK platform
-        run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "platforms;android-37"
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -d "${ANDROID_HOME}/platforms/android-37.0" ]; then
+            yes | $SDKMANAGER "platforms;android-37.0"
+          fi
 
       - name: Decode keystore
         if: ${{ env.KEYSTORE_BASE64 != '' }}
@@ -49,7 +53,7 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build, Lint, and Test
-        run: ./gradlew assemblePlayRelease assembleFossRelease assemblePlayDebug bundlePlayRelease lintPlayDebug testPlayDebugUnitTest :wear:testDebugUnitTest jacocoTestReport --no-daemon --parallel --build-cache
+        run: ./gradlew assemblePlayRelease assembleFossRelease assemblePlayDebug bundlePlayRelease lintPlayDebug testPlayDebugUnitTest testFossDebugUnitTest :wear:testDebugUnitTest :core:model:testDebugUnitTest :core:directory:testDebugUnitTest :core:playback:testDebugUnitTest :core:persistence:testDebugUnitTest jacocoTestReport --no-daemon --parallel --build-cache
         env:
           KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -151,7 +155,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 

@@ -9,4 +9,6 @@ android {
 dependencies {
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
+
+    testImplementation(libs.junit)
 }

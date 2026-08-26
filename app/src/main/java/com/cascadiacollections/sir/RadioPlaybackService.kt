@@ -1,10 +1,6 @@
 package com.cascadiacollections.sir
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothProfile
@@ -20,8 +16,6 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -37,11 +31,11 @@ import androidx.media3.exoplayer.analytics.PlaybackStatsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.CommandButton
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaStyleNotificationHelper
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.cascadiacollections.android.media3.timeshift.CircularByteBuffer
@@ -57,7 +51,9 @@ import com.cascadiacollections.sir.core.playback.PlaybackLocks
 import com.cascadiacollections.sir.core.playback.RawStreamMetadata
 import com.cascadiacollections.sir.core.playback.RetryBackoff
 import com.cascadiacollections.sir.core.playback.SleepTimerRestore
+import com.cascadiacollections.sir.core.playback.StallCeiling
 import com.cascadiacollections.sir.core.playback.StreamConfig
+import com.cascadiacollections.sir.core.playback.StreamFailure
 import com.cascadiacollections.sir.core.playback.StreamMetadata
 import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
 import com.cascadiacollections.sir.core.playback.StreamSource
@@ -86,6 +82,7 @@ class RadioPlaybackService : MediaLibraryService() {
     private val retryBackoff = RetryBackoff(
         maxRetries = StreamLoadErrorHandlingPolicy.MAX_PREPARE_ATTEMPTS - 1
     )
+    private val stallCeiling = StallCeiling()
 
     // Locks to keep device active during playback
     private var playbackLocks: PlaybackLocks? = null
@@ -166,6 +163,19 @@ class RadioPlaybackService : MediaLibraryService() {
     override fun onCreate() {
         super.onCreate()
         val context = this
+
+        // Media3's own provider owns the channel, foreground promotion/demotion, and
+        // POST_NOTIFICATIONS handling (media-session notifications are exempt by policy).
+        // The seek-back-action override this used to need is gone: SEEKBACK_ENABLED is
+        // false, and once it lands, updateCustomLayout()'s CommandButtons are picked up
+        // automatically without any provider customization.
+        setMediaNotificationProvider(
+            DefaultMediaNotificationProvider.Builder(this)
+                .setNotificationId(NOTIFICATION_ID)
+                .setChannelId(CHANNEL_ID)
+                .setChannelName(R.string.notification_channel_name)
+                .build()
+        )
 
         // Load settings asynchronously
         serviceScope.launch {
@@ -430,6 +440,16 @@ class RadioPlaybackService : MediaLibraryService() {
                 }
             })
             .setId(MEDIA_SESSION_ID)
+            .setSessionActivity(
+                PendingIntent.getActivity(
+                    context,
+                    0,
+                    Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    },
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
             .build()
             // No initial custom layout — updateCustomLayout() adds "Replay 30s"
             // once the buffer has enough data. Calling setCustomLayout with an
@@ -459,18 +479,34 @@ class RadioPlaybackService : MediaLibraryService() {
                 when (playbackState) {
                     Player.STATE_READY -> {
                         retryBackoff.reset()
+                        stallCeiling.clear()
                         if (player?.playWhenReady == true) {
                             updateCustomLayout()
                         }
                     }
 
-                    Player.STATE_ENDED -> handleUnexpectedEnd()
+                    Player.STATE_ENDED -> {
+                        stallCeiling.clear()
+                        handleUnexpectedEnd()
+                    }
 
-                    // Named rather than left to an `else` because lint checks a `when` over
-                    // an @IntDef for completeness. Neither needs a decision here: buffering
-                    // is already reflected by the session, and idle only follows a stop we
-                    // asked for or a re-prepare on its way to buffering.
-                    Player.STATE_BUFFERING, Player.STATE_IDLE -> Unit
+                    // Arm the stall ceiling only when we actually want audio: a manual
+                    // pause leaves the player briefly buffering on its way to a stop, and
+                    // that is not a stall.
+                    Player.STATE_BUFFERING -> {
+                        if (player?.playWhenReady == true) {
+                            val token = stallCeiling.arm()
+                            sleepTimerHandler.postDelayed(
+                                { onStallCeilingExpired(token) },
+                                stallCeiling.timeoutDelayMs
+                            )
+                        }
+                    }
+
+                    // Idle only follows a stop we asked for or a re-prepare on its way to
+                    // buffering; named rather than folded into an `else` because lint
+                    // checks a `when` over an @IntDef for completeness.
+                    Player.STATE_IDLE -> Unit
                 }
             }
 
@@ -480,15 +516,9 @@ class RadioPlaybackService : MediaLibraryService() {
                     // Bluetooth — so this is the one place that sees all resumes.
                     audioRoutePolicy.onPlaybackStarted()
                     playbackLocks?.acquire()
-                    startForeground(
-                        NOTIFICATION_ID,
-                        buildNotification(context)
-                    )
                     if (SEEKBACK_ENABLED) scheduleSeekBackReveal()
                 } else {
                     playbackLocks?.release()
-                    stopForeground(STOP_FOREGROUND_DETACH)
-                    updateNotificationSafe()
                 }
             }
 
@@ -507,10 +537,11 @@ class RadioPlaybackService : MediaLibraryService() {
                     stationName = currentStationTitle ?: getString(R.string.station_name),
                 )
                 streamMetadata = update.metadata
-                if (update.notifyChanged) updateNotificationSafe()
+                if (update.notifyChanged) publishResolvedMetadata()
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                stallCeiling.clear()
                 val failure = error.toStreamFailure()
                 Log.e(TAG, "Player error (attempt ${retryBackoff.attemptLabel}, $failure)", error)
                 if (!failure.isRetryable) {
@@ -518,15 +549,13 @@ class RadioPlaybackService : MediaLibraryService() {
                     // decode, fails identically on every attempt. Spending the backoff on
                     // it held a wake lock for about a minute to show the same message.
                     retryBackoff.reset()
-                    updateNotificationSafe(getString(failure.messageRes()))
                     return
                 }
                 val delayMs = retryBackoff.nextDelayMs()
                 if (delayMs != null) {
-                    updateNotificationSafe(getString(R.string.stream_reconnecting))
                     sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
                 } else {
-                    updateNotificationSafe(getString(failure.messageRes()))
+                    Log.e(TAG, "Retries exhausted: $failure")
                 }
             }
         })
@@ -536,12 +565,6 @@ class RadioPlaybackService : MediaLibraryService() {
 
         // Initialize equalizer with the player's audio session
         initializeEqualizer()
-
-        createNotificationChannel()
-        startForeground(
-            NOTIFICATION_ID,
-            buildNotification(context)
-        )
 
         ContextCompat.registerReceiver(
             this,
@@ -583,6 +606,11 @@ class RadioPlaybackService : MediaLibraryService() {
             }
 
             ACTION_PLAY -> {
+                // A stall ceiling give-up leaves the player idle rather than failed, so
+                // resuming it here has to re-prepare rather than just resume.
+                if (player?.playbackState == Player.STATE_IDLE) {
+                    player?.prepare()
+                }
                 player?.play()
             }
 
@@ -660,129 +688,19 @@ class RadioPlaybackService : MediaLibraryService() {
         super.onDestroy()
     }
 
-    @OptIn(UnstableApi::class)
-    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
-        // Keep our custom notification (with seek-back action) instead of Media3's default
-        val notification = buildNotification(this)
-        if (player?.isPlaying == true || startInForegroundRequired) {
-            startForeground(NOTIFICATION_ID, notification)
-        } else {
-            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, notification)
-        }
-    }
-
-    @OptIn(UnstableApi::class)
-    private fun buildNotification(context: Context): Notification {
-        val session = checkNotNull(mediaSession) { "MediaSession is null" }
-        val openAppIntent = PendingIntent.getActivity(
-            context,
-            0,
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val stopIntent = PendingIntent.getService(
-            context,
-            0,
-            Intent(context, RadioPlaybackService::class.java).apply {
-                action = ACTION_STOP
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val pauseIntent = PendingIntent.getService(
-            context,
-            1,
-            Intent(context, RadioPlaybackService::class.java).apply {
-                action = ACTION_PAUSE
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val playIntent = PendingIntent.getService(
-            context,
-            2,
-            Intent(context, RadioPlaybackService::class.java).apply {
-                action = ACTION_PLAY
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val seekBytes = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
-        val canSeek = replayBuffer.canSeekBack(seekBytes)
-
-        // Action index tracking for compact view
-        var actionIndex = 0
-        val compactIndices = mutableListOf(actionIndex) // play/pause always compact
-
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
-            .setContentText(currentArtist ?: getString(R.string.stream_description))
-            .setSubText(
-                currentTrackTitle?.let { currentStation ?: getString(R.string.station_name) }
-            )
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentIntent(openAppIntent)
-            .setDeleteIntent(stopIntent)
-            .setOngoing(player?.isPlaying == true)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .addAction(
-                if (player?.isPlaying == true)
-                    NotificationCompat.Action.Builder(
-                        android.R.drawable.ic_media_pause,
-                        context.getString(R.string.pause),
-                        pauseIntent
-                    ).build()
-                else
-                    NotificationCompat.Action.Builder(
-                        android.R.drawable.ic_media_play,
-                        context.getString(R.string.play),
-                        playIntent
-                    ).build()
-            )
-
-        if (SEEKBACK_ENABLED && canSeek) {
-            actionIndex++
-            compactIndices += actionIndex
-            val seekBackIntent = PendingIntent.getService(
-                context, 3,
-                Intent(context, RadioPlaybackService::class.java).apply {
-                    action = ACTION_SEEK_BACK
-                },
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            builder.addAction(
-                NotificationCompat.Action.Builder(
-                    android.R.drawable.ic_media_rew,
-                    context.getString(R.string.seek_back_30),
-                    seekBackIntent
-                ).build()
-            )
-        }
-
-        if (SEEKBACK_ENABLED && playbackMode is PlaybackMode.TimeShifted) {
-            actionIndex++
-            compactIndices += actionIndex
-            val goLiveIntent = PendingIntent.getService(
-                context, 4,
-                Intent(context, RadioPlaybackService::class.java).apply {
-                    action = ACTION_GO_LIVE
-                },
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            builder.addAction(
-                NotificationCompat.Action.Builder(
-                    android.R.drawable.ic_media_ff,
-                    context.getString(R.string.go_live),
-                    goLiveIntent
-                ).build()
-            )
-        }
-
-        builder.setStyle(
-            MediaStyleNotificationHelper.MediaStyle(session)
-                .setShowActionsInCompactView(*compactIndices.toIntArray())
-        )
-
-        return builder.build()
+    /**
+     * Pushes the resolver's deduped title/artist onto the current [MediaItem] so the
+     * session-owned notification (and lock screen, Auto, Wear) show them instead of the
+     * raw ICY tags, which repeat the stream's static placeholder text between tracks.
+     */
+    private fun publishResolvedMetadata() {
+        val p = player ?: return
+        val item = p.currentMediaItem ?: return
+        val resolved = item.mediaMetadata.buildUpon()
+            .setTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
+            .setArtist(currentArtist ?: getString(R.string.stream_description))
+            .build()
+        p.replaceMediaItem(0, item.buildUpon().setMediaMetadata(resolved).build())
     }
 
     /**
@@ -803,11 +721,33 @@ class RadioPlaybackService : MediaLibraryService() {
         Log.w(TAG, "Live stream ended unexpectedly (attempt ${retryBackoff.attemptLabel})")
         val delayMs = retryBackoff.nextDelayMs()
         if (delayMs != null) {
-            updateNotificationSafe(getString(R.string.stream_reconnecting))
             sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
         } else {
-            updateNotificationSafe(getString(R.string.radio_error))
+            Log.e(TAG, "Retries exhausted after unexpected end")
         }
+    }
+
+    /**
+     * Fires [StallCeiling.timeoutDelayMs] after [StallCeiling.arm]. If [token] is stale —
+     * the stall cleared, or a new one was armed, before this ran — it is a no-op.
+     *
+     * Spends one reconnect attempt through the existing [retryBackoff] budget; once that
+     * is exhausted, stops the player rather than keep looping on a connection that never
+     * recovers. Mirrors ShoutKit: the terminal state is a stop, not a reported failure, so
+     * the transport shows a play button rather than an error icon — [ACTION_PLAY] restarts
+     * the stream when it finds the player idle.
+     */
+    private fun onStallCeilingExpired(token: Int) {
+        if (!stallCeiling.isCurrent(token)) return
+        Log.w(TAG, "Stream stalled past the ceiling (attempt ${retryBackoff.attemptLabel})")
+        val delayMs = retryBackoff.nextDelayMs()
+        if (delayMs != null) {
+            sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
+            return
+        }
+        retryBackoff.reset()
+        player?.stop()
+        Log.e(TAG, "Gave up: ${StreamFailure.Stalled}")
     }
 
     /**
@@ -859,47 +799,10 @@ class RadioPlaybackService : MediaLibraryService() {
                 .build()
         }
         // Only update layout when we have buttons — empty list crashes the
-        // legacy PlaybackStateCompat CustomAction builder (requires icon)
+        // legacy PlaybackStateCompat CustomAction builder (requires icon). The session's
+        // own notification manager picks up the change and refreshes the notification.
         if (buttons.isNotEmpty()) {
             session.setCustomLayout(ImmutableList.copyOf(buttons))
-        }
-        updateNotificationSafe()
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun updateNotificationSafe(contentText: String = getString(R.string.stream_description)) {
-        if (mediaSession == null) return
-        updateNotification(contentText)
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun updateNotification(contentText: String = getString(R.string.stream_description)) {
-        val notification = buildNotification(this).apply {
-            extras.putString(Notification.EXTRA_TEXT, contentText)
-        }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, notification)
-        } else {
-            Log.w(TAG, "POST_NOTIFICATIONS permission missing; cannot update notification")
-        }
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = getString(R.string.notification_channel_description)
-            }
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager?.createNotificationChannel(channel)
         }
     }
 

@@ -68,6 +68,16 @@ sealed interface StreamFailure {
     data object Transient : StreamFailure {
         override val isRetryable: Boolean = true
     }
+
+    /**
+     * The stream sat in `STATE_BUFFERING` past [StallCeiling]'s timeout and the bounded
+     * reconnect budget it was handed there is already spent. Not retryable itself — the
+     * ceiling already spent its one reconnect attempt before reporting this — but not a
+     * station-side error either, so the caller parks playback as paused rather than failed.
+     */
+    data object Stalled : StreamFailure {
+        override val isRetryable: Boolean = false
+    }
 }
 
 /** Maps a [StreamErrorKind] (plus an HTTP status where there is one) to a [StreamFailure]. */

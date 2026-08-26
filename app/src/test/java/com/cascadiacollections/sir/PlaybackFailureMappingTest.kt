@@ -151,6 +151,7 @@ class PlaybackFailureMappingTest {
             StreamFailure.StationUnavailable(404),
             StreamFailure.Unplayable,
             StreamFailure.Transient,
+            StreamFailure.Stalled,
         ).forEach { failure ->
             assertTrue("no message for $failure", failure.messageRes() != 0)
         }

@@ -1,30 +1,25 @@
 package com.cascadiacollections.sir.core.playback
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.net.wifi.WifiManager
 import android.os.Build
-import android.os.PowerManager
 
 /**
- * The CPU and WiFi locks a streaming session needs to survive doze.
+ * The WiFi low-latency lock a streaming session needs to survive doze.
  *
- * Both locks are acquired and released as a pair around playback, and both are
- * idempotent: acquiring twice would make the release refcount wrong and leak the lock
- * past the end of playback, which shows up as battery drain rather than as a crash.
+ * ExoPlayer's own `setWakeMode(C.WAKE_MODE_NETWORK)` already acquires a `PowerManager`
+ * wake lock and a `WifiManager.WifiLock` for as long as the player is buffering or
+ * playing, so this class does not duplicate either — Media3 1.11.0's own WiFi lock is
+ * hardcoded to `WIFI_MODE_FULL_HIGH_PERF`, with no API-level branch, so the one thing
+ * left worth acquiring separately is `WIFI_MODE_FULL_LOW_LATENCY` on API 29+, which
+ * measurably reduces buffering on modern WiFi 6/7 chipsets. Idempotent: acquiring twice
+ * would make the release refcount wrong and leak the lock past the end of playback,
+ * which shows up as battery drain rather than as a crash.
  */
 class PlaybackLocks(context: Context, tagPrefix: String = DEFAULT_TAG_PREFIX) {
 
     private val appContext = context.applicationContext
 
-    private val wakeLock: PowerManager.WakeLock? =
-        appContext.getSystemService(PowerManager::class.java)?.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK,
-            "$tagPrefix::PlaybackWakeLock"
-        )
-
-    // WIFI_MODE_FULL_LOW_LATENCY (API 29+) measurably reduces buffering on modern
-    // WiFi 6/7 chipsets; older devices only have the high-performance mode.
     @Suppress("DEPRECATION")
     private val wifiLock: WifiManager.WifiLock? =
         appContext.getSystemService(WifiManager::class.java)?.let { wifiManager ->
@@ -36,17 +31,14 @@ class PlaybackLocks(context: Context, tagPrefix: String = DEFAULT_TAG_PREFIX) {
             wifiManager.createWifiLock(mode, "$tagPrefix::PlaybackWifiLock")
         }
 
-    /** True when either lock is currently held. */
-    val isHeld: Boolean get() = wakeLock?.isHeld == true || wifiLock?.isHeld == true
+    /** True when the lock is currently held. */
+    val isHeld: Boolean get() = wifiLock?.isHeld == true
 
-    @SuppressLint("WakelockTimeout")
     fun acquire() {
-        wakeLock?.takeUnless { it.isHeld }?.acquire()
         wifiLock?.takeUnless { it.isHeld }?.acquire()
     }
 
     fun release() {
-        wakeLock?.takeIf { it.isHeld }?.release()
         wifiLock?.takeIf { it.isHeld }?.release()
     }
 

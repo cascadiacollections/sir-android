@@ -20,6 +20,7 @@
     <string name="stream_no_connection">无法连接到直播流——请检查网络连接</string>
     <string name="stream_station_unavailable">该电台当前不可用</string>
     <string name="stream_unplayable">此设备无法播放该电台的直播流</string>
+    <string name="stream_stalled">直播流已停滞——点按播放以重新连接</string>
     <string name="stream_error">直播流不可用——点按重试</string>
     <string name="metered_network_title">移动数据</string>
     <string name="metered_network_message">你当前处于按流量计费的网络。播放直播将消耗移动数据。</string>
@@ -80,7 +81,6 @@
     <string name="shortcut_play_long">播放 SIR 电台</string>
     <!-- Notification / Service -->
     <string name="notification_channel_name">电台播放</string>
-    <string name="notification_channel_description">电台播放通知</string>
     <string name="stream_description">直播流</string>
     <string name="stream_quality">直播流质量</string>
     <string name="seek_back_30">回放 30 秒</string>

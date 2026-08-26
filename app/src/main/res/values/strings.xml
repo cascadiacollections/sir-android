@@ -21,6 +21,7 @@
     <string name="stream_no_connection">Can\'t reach the stream — check your connection</string>
     <string name="stream_station_unavailable">This station isn\'t available right now</string>
     <string name="stream_unplayable">This station\'s stream can\'t be played on this device</string>
+    <string name="stream_stalled">Stream stalled — tap play to reconnect</string>
     <string name="stream_error">Stream unavailable — tap to retry</string>
     <string name="metered_network_title">Mobile Data</string>
     <string name="metered_network_message">You\'re on a metered connection. Streaming will use mobile data.</string>
@@ -91,7 +92,6 @@
 
     <!-- Notification / Service -->
     <string name="notification_channel_name">Radio Playback</string>
-    <string name="notification_channel_description">Notifications for radio playback</string>
     <string name="station_name" translatable="false">SIR</string>
     <string name="stream_description">Live stream</string>
     <string name="stream_quality">Stream Quality</string>

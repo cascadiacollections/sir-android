@@ -93,4 +93,5 @@ internal fun StreamFailure.messageRes(): Int = when (this) {
     is StreamFailure.StationUnavailable -> R.string.stream_station_unavailable
     StreamFailure.Unplayable -> R.string.stream_unplayable
     StreamFailure.Transient -> R.string.radio_error
+    StreamFailure.Stalled -> R.string.stream_stalled
 }

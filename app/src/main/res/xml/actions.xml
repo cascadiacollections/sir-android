@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App Actions capability: lets the Assistant fulfill "open/start playing" phrases by deep-linking
+  into the existing sir://action/play URI scheme (see MainActivity.handleActionIntent).
+
+  actions.intent.OPEN_APP_FEATURE is used instead of actions.intent.PLAY_MEDIA — PLAY_MEDIA
+  expects catalog/genre disambiguation params that don't fit a single fixed live stream with
+  nothing to disambiguate against.
+
+  Note: "Hey Google, play SIR" is not a guaranteed voice trigger — Assistant NLU resolution
+  depends on the matched built-in intent, declared entities, and usage signals, not exact
+  app-name matching. Full voice-trigger verification requires the App Actions Test Tool
+  (gactions test) against a Google Cloud project linked to the Play Console listing.
+-->
+<actions>
+    <action intentName="actions.intent.OPEN_APP_FEATURE">
+        <fulfillment urlTemplate="sir://action/play">
+            <parameter-mapping urlParameter="feature" intentParameter="feature" />
+        </fulfillment>
+        <parameter name="feature">
+            <entity-set-reference entitySetId="PlayFeatureEntitySet" />
+        </parameter>
+    </action>
+    <entity-set entitySetId="PlayFeatureEntitySet">
+        <entity name="play" alternateName="@array/play_feature_synonyms" />
+    </entity-set>
+</actions>

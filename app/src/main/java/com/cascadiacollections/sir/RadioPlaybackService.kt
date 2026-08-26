@@ -48,6 +48,7 @@ import androidx.media3.session.SessionResult
 import com.cascadiacollections.android.media3.timeshift.CircularByteBuffer
 import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
+import com.cascadiacollections.sir.notificationcolors.AppNotificationColors
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -617,6 +618,12 @@ class RadioPlaybackService : MediaLibraryService() {
             .setDeleteIntent(stopIntent)
             .setOngoing(player?.isPlaying == true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            // Colorized styling only renders while the notification is ongoing (foreground
+            // service, tied to isPlaying above) — this is intentional, matching standard
+            // Android media-app convention (e.g. Spotify/YouTube Music): colorized and
+            // non-dismissible while actively playing, plain and dismissible once paused.
+            .setColorized(true)
+            .setColor(AppNotificationColors.ACCENT)
             .addAction(
                 if (player?.isPlaying == true)
                     NotificationCompat.Action.Builder(

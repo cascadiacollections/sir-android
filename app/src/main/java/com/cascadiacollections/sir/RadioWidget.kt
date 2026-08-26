@@ -2,6 +2,9 @@ package com.cascadiacollections.sir
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Build
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -42,7 +45,9 @@ import com.cascadiacollections.sir.ui.theme.Coral80
 class RadioWidget : GlanceAppWidget() {
 
     companion object {
-        private val colors = ColorProviders(
+        // Pre-API-31 fallback: dynamic (wallpaper-derived) color isn't available below
+        // Android 12, so the widget keeps the app's static Amber/Coral palette there.
+        private val staticColors = ColorProviders(
             light = lightColorScheme(
                 primary = Amber40,
                 secondary = AmberGrey40,
@@ -57,6 +62,14 @@ class RadioWidget : GlanceAppWidget() {
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val colors = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ColorProviders(
+                light = dynamicLightColorScheme(context),
+                dark = dynamicDarkColorScheme(context)
+            )
+        } else {
+            staticColors
+        }
         provideContent {
             GlanceTheme(colors = colors) {
                 Row(

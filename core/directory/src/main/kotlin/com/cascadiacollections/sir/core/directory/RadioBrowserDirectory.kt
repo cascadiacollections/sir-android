@@ -56,7 +56,7 @@ class RadioBrowserDirectory(
     override suspend fun getStation(id: String): Result<Station?> {
         if (id.isBlank()) return Result.success(null)
         return get(1) { base ->
-            base.addPathSegments("json/stations/byuuid/$id")
+            base.addPathSegments("json/stations/byuuid").addPathSegment(id)
         }.map { it.firstOrNull() }
     }
 

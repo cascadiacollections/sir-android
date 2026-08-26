@@ -29,7 +29,9 @@ import com.cascadiacollections.sir.R
  * Always mounted at a fixed height (rather than conditionally composed) so switching tabs
  * never shifts the navigation chrome above it. When [title] is null (nothing resolved to
  * play yet) an idle placeholder row renders instead of the live now-playing row, keeping
- * the same height either way.
+ * the same height either way. [title] being null only reflects missing display metadata —
+ * a stream can be actively playing with no ICY title — so interactivity is gated on
+ * [isIdle] instead, not on [title]'s nullability.
  *
  * Tapping the bar returns to the listen tab; only the play/pause button is a separate
  * target, which keeps the touch target for "go back to what I'm hearing" large.
@@ -38,6 +40,7 @@ import com.cascadiacollections.sir.R
 fun MiniPlayer(
     isPlaying: Boolean,
     isBuffering: Boolean,
+    isIdle: Boolean,
     title: String?,
     subtitle: String?,
     onToggle: () -> Unit,
@@ -55,7 +58,7 @@ fun MiniPlayer(
             }
             Row(
                 modifier = Modifier
-                    .clickable(onClick = onClick, enabled = title != null)
+                    .clickable(onClick = onClick, enabled = !isIdle)
                     .fillMaxWidth()
                     .padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -64,10 +67,10 @@ fun MiniPlayer(
                     Text(
                         text = title ?: stringResource(R.string.station_name),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (title != null) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
+                        color = if (isIdle) {
                             MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
                         },
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -82,7 +85,7 @@ fun MiniPlayer(
                         )
                     }
                 }
-                IconButton(onClick = onToggle, enabled = title != null) {
+                IconButton(onClick = onToggle, enabled = !isIdle) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = stringResource(

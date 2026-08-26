@@ -127,6 +127,7 @@ fun SirAppShell(
                 MiniPlayer(
                     isPlaying = uiState.isPlaying,
                     isBuffering = uiState.isBuffering,
+                    isIdle = !uiState.isConnected,
                     title = uiState.trackTitle?.takeIf { it.isNotBlank() },
                     subtitle = uiState.artist,
                     onToggle = onToggle,

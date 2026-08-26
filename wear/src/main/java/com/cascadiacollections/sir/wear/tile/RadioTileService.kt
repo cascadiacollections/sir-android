@@ -17,16 +17,17 @@ import com.cascadiacollections.sir.wear.WearActivity
 import com.cascadiacollections.sir.wear.WearPlaybackService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import java.util.concurrent.TimeUnit
+import com.google.common.util.concurrent.MoreExecutors
 
 private const val RESOURCES_VERSION = "1"
-private const val CONTROLLER_TIMEOUT_MS = 1_500L
 
 /**
  * Wear Tile showing the current station and playback state, backed by
  * [WearPlaybackService]'s [MediaController]. Tile requests are infrequent
- * (refresh-triggered, not continuous), so this polls a controller snapshot per request
- * rather than keeping a second, separately-synchronized state holder alive.
+ * (refresh-triggered, not continuous), so this builds a controller per request rather than
+ * keeping a second, separately-synchronized state holder alive. `onTileRequest` returns a
+ * future chained from [MediaController.Builder.buildAsync] instead of blocking on it, so the
+ * calling thread is never held for the connection to complete.
  *
  * Tapping the tile opens [WearActivity], where transport controls already live.
  */
@@ -35,8 +36,30 @@ class RadioTileService : TileService() {
     override fun onTileRequest(
         requestParams: RequestBuilders.TileRequest
     ): ListenableFuture<TileBuilders.Tile> {
-        val snapshot = currentSnapshot()
+        val token = SessionToken(this, ComponentName(this, WearPlaybackService::class.java))
+        val controllerFuture = MediaController.Builder(this, token).buildAsync()
 
+        val snapshotFuture: ListenableFuture<TileSnapshot> = Futures.transform(
+            controllerFuture,
+            { controller ->
+                TileSnapshot(
+                    isPlaying = controller.isPlaying,
+                    stationName = controller.mediaMetadata.title?.toString()
+                ).also { controller.release() }
+            },
+            MoreExecutors.directExecutor()
+        )
+        val recoveredSnapshotFuture = Futures.catching(
+            snapshotFuture,
+            Exception::class.java,
+            { TileSnapshot(isPlaying = false, stationName = null) },
+            MoreExecutors.directExecutor()
+        )
+
+        return Futures.transform(recoveredSnapshotFuture, ::buildTile, MoreExecutors.directExecutor())
+    }
+
+    private fun buildTile(snapshot: TileSnapshot): TileBuilders.Tile {
         val launchWearActivity = ModifiersBuilders.Clickable.Builder()
             .setId("open_app")
             .setOnClick(
@@ -86,12 +109,10 @@ class RadioTileService : TileService() {
             )
             .build()
 
-        val tile = TileBuilders.Tile.Builder()
+        return TileBuilders.Tile.Builder()
             .setResourcesVersion(RESOURCES_VERSION)
             .setTileTimeline(timeline)
             .build()
-
-        return Futures.immediateFuture(tile)
     }
 
     override fun onTileResourcesRequest(
@@ -101,18 +122,4 @@ class RadioTileService : TileService() {
     )
 
     private data class TileSnapshot(val isPlaying: Boolean, val stationName: String?)
-
-    private fun currentSnapshot(): TileSnapshot {
-        val token = SessionToken(this, ComponentName(this, WearPlaybackService::class.java))
-        val future = MediaController.Builder(this, token).buildAsync()
-        return try {
-            val controller = future.get(CONTROLLER_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-            TileSnapshot(
-                isPlaying = controller.isPlaying,
-                stationName = controller.mediaMetadata.title?.toString()
-            ).also { controller.release() }
-        } catch (e: Exception) {
-            TileSnapshot(isPlaying = false, stationName = null)
-        }
-    }
 }

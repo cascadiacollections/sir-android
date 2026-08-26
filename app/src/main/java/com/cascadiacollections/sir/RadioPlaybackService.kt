@@ -504,9 +504,10 @@ class RadioPlaybackService : MediaLibraryService() {
                     }
 
                     // Idle only follows a stop we asked for or a re-prepare on its way to
-                    // buffering; named rather than folded into an `else` because lint
-                    // checks a `when` over an @IntDef for completeness.
-                    Player.STATE_IDLE -> Unit
+                    // buffering. Clear here too: a user-initiated stop while a stall was
+                    // armed must not let the delayed callback fire later and spend a
+                    // reconnect attempt on playback nobody wants anymore.
+                    Player.STATE_IDLE -> stallCeiling.clear()
                 }
             }
 
@@ -700,7 +701,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .setTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
             .setArtist(currentArtist ?: getString(R.string.stream_description))
             .build()
-        p.replaceMediaItem(0, item.buildUpon().setMediaMetadata(resolved).build())
+        p.replaceMediaItem(p.currentMediaItemIndex, item.buildUpon().setMediaMetadata(resolved).build())
     }
 
     /**
@@ -729,7 +730,10 @@ class RadioPlaybackService : MediaLibraryService() {
 
     /**
      * Fires [StallCeiling.timeoutDelayMs] after [StallCeiling.arm]. If [token] is stale —
-     * the stall cleared, or a new one was armed, before this ran — it is a no-op.
+     * the stall cleared, or a new one was armed, before this ran — it is a no-op. Also
+     * bails if audio is no longer wanted: a pause while still `STATE_BUFFERING` doesn't
+     * change [Player.getPlaybackState] and so wouldn't otherwise clear the ceiling, and a
+     * released player must never be spent a reconnect attempt on.
      *
      * Spends one reconnect attempt through the existing [retryBackoff] budget; once that
      * is exhausted, stops the player rather than keep looping on a connection that never
@@ -739,6 +743,10 @@ class RadioPlaybackService : MediaLibraryService() {
      */
     private fun onStallCeilingExpired(token: Int) {
         if (!stallCeiling.isCurrent(token)) return
+        if (player?.playWhenReady != true) {
+            stallCeiling.clear()
+            return
+        }
         Log.w(TAG, "Stream stalled past the ceiling (attempt ${retryBackoff.attemptLabel})")
         val delayMs = retryBackoff.nextDelayMs()
         if (delayMs != null) {

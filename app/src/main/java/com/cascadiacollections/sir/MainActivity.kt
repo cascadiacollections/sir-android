@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3WindowSizeClassApi::class)
 
 package com.cascadiacollections.sir
 
@@ -9,7 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -20,6 +20,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,9 +42,11 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
 import com.cascadiacollections.sir.ui.LicensesScreen
+import com.cascadiacollections.sir.ui.RadioDestination
 import com.cascadiacollections.sir.ui.RadioUi
 import com.cascadiacollections.sir.ui.SettingsSheet
 import com.cascadiacollections.sir.ui.theme.SirTheme
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 private const val ACTION_SHORTCUT_PLAY = "com.cascadiacollections.sir.SHORTCUT_PLAY"
@@ -73,9 +78,11 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
+            val windowSizeClass = calculateWindowSizeClass(this)
             SirTheme {
                 RadioScreen(
                     modifier = Modifier.fillMaxSize(),
+                    windowWidthSizeClass = windowSizeClass.widthSizeClass,
                     castDeviceDetector = castDeviceDetector,
                     castFeatureManager = castFeatureManager,
                     settingsRepository = settingsRepository
@@ -95,6 +102,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun RadioScreen(
     modifier: Modifier = Modifier,
+    windowWidthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     castDeviceDetector: CastDeviceDetector? = null,
     castFeatureManager: CastFeatureManager? = null,
     settingsRepository: SettingsRepository? = null
@@ -102,9 +110,8 @@ fun RadioScreen(
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
 
-    // Settings dialog state
-    var showSettings by rememberSaveable { mutableStateOf(false) }
-    var showLicenses by rememberSaveable { mutableStateOf(false) }
+    // Overlay destination state
+    var destination by rememberSaveable { mutableStateOf(RadioDestination.None) }
 
     // Cast state
     val castDevicesAvailable by castDeviceDetector?.castDevicesAvailable?.collectAsState()
@@ -122,14 +129,21 @@ fun RadioScreen(
         }
     }
 
-    // Predictive back gesture: dismiss settings dialog with system back animation (API 33+)
-    BackHandler(enabled = showSettings) {
-        showSettings = false
+    // Predictive back gesture: dismiss the active overlay (Settings or Licenses) with the
+    // system back animation.
+    PredictiveBackHandler(enabled = destination != RadioDestination.None) { progress ->
+        try {
+            progress.collect { }
+            destination = RadioDestination.None
+        } catch (e: CancellationException) {
+            // Gesture cancelled — leave the overlay open.
+        }
     }
 
     if (inspectionMode) {
         RadioUi(
             modifier = modifier,
+            windowWidthSizeClass = windowWidthSizeClass,
             isConnected = true,
             isPlaying = false,
             isBuffering = false,
@@ -168,6 +182,7 @@ fun RadioScreen(
 
     RadioUi(
         modifier = modifier,
+        windowWidthSizeClass = windowWidthSizeClass,
         isConnected = uiState.isConnected,
         isPlaying = uiState.isPlaying,
         isBuffering = uiState.isBuffering,
@@ -176,26 +191,23 @@ fun RadioScreen(
         artist = uiState.artist,
         sleepTimerLabel = uiState.sleepTimerLabel,
         showSettingsButton = true,
-        onSettingsClick = { showSettings = true },
+        onSettingsClick = { destination = RadioDestination.Settings },
         onToggle = { viewModel.togglePlayback() }
     )
 
     // Settings dialog
-    if (showSettings && castFeatureManager != null) {
+    if (destination == RadioDestination.Settings && castFeatureManager != null) {
         SettingsSheet(
             settingsRepository = settingsRepository,
             castFeatureManager = castFeatureManager,
-            onDismiss = { showSettings = false },
-            onOpenLicenses = {
-                showSettings = false
-                showLicenses = true
-            }
+            onDismiss = { destination = RadioDestination.None },
+            onOpenLicenses = { destination = RadioDestination.Licenses }
         )
     }
 
     // Open Source Licenses
-    if (showLicenses) {
-        LicensesScreen(onBack = { showLicenses = false })
+    if (destination == RadioDestination.Licenses) {
+        LicensesScreen(onBack = { destination = RadioDestination.None })
     }
 
     // Metered network warning dialog (shown once per session on cellular)
@@ -226,6 +238,7 @@ fun RadioScreenPreview() {
     SirTheme {
         RadioUi(
             modifier = Modifier.fillMaxSize(),
+            windowWidthSizeClass = WindowWidthSizeClass.Compact,
             isConnected = true,
             isPlaying = false,
             isBuffering = false,
@@ -242,6 +255,45 @@ fun RadioScreenPlayingPreview() {
     SirTheme {
         RadioUi(
             modifier = Modifier.fillMaxSize(),
+            windowWidthSizeClass = WindowWidthSizeClass.Compact,
+            isConnected = true,
+            isPlaying = true,
+            isBuffering = false,
+            trackTitle = "Sweet Home Alabama",
+            artist = "Lynyrd Skynyrd",
+            showSettingsButton = true,
+            onSettingsClick = {},
+            onToggle = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Medium width (e.g. unfolded phone)", widthDp = 700, heightDp = 900)
+@Composable
+fun RadioScreenMediumWidthPreview() {
+    SirTheme {
+        RadioUi(
+            modifier = Modifier.fillMaxSize(),
+            windowWidthSizeClass = WindowWidthSizeClass.Medium,
+            isConnected = true,
+            isPlaying = true,
+            isBuffering = false,
+            trackTitle = "Sweet Home Alabama",
+            artist = "Lynyrd Skynyrd",
+            showSettingsButton = true,
+            onSettingsClick = {},
+            onToggle = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Expanded width (e.g. tablet)", widthDp = 1000, heightDp = 900)
+@Composable
+fun RadioScreenExpandedWidthPreview() {
+    SirTheme {
+        RadioUi(
+            modifier = Modifier.fillMaxSize(),
+            windowWidthSizeClass = WindowWidthSizeClass.Expanded,
             isConnected = true,
             isPlaying = true,
             isBuffering = false,

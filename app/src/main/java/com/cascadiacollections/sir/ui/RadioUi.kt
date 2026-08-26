@@ -32,6 +32,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -48,10 +49,11 @@ import androidx.compose.ui.unit.dp
 import com.cascadiacollections.sir.R
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun RadioUi(
     modifier: Modifier,
+    windowWidthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     isConnected: Boolean,
     isPlaying: Boolean,
     isBuffering: Boolean,
@@ -64,9 +66,12 @@ fun RadioUi(
     onToggle: () -> Unit
 ) {
     // Widen margins on medium/expanded screens (Pixel 10 Pro Fold, tablets) so the
-    // centered content doesn't span the full display width at ≥ 600dp.
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val horizontalPadding = if (screenWidthDp >= 600) 72.dp else 24.dp
+    // centered content doesn't span the full display width.
+    val horizontalPadding = when (windowWidthSizeClass) {
+        WindowWidthSizeClass.Expanded -> 72.dp
+        WindowWidthSizeClass.Medium -> 48.dp
+        else -> 24.dp
+    }
 
     val title = when {
         !isConnected           -> stringResource(R.string.title_connecting)

@@ -24,6 +24,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
 import com.cascadiacollections.sir.core.playback.StreamConfig
+import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 
 private const val TAG = "WearPlaybackService"
@@ -126,7 +127,7 @@ class WearPlaybackService : MediaSessionService() {
             Intent(this, WearActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.station_name))
             .setContentText(getString(R.string.stream_description))
             .setSmallIcon(android.R.drawable.ic_media_play)
@@ -134,7 +135,8 @@ class WearPlaybackService : MediaSessionService() {
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(MediaStyleNotificationHelper.MediaStyle(session))
-            .build()
+        NotificationAccentColor.applyTo(builder)
+        builder.build()
     }
 
     private fun createNotificationChannel() {

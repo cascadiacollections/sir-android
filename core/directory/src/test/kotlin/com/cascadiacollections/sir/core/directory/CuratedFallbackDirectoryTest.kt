@@ -12,6 +12,7 @@ private class FixedDirectory(private val result: Result<List<Station>>) : RadioD
     override suspend fun search(query: StationQuery) = result
     override suspend fun topStations(limit: Int) = result
     override suspend fun stationsByTag(tag: String, limit: Int) = result
+    override suspend fun getStation(id: String) = result.map { it.firstOrNull { s -> s.id == id } }
 }
 
 class CuratedFallbackDirectoryTest {

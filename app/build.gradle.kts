@@ -187,8 +187,13 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material3.windowsizeclass)
+    implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
+
+    // Shared media-notification accent color (kept in sync with the app/wear modules)
+    implementation(project(":libs:notification-colors"))
 
     // Media3 time-shift library (CircularByteBuffer, TimeShiftDataSource)
     implementation(project(":libs:media3-timeshift"))

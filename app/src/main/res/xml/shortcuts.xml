@@ -11,4 +11,11 @@
             android:targetPackage="com.cascadiacollections.sir"
             android:targetClass="com.cascadiacollections.sir.MainActivity" />
     </shortcut>
+
+    <capability android:name="actions.intent.PLAY_MEDIA">
+        <intent
+            android:action="com.cascadiacollections.sir.SHORTCUT_PLAY"
+            android:targetPackage="com.cascadiacollections.sir"
+            android:targetClass="com.cascadiacollections.sir.MainActivity" />
+    </capability>
 </shortcuts>

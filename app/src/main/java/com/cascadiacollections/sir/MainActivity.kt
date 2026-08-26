@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3WindowSizeClassApi::class)
 
 package com.cascadiacollections.sir
 
@@ -20,6 +20,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,9 +47,13 @@ import com.cascadiacollections.sir.ui.RadioUi
 import com.cascadiacollections.sir.ui.SirAppShell
 import com.cascadiacollections.sir.ui.SirTab
 import com.cascadiacollections.sir.ui.theme.SirTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 
 private const val ACTION_SHORTCUT_PLAY = "com.cascadiacollections.sir.SHORTCUT_PLAY"
+private const val DEEP_LINK_SCHEME = "sir"
+private const val DEEP_LINK_HOST_STATION = "station"
 
 class MainActivity : ComponentActivity() {
 
@@ -55,6 +62,10 @@ class MainActivity : ComponentActivity() {
     // Application context: the repository is captured by long-lived DataStore collectors,
     // so holding the Activity here would leak it for the life of those collectors.
     private val settingsRepository by lazy { SettingsRepository(applicationContext) }
+
+    // Surfaces a sir://station/{id} deep link into the Compose tree, mirroring how
+    // CastDeviceDetector bridges its own StateFlow into RadioScreen via collectAsState().
+    private val pendingStationId = MutableStateFlow<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -74,18 +85,28 @@ class MainActivity : ComponentActivity() {
                 }
             )
         }
+        handleDeepLink(intent)
 
         enableEdgeToEdge()
         setContent {
             SirTheme {
                 RadioScreen(
                     modifier = Modifier.fillMaxSize(),
+                    windowSizeClass = calculateWindowSizeClass(this),
                     castDeviceDetector = castDeviceDetector,
                     castFeatureManager = castFeatureManager,
-                    settingsRepository = settingsRepository
+                    settingsRepository = settingsRepository,
+                    pendingStationId = pendingStationId,
+                    onDeepLinkConsumed = { pendingStationId.value = null }
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleDeepLink(intent)
     }
 
     override fun onDestroy() {
@@ -93,15 +114,25 @@ class MainActivity : ComponentActivity() {
         castDeviceDetector.release()
         castFeatureManager.release()
     }
+
+    private fun handleDeepLink(intent: Intent?) {
+        val uri = intent?.takeIf { it.action == Intent.ACTION_VIEW }?.data ?: return
+        if (uri.scheme != DEEP_LINK_SCHEME || uri.host != DEEP_LINK_HOST_STATION) return
+        val stationId = uri.lastPathSegment?.takeIf { it.isNotBlank() } ?: return
+        pendingStationId.value = stationId
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RadioScreen(
     modifier: Modifier = Modifier,
+    windowSizeClass: WindowSizeClass,
     castDeviceDetector: CastDeviceDetector? = null,
     castFeatureManager: CastFeatureManager? = null,
-    settingsRepository: SettingsRepository? = null
+    settingsRepository: SettingsRepository? = null,
+    pendingStationId: StateFlow<String?> = MutableStateFlow(null),
+    onDeepLinkConsumed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
@@ -182,8 +213,21 @@ fun RadioScreen(
 
     if (castFeatureManager == null) return
 
+    val pendingId by pendingStationId.collectAsState()
+    LaunchedEffect(pendingId) {
+        val id = pendingId ?: return@LaunchedEffect
+        val station = AppDirectory.instance.getStation(id).getOrNull()
+            ?: repository.savedStations.first().firstOrNull { it.id == id }
+        if (station != null && station.isPlayable) {
+            repository.selectStation(station)
+            selectedTab = SirTab.LISTEN
+        }
+        onDeepLinkConsumed()
+    }
+
     SirAppShell(
         modifier = modifier,
+        windowSizeClass = windowSizeClass,
         uiState = uiState,
         selectedTab = selectedTab,
         onSelectTab = { selectedTab = it },
@@ -194,8 +238,13 @@ fun RadioScreen(
         onOpenLicenses = { showLicenses = true }
     )
 
-    // Open Source Licenses
+    // Open Source Licenses. This BackHandler is composed after (and thus takes dispatcher
+    // priority over) the tab-reset handler above while the overlay is showing, so back closes
+    // Licenses first rather than silently resetting the tab underneath it.
     if (showLicenses) {
+        BackHandler(enabled = true) {
+            showLicenses = false
+        }
         LicensesScreen(onBack = { showLicenses = false })
     }
 

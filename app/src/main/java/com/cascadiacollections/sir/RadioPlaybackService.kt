@@ -511,15 +511,7 @@ class RadioPlaybackService : MediaLibraryService() {
                     // Arm the stall ceiling only when we actually want audio: a manual
                     // pause leaves the player briefly buffering on its way to a stop, and
                     // that is not a stall.
-                    Player.STATE_BUFFERING -> {
-                        if (player?.playWhenReady == true) {
-                            val token = stallCeiling.arm()
-                            sleepTimerHandler.postDelayed(
-                                { onStallCeilingExpired(token) },
-                                stallCeiling.timeoutDelayMs
-                            )
-                        }
-                    }
+                    Player.STATE_BUFFERING -> armStallCeiling()
 
                     // Idle only follows a stop we asked for or a re-prepare on its way to
                     // buffering. Clear here too: a user-initiated stop while a stall was
@@ -768,12 +760,28 @@ class RadioPlaybackService : MediaLibraryService() {
         Log.w(TAG, "Stream stalled past the ceiling (attempt ${retryBackoff.attemptLabel})")
         val delayMs = retryBackoff.nextDelayMs()
         if (delayMs != null) {
-            sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
+            // Re-arm explicitly rather than relying on a fresh STATE_BUFFERING callback:
+            // a player already sitting in STATE_BUFFERING may not emit one for prepare(),
+            // which would otherwise leave this reconnect attempt with no ceiling of its own.
+            sleepTimerHandler.postDelayed(
+                {
+                    player?.prepare()
+                    armStallCeiling()
+                },
+                delayMs
+            )
             return
         }
         retryBackoff.reset()
         player?.stop()
         Log.e(TAG, "Gave up: ${StreamFailure.Stalled}")
+    }
+
+    /** Arms [stallCeiling] and schedules its expiry check, if audio is still wanted. */
+    private fun armStallCeiling() {
+        if (player?.playWhenReady != true) return
+        val token = stallCeiling.arm()
+        sleepTimerHandler.postDelayed({ onStallCeilingExpired(token) }, stallCeiling.timeoutDelayMs)
     }
 
     /**

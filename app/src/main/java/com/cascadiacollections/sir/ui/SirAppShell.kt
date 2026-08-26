@@ -83,9 +83,10 @@ fun SirAppShell(
             }
         },
         layoutType = layoutType,
-    ) {
-    Scaffold(
-        topBar = {
+    ) { navPadding ->
+        Scaffold(
+            modifier = Modifier.padding(navPadding),
+            topBar = {
             TopAppBar(
                 title = { Text(stringResource(selectedTab.labelRes)) },
                 actions = {

@@ -57,6 +57,10 @@ class MainActivity : ComponentActivity() {
     private val castFeatureManager by lazy { CastFeatureManager(this) }
     private val settingsRepository by lazy { SettingsRepository(this) }
 
+    // Set by handleActionIntent() when a "sir://action/settings" deep link is handled; consumed
+    // (and cleared) by RadioScreen once it applies the destination.
+    private var pendingDestination by mutableStateOf<RadioDestination?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -66,14 +70,14 @@ class MainActivity : ComponentActivity() {
             lifecycle.addObserver(castDeviceDetector)
         }
 
-        // Handle home-screen shortcut: start playback immediately
-        if (intent?.action == ACTION_SHORTCUT_PLAY) {
-            ContextCompat.startForegroundService(
-                this,
-                Intent(this, RadioPlaybackService::class.java).apply {
-                    action = RadioPlaybackService.ACTION_PLAY
-                }
-            )
+        // Only process the launch intent on a genuinely fresh start. On a config-change
+        // recreation (rotation, fold/unfold), Android redelivers the same retained Intent to
+        // onCreate with savedInstanceState != null — without this guard, a deep link would
+        // replay on every rotation (re-firing ACTION_PLAY/ACTION_PAUSE, or reopening a
+        // just-dismissed Settings sheet). onNewIntent always processes, since by definition it
+        // only fires for a genuinely new intent.
+        if (savedInstanceState == null) {
+            handleActionIntent(intent)
         }
 
         enableEdgeToEdge()
@@ -85,16 +89,58 @@ class MainActivity : ComponentActivity() {
                     windowWidthSizeClass = windowSizeClass.widthSizeClass,
                     castDeviceDetector = castDeviceDetector,
                     castFeatureManager = castFeatureManager,
-                    settingsRepository = settingsRepository
+                    settingsRepository = settingsRepository,
+                    pendingDestination = pendingDestination,
+                    onPendingDestinationConsumed = { pendingDestination = null }
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleActionIntent(intent)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         castDeviceDetector.release()
         castFeatureManager.release()
+    }
+
+    /**
+     * Handles the home-screen shortcut action and the `sir://action/<verb>` deep-link scheme.
+     * Called from both [onCreate] (fresh launch only) and [onNewIntent] (already-running
+     * activity).
+     */
+    private fun handleActionIntent(intent: Intent?) {
+        if (intent?.action == ACTION_SHORTCUT_PLAY) {
+            startPlayback()
+            return
+        }
+        val uri = intent?.data ?: return
+        if (uri.scheme != "sir" || uri.host != "action") return
+        when (uri.pathSegments.firstOrNull()) {
+            "play" -> startPlayback()
+            "pause" -> ContextCompat.startForegroundService(
+                this,
+                Intent(this, RadioPlaybackService::class.java).apply {
+                    action = RadioPlaybackService.ACTION_PAUSE
+                }
+            )
+            "settings" -> pendingDestination = RadioDestination.Settings
+            // Unrecognized path: no-op — just open the app.
+        }
+    }
+
+    private fun startPlayback() {
+        ContextCompat.startForegroundService(
+            this,
+            Intent(this, RadioPlaybackService::class.java).apply {
+                action = RadioPlaybackService.ACTION_PLAY
+            }
+        )
     }
 }
 
@@ -105,13 +151,24 @@ fun RadioScreen(
     windowWidthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     castDeviceDetector: CastDeviceDetector? = null,
     castFeatureManager: CastFeatureManager? = null,
-    settingsRepository: SettingsRepository? = null
+    settingsRepository: SettingsRepository? = null,
+    pendingDestination: RadioDestination? = null,
+    onPendingDestinationConsumed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
 
     // Overlay destination state
     var destination by rememberSaveable { mutableStateOf(RadioDestination.None) }
+
+    // Apply a destination requested via deep link (e.g. "sir://action/settings") once, then
+    // signal the Activity to clear it so re-composition doesn't keep re-applying it.
+    LaunchedEffect(pendingDestination) {
+        pendingDestination?.let {
+            destination = it
+            onPendingDestinationConsumed()
+        }
+    }
 
     // Cast state
     val castDevicesAvailable by castDeviceDetector?.castDevicesAvailable?.collectAsState()

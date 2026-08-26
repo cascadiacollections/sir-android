@@ -1021,7 +1021,7 @@ class RadioPlaybackService : MediaLibraryService() {
         // Intent actions
         private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
         const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
-        private const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
+        const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
         const val ACTION_SEEK_BACK = "com.cascadiacollections.sir.action.SEEK_BACK"
         const val ACTION_GO_LIVE = "com.cascadiacollections.sir.action.GO_LIVE"
         const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"

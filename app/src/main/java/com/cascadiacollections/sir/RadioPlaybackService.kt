@@ -16,6 +16,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -32,9 +33,11 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
+import androidx.media3.session.DefaultMediaNotificationProvider.NotificationIdProvider
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
+import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
@@ -58,6 +61,7 @@ import com.cascadiacollections.sir.core.playback.StreamMetadata
 import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
 import com.cascadiacollections.sir.core.playback.StreamSource
 import com.cascadiacollections.sir.core.playback.StreamSourceResolver
+import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -168,13 +172,27 @@ class RadioPlaybackService : MediaLibraryService() {
         // POST_NOTIFICATIONS handling (media-session notifications are exempt by policy).
         // The seek-back-action override this used to need is gone: SEEKBACK_ENABLED is
         // false, and once it lands, updateCustomLayout()'s CommandButtons are picked up
-        // automatically without any provider customization.
+        // automatically without any provider customization. createNotification() is
+        // final, so the brand accent color — shared with Wear via NotificationAccentColor
+        // — is applied in the addNotificationActions() hook instead, the one point the
+        // provider hands back its NotificationCompat.Builder.
         setMediaNotificationProvider(
-            DefaultMediaNotificationProvider.Builder(this)
-                .setNotificationId(NOTIFICATION_ID)
-                .setChannelId(CHANNEL_ID)
-                .setChannelName(R.string.notification_channel_name)
-                .build()
+            object : DefaultMediaNotificationProvider(
+                context,
+                NotificationIdProvider { NOTIFICATION_ID },
+                CHANNEL_ID,
+                R.string.notification_channel_name
+            ) {
+                override fun addNotificationActions(
+                    mediaSession: MediaSession,
+                    mediaButtons: ImmutableList<CommandButton>,
+                    builder: NotificationCompat.Builder,
+                    actionFactory: MediaNotification.ActionFactory
+                ): IntArray {
+                    NotificationAccentColor.applyTo(builder)
+                    return super.addNotificationActions(mediaSession, mediaButtons, builder, actionFactory)
+                }
+            }
         )
 
         // Load settings asynchronously

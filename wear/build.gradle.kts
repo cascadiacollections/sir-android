@@ -35,6 +35,15 @@ dependencies {
     implementation(libs.wear.compose.foundation)
     implementation(libs.androidx.compose.material.icons.extended)
 
+    // Wear Tile (RadioTileService): androidx.wear.tiles.TileService base class, with the
+    // layout built via androidx.wear.protolayout builders (the newer, non-deprecated API).
+    implementation(libs.androidx.wear.tiles)
+    implementation(libs.androidx.wear.tiles.material)
+    implementation(libs.androidx.wear.protolayout)
+    implementation(libs.androidx.wear.protolayout.material)
+    implementation(libs.androidx.wear.protolayout.expression)
+    debugImplementation(libs.androidx.wear.tiles.tooling.preview)
+
     // Media3 for standalone streaming
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
@@ -43,6 +52,7 @@ dependencies {
     // Shared playback policy (stream URL, retry backoff) and OkHttp client factory
     implementation(projects.core.playback)
     implementation(project(":libs:okhttp-streaming"))
+    implementation(project(":libs:notification-colors"))
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
 

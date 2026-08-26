@@ -42,6 +42,11 @@ class CachingRadioDirectory(
         }
     }
 
+    override suspend fun getStation(id: String): Result<Station?> =
+        cached("byuuid:$id") {
+            delegate.getStation(id).map { station -> station?.let(::listOf) ?: emptyList() }
+        }.map { it.firstOrNull() }
+
     /**
      * Applies the same clamp the network directory applies, so a caller asking for 1000
      * shares the cache entry with one asking for [StationQuery.MAX_LIMIT] instead of

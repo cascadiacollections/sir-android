@@ -20,6 +20,9 @@ interface RadioDirectory {
 
     /** Stations carrying the given directory tag (genre, mood, ...). */
     suspend fun stationsByTag(tag: String, limit: Int = StationQuery.DEFAULT_LIMIT): Result<List<Station>>
+
+    /** A single station by its radio-browser `stationuuid`, or null if unknown. */
+    suspend fun getStation(id: String): Result<Station?>
 }
 
 /** Convenience overload so callers do not have to build a [StationQuery] by hand. */

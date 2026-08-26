@@ -2,6 +2,7 @@ package com.cascadiacollections.sir
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Build
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -26,6 +27,8 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.width
 import androidx.glance.material3.ColorProviders
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,7 +47,7 @@ import com.cascadiacollections.sir.ui.theme.Coral80
 class RadioWidget : GlanceAppWidget() {
 
     companion object {
-        private val colors = ColorProviders(
+        private val staticColors = ColorProviders(
             light = lightColorScheme(
                 primary = Amber40,
                 secondary = AmberGrey40,
@@ -56,6 +59,18 @@ class RadioWidget : GlanceAppWidget() {
                 tertiary = Coral80
             )
         )
+
+        // Dynamic color depends on the runtime wallpaper, so it can't be a compile-time
+        // constant like staticColors; fall back to the static brand palette below API 31.
+        private fun colorsFor(context: Context) =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                ColorProviders(
+                    light = dynamicLightColorScheme(context),
+                    dark = dynamicDarkColorScheme(context)
+                )
+            } else {
+                staticColors
+            }
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -65,7 +80,7 @@ class RadioWidget : GlanceAppWidget() {
             ?.takeIf { it.isNotBlank() }
             ?: context.getString(R.string.station_name)
         provideContent {
-            GlanceTheme(colors = colors) {
+            GlanceTheme(colors = colorsFor(context)) {
                 Row(
                     modifier = GlanceModifier
                         .fillMaxSize()

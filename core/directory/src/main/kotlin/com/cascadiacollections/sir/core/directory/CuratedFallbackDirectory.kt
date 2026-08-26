@@ -23,6 +23,9 @@ class CuratedFallbackDirectory(
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
         delegate.stationsByTag(tag, limit).orCurated { CuratedStations.matching(tag, curated).take(limit) }
 
+    override suspend fun getStation(id: String): Result<Station?> =
+        delegate.getStation(id).recoverCatching { curated.firstOrNull { it.id == id } }
+
     /**
      * Only failures fall back. An empty *successful* response is a real answer ("no
      * such station") and must not be masked by curated content.

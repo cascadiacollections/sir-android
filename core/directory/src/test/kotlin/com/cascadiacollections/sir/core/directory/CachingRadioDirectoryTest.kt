@@ -35,6 +35,14 @@ private class RecordingDirectory(
     }
 
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> = result
+
+    var getStationCalls = 0
+        private set
+
+    override suspend fun getStation(id: String): Result<Station?> {
+        getStationCalls++
+        return result.map { it.firstOrNull { s -> s.id == id } }
+    }
 }
 
 class CachingRadioDirectoryTest {

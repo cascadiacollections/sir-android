@@ -49,6 +49,7 @@ import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
 import com.cascadiacollections.sir.core.playback.AudioRoutePolicy
 import com.cascadiacollections.sir.core.playback.EqualizerCurves
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
@@ -776,6 +777,8 @@ class RadioPlaybackService : MediaLibraryService() {
                 ).build()
             )
         }
+
+        NotificationAccentColor.applyTo(builder)
 
         builder.setStyle(
             MediaStyleNotificationHelper.MediaStyle(session)

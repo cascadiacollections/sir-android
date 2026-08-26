@@ -1,15 +1,19 @@
 package com.cascadiacollections.sir.wear
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -24,6 +28,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
 import com.cascadiacollections.sir.core.playback.StreamConfig
+import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
 
 private const val TAG = "WearPlaybackService"
@@ -126,7 +131,7 @@ class WearPlaybackService : MediaSessionService() {
             Intent(this, WearActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.station_name))
             .setContentText(getString(R.string.stream_description))
             .setSmallIcon(android.R.drawable.ic_media_play)
@@ -134,7 +139,26 @@ class WearPlaybackService : MediaSessionService() {
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(MediaStyleNotificationHelper.MediaStyle(session))
-            .build()
+        NotificationAccentColor.applyTo(builder)
+        builder.build()
+    }
+
+    /**
+     * Permission-gated notification refresh for updates after the initial
+     * `startForeground` call (which is required unconditionally regardless of the
+     * runtime permission). Mirrors RadioPlaybackService.updateNotification().
+     */
+    private fun updateNotificationSafe() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, buildNotification())
+        } else {
+            Log.w(TAG, "POST_NOTIFICATIONS permission missing; cannot update notification")
+        }
     }
 
     private fun createNotificationChannel() {

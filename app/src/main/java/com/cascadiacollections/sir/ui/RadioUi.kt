@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -144,12 +143,13 @@ fun ListenScreen(
     trackTitle: String? = null,
     artist: String? = null,
     sleepTimerLabel: String? = null,
+    isWideLayout: Boolean = false,
     onToggle: () -> Unit
 ) {
     // Widen margins on medium/expanded screens (Pixel 10 Pro Fold, tablets) so the
-    // centered content doesn't span the full display width at >= 600dp.
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val horizontalPadding = if (screenWidthDp >= 600) 72.dp else 24.dp
+    // centered content doesn't span the full display width. isWideLayout is derived once
+    // from WindowSizeClass at the shell level (SirAppShell) rather than recomputed here.
+    val horizontalPadding = if (isWideLayout) 72.dp else 24.dp
 
     val title = when {
         !isConnected           -> stringResource(R.string.title_connecting)

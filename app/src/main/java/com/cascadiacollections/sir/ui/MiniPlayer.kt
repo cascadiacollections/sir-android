@@ -26,6 +26,11 @@ import com.cascadiacollections.sir.R
  * Compact now-playing bar shown above the navigation bar on every tab except listen,
  * so playback stays reachable while browsing.
  *
+ * Always mounted at a fixed height (rather than conditionally composed) so switching tabs
+ * never shifts the navigation chrome above it. When [title] is null (nothing resolved to
+ * play yet) an idle placeholder row renders instead of the live now-playing row, keeping
+ * the same height either way.
+ *
  * Tapping the bar returns to the listen tab; only the play/pause button is a separate
  * target, which keeps the touch target for "go back to what I'm hearing" large.
  */
@@ -33,7 +38,7 @@ import com.cascadiacollections.sir.R
 fun MiniPlayer(
     isPlaying: Boolean,
     isBuffering: Boolean,
-    title: String,
+    title: String?,
     subtitle: String?,
     onToggle: () -> Unit,
     onClick: () -> Unit,
@@ -50,15 +55,20 @@ fun MiniPlayer(
             }
             Row(
                 modifier = Modifier
-                    .clickable(onClick = onClick)
+                    .clickable(onClick = onClick, enabled = title != null)
                     .fillMaxWidth()
                     .padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = title,
+                        text = title ?: stringResource(R.string.station_name),
                         style = MaterialTheme.typography.bodyMedium,
+                        color = if (title != null) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -72,7 +82,7 @@ fun MiniPlayer(
                         )
                     }
                 }
-                IconButton(onClick = onToggle) {
+                IconButton(onClick = onToggle, enabled = title != null) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = stringResource(

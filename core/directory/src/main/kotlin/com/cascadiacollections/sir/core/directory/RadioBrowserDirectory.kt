@@ -53,6 +53,13 @@ class RadioBrowserDirectory(
         }
     }
 
+    override suspend fun getStation(id: String): Result<Station?> {
+        if (id.isBlank()) return Result.success(null)
+        return get(1) { base ->
+            base.addPathSegments("json/stations/byuuid/$id")
+        }.map { it.firstOrNull() }
+    }
+
     private suspend fun get(
         limit: Int,
         buildPath: (HttpUrl.Builder) -> HttpUrl.Builder

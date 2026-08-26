@@ -1,19 +1,15 @@
 package com.cascadiacollections.sir.wear
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -141,24 +137,6 @@ class WearPlaybackService : MediaSessionService() {
             .setStyle(MediaStyleNotificationHelper.MediaStyle(session))
         NotificationAccentColor.applyTo(builder)
         builder.build()
-    }
-
-    /**
-     * Permission-gated notification refresh for updates after the initial
-     * `startForeground` call (which is required unconditionally regardless of the
-     * runtime permission). Mirrors RadioPlaybackService.updateNotification().
-     */
-    private fun updateNotificationSafe() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, buildNotification())
-        } else {
-            Log.w(TAG, "POST_NOTIFICATIONS permission missing; cannot update notification")
-        }
     }
 
     private fun createNotificationChannel() {

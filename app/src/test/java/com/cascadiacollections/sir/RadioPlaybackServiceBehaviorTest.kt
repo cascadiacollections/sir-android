@@ -62,7 +62,8 @@ class RadioPlaybackServiceBehaviorTest {
             RadioPlaybackService.ACTION_SEEK_BACK,
             RadioPlaybackService.ACTION_GO_LIVE,
             RadioPlaybackService.ACTION_SET_SLEEP_TIMER,
-            RadioPlaybackService.ACTION_SET_EQUALIZER
+            RadioPlaybackService.ACTION_SET_EQUALIZER,
+            RadioPlaybackService.ACTION_PLAY_FROM_SEARCH
         )
         assertEquals(actions.size, actions.toSet().size)
     }
@@ -71,9 +72,21 @@ class RadioPlaybackServiceBehaviorTest {
     fun `all public extra key constants are distinct`() {
         val extras = listOf(
             RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,
-            RadioPlaybackService.EXTRA_EQUALIZER_PRESET
+            RadioPlaybackService.EXTRA_EQUALIZER_PRESET,
+            RadioPlaybackService.EXTRA_SEARCH_QUERY
         )
         assertEquals(extras.size, extras.toSet().size)
+    }
+
+    @Test
+    fun `play-from-search intent carries the raw query`() {
+        val context = RuntimeEnvironment.getApplication()
+        val intent = Intent(context, RadioPlaybackService::class.java).apply {
+            action = RadioPlaybackService.ACTION_PLAY_FROM_SEARCH
+            putExtra(RadioPlaybackService.EXTRA_SEARCH_QUERY, "NPR")
+        }
+        assertEquals(RadioPlaybackService.ACTION_PLAY_FROM_SEARCH, intent.action)
+        assertEquals("NPR", intent.getStringExtra(RadioPlaybackService.EXTRA_SEARCH_QUERY))
     }
 
     // ---- Service creation ----

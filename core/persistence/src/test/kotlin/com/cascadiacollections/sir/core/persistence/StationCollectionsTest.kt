@@ -43,6 +43,27 @@ class StationCollectionsTest {
     }
 
     @Test
+    fun `findByName prefers an exact case-insensitive match over a substring match`() {
+        val current = listOf(station("a", name = "Classical NPR"), station("b", name = "NPR"))
+
+        assertEquals("b", StationCollections.findByName(current, "npr")?.id)
+    }
+
+    @Test
+    fun `findByName falls back to a substring match`() {
+        val current = listOf(station("a", name = "NPR News"))
+
+        assertEquals("a", StationCollections.findByName(current, "npr")?.id)
+    }
+
+    @Test
+    fun `findByName returns null when nothing matches`() {
+        val current = listOf(station("a", name = "Jazz FM"))
+
+        assertEquals(null, StationCollections.findByName(current, "rock"))
+    }
+
+    @Test
     fun `recents are newest first`() {
         var recents = emptyList<Station>()
         recents = StationCollections.recordRecent(recents, station("a"))

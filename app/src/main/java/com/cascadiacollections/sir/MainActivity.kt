@@ -4,6 +4,7 @@ package com.cascadiacollections.sir
 
 import android.Manifest
 import android.app.Application
+import android.app.SearchManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -86,6 +87,7 @@ class MainActivity : ComponentActivity() {
             )
         }
         handleDeepLink(intent)
+        handlePlayFromSearch(intent)
 
         enableEdgeToEdge()
         setContent {
@@ -107,6 +109,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleDeepLink(intent)
+        handlePlayFromSearch(intent)
     }
 
     override fun onDestroy() {
@@ -120,6 +123,27 @@ class MainActivity : ComponentActivity() {
         if (uri.scheme != DEEP_LINK_SCHEME || uri.host != DEEP_LINK_HOST_STATION) return
         val stationId = uri.lastPathSegment?.takeIf { it.isNotBlank() } ?: return
         pendingStationId.value = stationId
+    }
+
+    /**
+     * Voice search ("Play [station name]") when SIR wasn't already the active media
+     * app — the system delivers this as a plain intent to whichever app declared the
+     * MEDIA_PLAY_FROM_SEARCH filter, rather than through a session. When SIR *is*
+     * already active, the same search instead reaches
+     * RadioPlaybackService.onSetMediaItems via the session directly.
+     */
+    private fun handlePlayFromSearch(intent: Intent?) {
+        val query = intent
+            ?.takeIf { it.action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" }
+            ?.getStringExtra(SearchManager.QUERY)
+            ?: return
+        ContextCompat.startForegroundService(
+            this,
+            Intent(this, RadioPlaybackService::class.java).apply {
+                action = RadioPlaybackService.ACTION_PLAY_FROM_SEARCH
+                putExtra(RadioPlaybackService.EXTRA_SEARCH_QUERY, query)
+            }
+        )
     }
 }
 

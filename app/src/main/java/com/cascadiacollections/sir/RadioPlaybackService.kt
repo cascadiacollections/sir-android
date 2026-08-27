@@ -44,7 +44,9 @@ import androidx.media3.session.SessionResult
 import com.cascadiacollections.android.media3.timeshift.CircularByteBuffer
 import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
+import com.cascadiacollections.sir.core.directory.search
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
+import com.cascadiacollections.sir.core.persistence.StationCollections
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.AudioRoutePolicy
 import com.cascadiacollections.sir.core.playback.EqualizerCurves
@@ -456,6 +458,29 @@ class RadioPlaybackService : MediaLibraryService() {
                     // collector watching the selection no-ops instead of racing us.
                     mutableListOf(adoptStreamSource(resolveStreamSource()) ?: buildMediaItem())
                 }
+
+                // Voice search ("Play [station name]") arrives here rather than through
+                // onAddMediaItems: Media3's legacy bridge translates
+                // MediaSessionCompat.Callback#onPlayFromSearch into a single MediaItem
+                // whose RequestMetadata carries the raw query, delivered through
+                // onSetMediaItems rather than onAddMediaItems.
+                override fun onSetMediaItems(
+                    mediaSession: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    mediaItems: MutableList<MediaItem>,
+                    startIndex: Int,
+                    startPositionMs: Long
+                ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+                    val query = mediaItems.firstOrNull()?.requestMetadata?.searchQuery
+                    if (query.isNullOrBlank()) {
+                        return super.onSetMediaItems(mediaSession, controller, mediaItems, startIndex, startPositionMs)
+                    }
+                    return serviceScope.future {
+                        resolveVoiceSearch(query)?.let { settingsRepository.selectStation(it) }
+                        val item = adoptStreamSource(resolveStreamSource()) ?: buildMediaItem()
+                        MediaSession.MediaItemsWithStartPosition(listOf(item), 0, C.TIME_UNSET)
+                    }
+                }
             })
             .setId(MEDIA_SESSION_ID)
             .setSessionActivity(
@@ -627,6 +652,24 @@ class RadioPlaybackService : MediaLibraryService() {
 
             ACTION_PAUSE -> {
                 player?.pause()
+            }
+
+            // Cold-start voice search: SIR wasn't already the active media app, so this
+            // arrived via the MEDIA_PLAY_FROM_SEARCH manifest intent-filter rather than
+            // through the session (see onSetMediaItems for the already-playing case).
+            ACTION_PLAY_FROM_SEARCH -> {
+                val query = intent.getStringExtra(EXTRA_SEARCH_QUERY)
+                serviceScope.launch {
+                    val station = query?.takeIf { it.isNotBlank() }?.let { resolveVoiceSearch(it) }
+                    if (station != null) {
+                        // Picked up by the selectedStation collector in onCreate, which
+                        // starts playback itself — nothing further to do here.
+                        settingsRepository.selectStation(station)
+                    } else {
+                        if (player?.playbackState == Player.STATE_IDLE) player?.prepare()
+                        player?.play()
+                    }
+                }
             }
 
             ACTION_SEEK_BACK -> {
@@ -956,6 +999,19 @@ class RadioPlaybackService : MediaLibraryService() {
     }
 
     /**
+     * Resolves a voice-search query ("Play [station name]") to a station.
+     *
+     * Saved stations are checked first — an exact match is what the user almost
+     * certainly meant, and it works with no network round trip — before falling back
+     * to the top live directory result for stations the user hasn't saved.
+     */
+    private suspend fun resolveVoiceSearch(query: String): Station? {
+        val saved = settingsRepository.savedStations.first()
+        StationCollections.findByName(saved, query)?.let { return it }
+        return AppDirectory.instance.search(query, limit = 1).getOrNull()?.firstOrNull()
+    }
+
+    /**
      * Resolves the stream to play from the persisted settings. The debug override is
      * only consulted in debug builds so a release build can never be pointed at an
      * arbitrary URL by stale preferences.
@@ -1054,9 +1110,11 @@ class RadioPlaybackService : MediaLibraryService() {
         const val ACTION_GO_LIVE = "com.cascadiacollections.sir.action.GO_LIVE"
         const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"
         const val ACTION_SET_EQUALIZER = "com.cascadiacollections.sir.action.SET_EQUALIZER"
+        const val ACTION_PLAY_FROM_SEARCH = "com.cascadiacollections.sir.action.PLAY_FROM_SEARCH"
 
         // Intent extras
         const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
+        const val EXTRA_SEARCH_QUERY = "search_query"
     }
 }

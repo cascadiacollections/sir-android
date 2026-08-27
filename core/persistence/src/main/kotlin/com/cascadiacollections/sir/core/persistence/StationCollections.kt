@@ -33,6 +33,17 @@ object StationCollections {
         current.filterNot { it.id == stationId }
 
     /**
+     * Finds a station by name for voice search ("Play [station name]"): an exact
+     * case-insensitive match first, falling back to a substring match, so "Play NPR"
+     * finds a station named exactly "NPR" before matching "Classical NPR" and doesn't
+     * miss "NPR News" just because there's no exact "NPR".
+     */
+    fun findByName(current: List<Station>, query: String): Station? {
+        current.firstOrNull { it.name.equals(query, ignoreCase = true) }?.let { return it }
+        return current.firstOrNull { it.name.contains(query, ignoreCase = true) }
+    }
+
+    /**
      * Records [station] as most recently played: newest first, one entry per station,
      * capped at [limit]. Replaying an existing entry moves it to the front rather than
      * duplicating it.

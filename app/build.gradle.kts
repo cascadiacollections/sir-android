@@ -218,6 +218,13 @@ dependencies {
     // Serialization for API responses
     implementation(libs.kotlinx.serialization.json)
 
+    // Station artwork loading (AsyncImage in StationRow). coil-network-okhttp is a
+    // separate short-timeout client from the streaming-tuned one in
+    // :libs:okhttp-streaming (that one disables the call timeout entirely for
+    // open-ended audio streams, which would be wrong for a one-shot image fetch).
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+
     // Cast device detection (lightweight - actual Cast player in dynamic module).
     // Play only: without the Cast framework's route provider, discovery finds nothing,
     // and the FOSS flavor's CastDeviceDetector reports unavailable without scanning.

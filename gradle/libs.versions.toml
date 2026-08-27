@@ -15,6 +15,7 @@ material3Expressive = "1.5.0-alpha26"
 media3 = "1.11.0"
 coroutines = "1.11.0"
 okhttp = "5.5.0"
+coil = "3.6.0"
 kotlinxSerialization = "1.11.0"
 playServicescast = "22.3.1"
 mediarouter = "1.9.0-alpha01"
@@ -77,6 +78,8 @@ leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-and
 okhttp-bom = { group = "com.squareup.okhttp3", name = "okhttp-bom", version.ref = "okhttp" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp" }
 okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-guava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "coroutines" }

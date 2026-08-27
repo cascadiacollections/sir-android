@@ -8,6 +8,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -70,5 +71,31 @@ class StationShortcutsTest {
 
         val maxCount = context.getSystemService(ShortcutManager::class.java).maxShortcutCountPerActivity
         assertTrue(dynamicShortcutIds().size <= maxCount)
+    }
+
+    @Test
+    fun `a launcher reporting zero shortcut support still clears stale shortcuts`() {
+        val context = RuntimeEnvironment.getApplication()
+        val manager = context.getSystemService(ShortcutManager::class.java)
+        StationShortcuts.update(context, listOf(station("a")))
+        assertEquals(listOf("station-a"), dynamicShortcutIds())
+
+        shadowOf(manager).setMaxShortcutCountPerActivity(0)
+        StationShortcuts.update(context, listOf(station("b")))
+
+        assertTrue(dynamicShortcutIds().isEmpty())
+    }
+
+    @Test
+    fun `shortcuts are ranked in the most-played-first order they're given`() {
+        val context = RuntimeEnvironment.getApplication()
+        val manager = context.getSystemService(ShortcutManager::class.java)
+
+        StationShortcuts.update(context, listOf(station("a"), station("b"), station("c")))
+
+        val ranks = manager.dynamicShortcuts.associate { it.id to it.rank }
+        assertEquals(0, ranks.getValue("station-a"))
+        assertEquals(1, ranks.getValue("station-b"))
+        assertEquals(2, ranks.getValue("station-c"))
     }
 }

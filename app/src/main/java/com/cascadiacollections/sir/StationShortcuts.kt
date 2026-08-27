@@ -28,21 +28,27 @@ object StationShortcuts {
      * saved — `setDynamicShortcuts` replaces the whole set rather than only adding.
      */
     fun update(context: Context, stations: List<Station>) {
-        val maxCount = ShortcutManagerCompat.getMaxShortcutCountPerActivity(context)
-        if (maxCount <= 0) return
+        // maxCount <= 0 means this launcher doesn't support shortcuts at all (rather
+        // than "zero slots free") — still clear any shortcuts a previous launcher may
+        // have left behind, rather than returning early and leaving them stale.
+        val maxCount = ShortcutManagerCompat.getMaxShortcutCountPerActivity(context).coerceAtLeast(0)
 
         val shortcuts = stations
             .filter { it.isPlayable }
             .take(maxCount)
-            .map { station -> shortcutFor(context, station) }
+            .mapIndexed { index, station -> shortcutFor(context, station, rank = index) }
 
         ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
     }
 
-    private fun shortcutFor(context: Context, station: Station): ShortcutInfoCompat =
+    private fun shortcutFor(context: Context, station: Station, rank: Int): ShortcutInfoCompat =
         ShortcutInfoCompat.Builder(context, ID_PREFIX + station.id)
             .setShortLabel(station.name)
             .setLongLabel(station.name)
+            // Shortcuts sort ascending by rank, and stations arrive most-played-first,
+            // so rank == position preserves that ordering — without it every shortcut
+            // defaults to rank 0 and the launcher is free to order them arbitrarily.
+            .setRank(rank)
             .setIcon(IconCompat.createWithResource(context, R.drawable.ic_launcher_foreground))
             .setIntent(
                 Intent(Intent.ACTION_VIEW, "sir://station/${station.id}".toUri()).apply {

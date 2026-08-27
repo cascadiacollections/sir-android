@@ -180,6 +180,39 @@ class EqualizerCurvesTest {
         assertEquals(List(5) { 0.toShort() }, result)
     }
 
+    // ---- normalizeCustomBands ----
+
+    @Test
+    fun `normalizing an empty list produces flat gains at the requested count`() {
+        assertEquals(List(5) { 0f }, EqualizerCurves.normalizeCustomBands(emptyList(), bandCount = 5))
+    }
+
+    @Test
+    fun `normalizing a correctly-sized in-range list is a no-op`() {
+        val gains = listOf(-1f, -0.5f, 0f, 0.5f, 1f)
+        assertEquals(gains, EqualizerCurves.normalizeCustomBands(gains, bandCount = 5))
+    }
+
+    @Test
+    fun `normalizing a shorter list stretches it to the requested count`() {
+        val result = EqualizerCurves.normalizeCustomBands(listOf(0f, 1f), bandCount = 5)
+        assertEquals(5, result.size)
+        assertEquals(0f, result.first())
+        assertEquals(1f, result.last())
+    }
+
+    @Test
+    fun `normalizing a longer list still produces exactly the requested count`() {
+        val result = EqualizerCurves.normalizeCustomBands(List(9) { 1f }, bandCount = 5)
+        assertEquals(5, result.size)
+    }
+
+    @Test
+    fun `normalizing clamps out-of-range gains to -1f to 1f`() {
+        val result = EqualizerCurves.normalizeCustomBands(listOf(-5f, 5f), bandCount = 3)
+        result.forEach { gain -> assertTrue(gain in -1f..1f) }
+    }
+
     // ---- displayGainsFor ----
 
     @Test

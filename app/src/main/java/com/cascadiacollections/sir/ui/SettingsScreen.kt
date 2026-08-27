@@ -102,7 +102,10 @@ fun SettingsContent(
     }
     LaunchedEffect(equalizerPreset, equalizerUseCustomBands, equalizerCustomBands) {
         equalizerBandGains = if (equalizerUseCustomBands) {
-            equalizerCustomBands.ifEmpty { List(EqualizerCurves.CUSTOM_BAND_COUNT) { 0f } }
+            // Normalized rather than used as-is: a persisted curve could be a different
+            // length (an older install, a test fixture) or carry out-of-range values,
+            // and the sliders below assume exactly CUSTOM_BAND_COUNT entries in -1f..1f.
+            EqualizerCurves.normalizeCustomBands(equalizerCustomBands)
         } else {
             EqualizerCurves.displayGainsFor(equalizerPreset)
         }

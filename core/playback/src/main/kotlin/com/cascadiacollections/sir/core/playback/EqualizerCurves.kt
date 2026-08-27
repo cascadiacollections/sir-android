@@ -71,6 +71,21 @@ object EqualizerCurves {
         }
     }
 
+    /**
+     * Normalizes an arbitrary-length, possibly out-of-range gain list — e.g. one
+     * persisted by an older build, or edited by hand — to exactly [bandCount] sliders,
+     * each clamped to -1f..1f. Interpolates rather than truncating/padding so a
+     * differently-sized list still maps onto the fixed slider UI sensibly instead of
+     * silently dropping or ignoring entries.
+     */
+    fun normalizeCustomBands(gains: List<Float>, bandCount: Int = CUSTOM_BAND_COUNT): List<Float> {
+        if (gains.isEmpty() || bandCount <= 0) return List(bandCount.coerceAtLeast(0)) { 0f }
+        return List(bandCount) { band ->
+            val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
+            interpolate(gains, position).coerceIn(-1f, 1f)
+        }
+    }
+
     /** Piecewise-linear interpolation of [values] at normalized [position] (0f..1f). */
     private fun interpolate(values: List<Float>, position: Float): Float {
         if (values.size == 1) return values[0]

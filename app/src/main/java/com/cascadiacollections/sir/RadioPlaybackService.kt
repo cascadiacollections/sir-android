@@ -670,8 +670,12 @@ class RadioPlaybackService : MediaLibraryService() {
             }
 
             ACTION_SET_EQUALIZER_BANDS -> {
+                // Fired on every slider-drag tick, so this only ever applies live audio
+                // feedback — persist = false. The UI persists once itself, directly via
+                // SettingsRepository, when the drag gesture ends (see SettingsScreen's
+                // onGainsSettled), rather than writing to DataStore on every tick here.
                 val bands = intent.getFloatArrayExtra(EXTRA_EQUALIZER_BANDS)?.toList()
-                if (bands != null) applyCustomEqualizerBands(bands)
+                if (bands != null) applyCustomEqualizerBands(bands, persist = false)
             }
 
         }

@@ -69,6 +69,23 @@
     <string name="remove_station">移除电台</string>
     <string name="browse_empty">按名称或风格搜索电台即可开始。</string>
     <string name="library_empty">你保存或播放过的电台会显示在这里。</string>
+    <!-- Edit saved station -->
+    <string name="edit_station">编辑电台</string>
+    <string name="station_name_label">名称</string>
+    <string name="station_url_label">直播流地址</string>
+    <string name="station_artwork_url_label">封面图片地址（可选）</string>
+    <string name="station_url_invalid">地址必须以 http:// 或 https:// 开头</string>
+    <string name="station_updated">电台已更新</string>
+    <string name="cancel">取消</string>
+    <!-- Playlist import/export -->
+    <string name="import_stations">导入电台</string>
+    <string name="export_stations">导出电台</string>
+    <!-- %1$d = stations added, %2$d = stations already saved and skipped -->
+    <string name="import_result">导入完成——新增 %1$d，跳过 %2$d（已保存）</string>
+    <string name="import_empty">该文件中未找到电台</string>
+    <string name="import_failed">无法读取该播放列表文件</string>
+    <string name="export_failed">无法写入导出文件</string>
+    <string name="export_success">电台已导出</string>
     <!-- Navigation -->
     <string name="tab_listen">收听</string>
     <string name="tab_browse">浏览</string>

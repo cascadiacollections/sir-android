@@ -66,6 +66,7 @@ class RadioViewModelTest {
         assertFalse(state.isError)
         assertNull(state.trackTitle)
         assertNull(state.artist)
+        assertTrue(state.trackHistory.isEmpty())
         assertNull(state.sleepTimerLabel)
     }
 
@@ -78,6 +79,7 @@ class RadioViewModelTest {
         assertFalse(state.isError)
         assertNull(state.trackTitle)
         assertNull(state.artist)
+        assertTrue(state.trackHistory.isEmpty())
         assertNull(state.sleepTimerLabel)
         assertFalse(state.showMeteredWarning)
     }

@@ -106,6 +106,11 @@
     <string name="share">Share</string>
     <string name="share_now_playing">Now playing on SIR: %1$s</string>
 
+    <!-- Track history -->
+    <string name="track_history_title">Track history</string>
+    <string name="track_history_empty">Tracks you\'ve heard this session will show up here.</string>
+    <string name="copy_track">Copy track info</string>
+
     <!-- App shortcuts -->
     <string name="shortcut_play_long">Play SIR Radio</string>
 

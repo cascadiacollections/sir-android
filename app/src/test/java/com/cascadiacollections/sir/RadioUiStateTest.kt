@@ -19,6 +19,7 @@ class RadioUiStateTest {
         assertNull(state.artist)
         assertNull(state.sleepTimerLabel)
         assertFalse(state.showMeteredWarning)
+        assertTrue(state.trackHistory.isEmpty())
     }
 
     @Test

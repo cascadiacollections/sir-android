@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,6 +22,10 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -58,6 +63,7 @@ fun SirAppShell(
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
+    var showTrackHistory by remember { mutableStateOf(false) }
     val isWideLayout = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
     val layoutType = if (isWideLayout) {
         NavigationSuiteType.NavigationRail
@@ -109,6 +115,15 @@ fun SirAppShell(
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = stringResource(R.string.share),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (uiState.trackHistory.isNotEmpty()) {
+                        IconButton(onClick = { showTrackHistory = true }) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = stringResource(R.string.track_history_title),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -173,5 +188,12 @@ fun SirAppShell(
             )
         }
     }
+    }
+
+    if (showTrackHistory) {
+        TrackHistorySheet(
+            history = uiState.trackHistory,
+            onDismiss = { showTrackHistory = false }
+        )
     }
 }

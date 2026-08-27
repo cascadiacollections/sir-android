@@ -14,6 +14,8 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
+import com.cascadiacollections.sir.core.playback.TrackHistory
+import com.cascadiacollections.sir.core.playback.TrackHistoryEntry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -39,6 +41,9 @@ data class RadioUiState(
     val artist: String? = null,
     val sleepTimerLabel: String? = null,
     val showMeteredWarning: Boolean = false,
+    // Appended last, after showMeteredWarning, to avoid shifting the componentN()
+    // destructuring order other tests/call sites may rely on for the fields above.
+    val trackHistory: List<TrackHistoryEntry> = emptyList(),
 )
 
 class RadioViewModel(
@@ -50,6 +55,14 @@ class RadioViewModel(
     val uiState: StateFlow<RadioUiState> = _uiState.asStateFlow()
 
     private var controller: MediaController? = null
+
+    // RadioPlaybackService.publishResolvedMetadata() falls back to this exact string for
+    // the artist field when there's no real ICY metadata (station just launched, or the
+    // stream carries none at all). Recording that as a "track" would fill history with
+    // noise indistinguishable from a real song, so it's the signal used to skip it.
+    private val liveStreamArtistFallback: String by lazy {
+        getApplication<Application>().getString(R.string.stream_description)
+    }
 
     private val sessionToken = SessionToken(
         application,
@@ -74,7 +87,23 @@ class RadioViewModel(
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
             val title = mediaMetadata.title?.toString()
             val artist = mediaMetadata.artist?.toString()
-            _uiState.update { it.copy(trackTitle = title, artist = artist) }
+            val realTrackTitle = title?.takeIf {
+                it.isNotBlank() && !artist.isNullOrBlank() && artist != liveStreamArtistFallback
+            }
+            _uiState.update { current ->
+                current.copy(
+                    trackTitle = title,
+                    artist = artist,
+                    trackHistory = if (realTrackTitle != null) {
+                        TrackHistory.record(
+                            current.trackHistory,
+                            TrackHistoryEntry(realTrackTitle, artist, System.currentTimeMillis())
+                        )
+                    } else {
+                        current.trackHistory
+                    }
+                )
+            }
         }
     }
 

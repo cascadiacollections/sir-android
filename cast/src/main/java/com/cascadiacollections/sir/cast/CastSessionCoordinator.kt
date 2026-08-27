@@ -43,7 +43,7 @@ class CastSessionCoordinator(private val context: Context) {
 
     init {
         castPlayer.setSessionCallbacks(
-            onStarted = { onCastSessionAvailable() },
+            onStarted = { _ -> onCastSessionAvailable() },
             onEnded = { onCastSessionUnavailable() }
         )
         connect()

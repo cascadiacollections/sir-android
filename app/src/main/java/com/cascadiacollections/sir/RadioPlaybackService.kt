@@ -12,6 +12,7 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.audiofx.Equalizer
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -854,6 +855,12 @@ class RadioPlaybackService : MediaLibraryService() {
                 .setTitle(currentStationTitle ?: getString(R.string.station_name))
                 .setArtist(getString(R.string.stream_description))
                 .setIsPlayable(true)
+                // MediaItem.LocalConfiguration (the setUri above) never crosses the
+                // MediaController boundary, by Media3 design — only mediaId and
+                // mediaMetadata do. The :cast module needs the actual playable URL to
+                // start a Chromecast session from a MediaController of its own (it
+                // can't reach this service's private fields), so it rides along here.
+                .setExtras(Bundle().apply { putString(EXTRA_STREAM_URL, currentStreamUrl) })
                 .build()
         )
         .build()
@@ -1058,5 +1065,14 @@ class RadioPlaybackService : MediaLibraryService() {
         // Intent extras
         const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
+
+        /**
+         * [MediaMetadata.extras] key for the actual playable stream URL of the current
+         * item. Public (unlike the fields it mirrors) because MediaItem's own URI
+         * (`LocalConfiguration`) never crosses the MediaController boundary — this is
+         * how a controller elsewhere in the process, such as the :cast module's own
+         * MediaController, can learn the real URL to hand to a Chromecast session.
+         */
+        const val EXTRA_STREAM_URL = "stream_url"
     }
 }

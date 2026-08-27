@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.directory.search
 import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.core.persistence.PlaylistCodec
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -24,6 +25,12 @@ data class RadioBrowserUiState(
     val recentStations: List<Station> = emptyList(),
     val selectedStationId: String? = null
 )
+
+/** Outcome of [RadioBrowserViewModel.importPlaylist], reported back to the UI for a toast. */
+sealed interface PlaylistImportResult {
+    data class Imported(val added: Int, val skipped: Int) : PlaylistImportResult
+    data object Empty : PlaylistImportResult
+}
 
 /**
  * Drives the station discovery surface.
@@ -180,6 +187,34 @@ class RadioBrowserViewModel(
             settingsRepository.clearRecentStations()
         }
     }
+
+    /**
+     * Parses [text] as an M3U ([isPls] false) or PLS ([isPls] true) playlist and saves
+     * any station whose URL isn't already saved. Dedupes by URL rather than id, since
+     * imported entries carry no radio-browser id to match against.
+     */
+    fun importPlaylist(text: String, isPls: Boolean, onResult: (PlaylistImportResult) -> Unit) {
+        viewModelScope.launch {
+            val parsed = if (isPls) PlaylistCodec.parsePls(text) else PlaylistCodec.parseM3u(text)
+            if (parsed.isEmpty()) {
+                onResult(PlaylistImportResult.Empty)
+                return@launch
+            }
+
+            val seenUrls = _uiState.value.savedStations.mapTo(mutableSetOf()) { it.url }
+            var added = 0
+            parsed.forEach { station ->
+                if (seenUrls.add(station.url)) {
+                    settingsRepository.saveStation(station)
+                    added++
+                }
+            }
+            onResult(PlaylistImportResult.Imported(added = added, skipped = parsed.size - added))
+        }
+    }
+
+    /** Renders the current saved stations as M3U text for export/backup. */
+    fun exportPlaylist(): String = PlaylistCodec.toM3u(_uiState.value.savedStations)
 
     class Factory(
         private val directory: RadioDirectory,

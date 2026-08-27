@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">SIR</string>
     <string name="radio_error">Stream unavailable, retry shortly</string>
     <string name="play">Play</string>
@@ -76,6 +76,25 @@
     <string name="remove_station">Remove station</string>
     <string name="browse_empty">Search for a station by name or genre to get started.</string>
     <string name="library_empty">Stations you save or play will show up here.</string>
+
+    <!-- Edit saved station -->
+    <string name="edit_station">Edit station</string>
+    <string name="station_name_label">Name</string>
+    <string name="station_url_label">Stream URL</string>
+    <string name="station_artwork_url_label">Artwork URL (optional)</string>
+    <string name="station_url_invalid">URL must start with http:// or https://</string>
+    <string name="station_updated">Station updated</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Playlist import/export -->
+    <string name="import_stations">Import stations</string>
+    <string name="export_stations">Export stations</string>
+    <!-- %1$d = stations added, %2$d = stations already saved and skipped -->
+    <string name="import_result" tools:ignore="PluralsCandidate">Import complete — added %1$d, skipped %2$d already saved</string>
+    <string name="import_empty">No stations found in that file</string>
+    <string name="import_failed">Couldn\'t read that playlist file</string>
+    <string name="export_failed">Couldn\'t write the export file</string>
+    <string name="export_success">Stations exported</string>
 
     <!-- Navigation -->
     <string name="tab_listen">Listen</string>

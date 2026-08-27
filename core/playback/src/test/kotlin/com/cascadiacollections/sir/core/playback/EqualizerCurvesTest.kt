@@ -104,4 +104,103 @@ class EqualizerCurvesTest {
 
         assertEquals(listOf(0.toShort()), low)
     }
+
+    // ---- levelsForCustomBands ----
+
+    @Test
+    fun `all-flat custom gains produce zero millibels`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = List(EqualizerCurves.CUSTOM_BAND_COUNT) { 0f },
+            bandCount = 5,
+            minLevel = minLevel,
+            maxLevel = maxLevel
+        )
+
+        assertEquals(List(5) { 0.toShort() }, result)
+    }
+
+    @Test
+    fun `a full boost reaches max level regardless of range asymmetry`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = listOf(1f, 1f, 1f, 1f, 1f),
+            bandCount = 3,
+            minLevel = (-3000).toShort(),
+            maxLevel = 300.toShort()
+        )
+
+        assertEquals(List(3) { 300.toShort() }, result)
+    }
+
+    @Test
+    fun `a full cut reaches min level regardless of range asymmetry`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = listOf(-1f, -1f, -1f, -1f, -1f),
+            bandCount = 3,
+            minLevel = (-3000).toShort(),
+            maxLevel = 300.toShort()
+        )
+
+        assertEquals(List(3) { (-3000).toShort() }, result)
+    }
+
+    @Test
+    fun `hardware bands interpolate between adjacent UI sliders`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = listOf(0f, 1f),
+            bandCount = 3,
+            minLevel = minLevel,
+            maxLevel = maxLevel
+        )
+
+        // position 0 -> gain 0, position 0.5 -> gain 0.5, position 1 -> gain 1
+        assertEquals(listOf(0.toShort(), 750.toShort(), 1500.toShort()), result)
+    }
+
+    @Test
+    fun `custom band levels never escape the supported range`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = listOf(-1f, 1f, -1f, 1f, -1f),
+            bandCount = 10,
+            minLevel = minLevel,
+            maxLevel = maxLevel
+        )
+
+        result.forEach { level -> assertTrue(level in minLevel..maxLevel) }
+    }
+
+    @Test
+    fun `empty gains produce a flat curve rather than crashing`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = emptyList(),
+            bandCount = 5,
+            minLevel = minLevel,
+            maxLevel = maxLevel
+        )
+
+        assertEquals(List(5) { 0.toShort() }, result)
+    }
+
+    // ---- displayGainsFor ----
+
+    @Test
+    fun `normal preset displays as all-flat gains`() {
+        assertEquals(List(5) { 0f }, EqualizerCurves.displayGainsFor(EqualizerPreset.NORMAL, bandCount = 5))
+    }
+
+    @Test
+    fun `bass boost displays as a descending gain curve`() {
+        val result = EqualizerCurves.displayGainsFor(EqualizerPreset.BASS_BOOST, bandCount = 5)
+
+        assertTrue(result.zipWithNext().all { (a, b) -> b <= a })
+        assertTrue(result.first() > result.last())
+    }
+
+    @Test
+    fun `display gains stay within -1f to 1f`() {
+        EqualizerPreset.entries.forEach { preset ->
+            EqualizerCurves.displayGainsFor(preset, bandCount = 8).forEach { gain ->
+                assertTrue("$preset produced $gain", gain in -1f..1f)
+            }
+        }
+    }
 }

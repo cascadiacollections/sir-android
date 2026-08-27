@@ -13,6 +13,12 @@
     <string name="sleep_timer_set">Sleep timer set for %1$s</string>
     <string name="sleep_timer_off">Sleep timer off</string>
     <string name="equalizer">Equalizer</string>
+    <string name="equalizer_preset_custom">Custom</string>
+    <string name="equalizer_band_bass">Bass</string>
+    <string name="equalizer_band_low_mid">Low-Mid</string>
+    <string name="equalizer_band_mid">Mid</string>
+    <string name="equalizer_band_high_mid">High-Mid</string>
+    <string name="equalizer_band_treble">Treble</string>
     <string name="custom_stream_url">Custom Stream URL</string>
     <string name="custom_stream_hint">Enter stream URL (http/https)</string>
     <string name="custom_stream_active">Using custom stream</string>

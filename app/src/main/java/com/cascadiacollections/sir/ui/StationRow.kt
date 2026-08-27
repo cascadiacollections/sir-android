@@ -74,7 +74,12 @@ private fun StationArtwork(
     isPlaying: Boolean,
     modifier: Modifier = Modifier
 ) {
-    var loadFailed by remember(station.favicon) { mutableStateOf(false) }
+    // Keyed to station.id (not just favicon): StationRow is rendered in a LazyColumn
+    // without an item key, so Compose can reuse this composition slot for a different
+    // station at the same list position. If that station happened to share (or also
+    // lack) a favicon, an unkeyed remember would carry the previous station's failure
+    // state over onto it.
+    var loadFailed by remember(station.id, station.favicon) { mutableStateOf(false) }
     val tint = if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
 
     if (station.favicon.isNullOrBlank() || loadFailed) {

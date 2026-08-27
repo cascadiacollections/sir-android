@@ -218,10 +218,11 @@ dependencies {
     // Serialization for API responses
     implementation(libs.kotlinx.serialization.json)
 
-    // Station artwork loading (AsyncImage in StationRow). coil-network-okhttp is a
-    // separate short-timeout client from the streaming-tuned one in
-    // :libs:okhttp-streaming (that one disables the call timeout entirely for
-    // open-ended audio streams, which would be wrong for a one-shot image fetch).
+    // Station artwork loading (AsyncImage in StationRow). The bounded-timeout
+    // OkHttpClient this actually uses is configured in ui/theme/AppImageLoader.kt and
+    // installed once via SirTheme — it's a separate client from the streaming-tuned
+    // one in :libs:okhttp-streaming, which disables the call timeout entirely for
+    // open-ended audio streams (wrong for a one-shot image fetch).
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
@@ -254,6 +255,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.guava)
 
     testImplementation(libs.junit)
+    // FakeImageLoaderEngine, to deterministically test StationRow's onError fallback
+    testImplementation(libs.coil.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)

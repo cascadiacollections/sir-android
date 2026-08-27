@@ -1,9 +1,14 @@
 package com.cascadiacollections.sir.ui
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import coil3.ImageLoader
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.request.ErrorResult
+import coil3.test.FakeImageLoaderEngine
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.ui.theme.SirTheme
 import org.junit.Rule
@@ -39,6 +44,27 @@ class StationRowTest {
         }
 
         composeRule.onNodeWithText("Station A").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a failing artwork load falls back to the play icon`() {
+        // A real ImageLoader (not SirTheme's), wired to an engine that always fails, so
+        // the fallback is exercised deterministically rather than depending on an
+        // actual network request's timing.
+        val failingEngine = FakeImageLoaderEngine.Builder()
+            .default { chain -> ErrorResult(image = null, request = chain.request, throwable = RuntimeException("boom")) }
+            .build()
+
+        composeRule.setContent {
+            setSingletonImageLoaderFactory { context ->
+                ImageLoader.Builder(context).components { add(failingEngine) }.build()
+            }
+            MaterialTheme {
+                StationRow(station = stationWithArtwork, isPlaying = false, onPlay = {})
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Play station").assertIsDisplayed()
     }
 
     @Test

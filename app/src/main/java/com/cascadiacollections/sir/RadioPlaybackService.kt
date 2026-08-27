@@ -12,6 +12,7 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.audiofx.Equalizer
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -710,6 +711,13 @@ class RadioPlaybackService : MediaLibraryService() {
         val resolved = item.mediaMetadata.buildUpon()
             .setTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
             .setArtist(currentArtist ?: getString(R.string.stream_description))
+            // A locale-independent, non-user-facing signal that this update carries a
+            // real resolved ICY track rather than the station-name/generic-description
+            // fallback — RadioViewModel uses it to decide what belongs in track
+            // history. Comparing the *displayed* title/artist text against a
+            // translated fallback string would break the moment either happened to
+            // equal it, or the two ran under different configurations.
+            .setExtras(Bundle().apply { putBoolean(EXTRA_HAS_RESOLVED_TRACK, currentTrackTitle != null) })
             .build()
         p.replaceMediaItem(p.currentMediaItemIndex, item.buildUpon().setMediaMetadata(resolved).build())
     }
@@ -1058,5 +1066,12 @@ class RadioPlaybackService : MediaLibraryService() {
         // Intent extras
         const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
+
+        /**
+         * [MediaMetadata.extras] key: whether the current metadata update carries a
+         * genuinely resolved ICY track, as opposed to the station-name/generic
+         * fallback. See [publishResolvedMetadata].
+         */
+        const val EXTRA_HAS_RESOLVED_TRACK = "has_resolved_track"
     }
 }

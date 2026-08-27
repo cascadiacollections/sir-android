@@ -42,5 +42,8 @@ class TrackHistorySheetTest {
         }
 
         composeRule.onNodeWithText("Song A").assertIsDisplayed()
+        // The supporting line is "Artist A • <formatted time>" — matched as a substring
+        // since the time portion is locale/device-format dependent.
+        composeRule.onNodeWithText("Artist A", substring = true).assertIsDisplayed()
     }
 }

@@ -56,14 +56,6 @@ class RadioViewModel(
 
     private var controller: MediaController? = null
 
-    // RadioPlaybackService.publishResolvedMetadata() falls back to this exact string for
-    // the artist field when there's no real ICY metadata (station just launched, or the
-    // stream carries none at all). Recording that as a "track" would fill history with
-    // noise indistinguishable from a real song, so it's the signal used to skip it.
-    private val liveStreamArtistFallback: String by lazy {
-        getApplication<Application>().getString(R.string.stream_description)
-    }
-
     private val sessionToken = SessionToken(
         application,
         ComponentName(application, RadioPlaybackService::class.java)
@@ -87,9 +79,12 @@ class RadioViewModel(
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
             val title = mediaMetadata.title?.toString()
             val artist = mediaMetadata.artist?.toString()
-            val realTrackTitle = title?.takeIf {
-                it.isNotBlank() && !artist.isNullOrBlank() && artist != liveStreamArtistFallback
-            }
+            // A locale-independent, non-user-facing flag rather than comparing the
+            // displayed artist text against a translated fallback string — that would
+            // break the moment a real track's artist happened to equal it.
+            val hasResolvedTrack = mediaMetadata.extras
+                ?.getBoolean(RadioPlaybackService.EXTRA_HAS_RESOLVED_TRACK, false) == true
+            val realTrackTitle = title?.takeIf { it.isNotBlank() && hasResolvedTrack }
             _uiState.update { current ->
                 current.copy(
                     trackTitle = title,

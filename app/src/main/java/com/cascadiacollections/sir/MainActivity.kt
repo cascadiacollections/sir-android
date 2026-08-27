@@ -6,6 +6,7 @@ import android.Manifest
 import android.app.Application
 import android.app.SearchManager
 import android.content.Intent
+import android.provider.MediaStore
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -134,8 +135,10 @@ class MainActivity : ComponentActivity() {
      */
     private fun handlePlayFromSearch(intent: Intent?) {
         val query = intent
-            ?.takeIf { it.action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" }
+            ?.takeIf { it.action == MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH }
             ?.getStringExtra(SearchManager.QUERY)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
             ?: return
         ContextCompat.startForegroundService(
             this,

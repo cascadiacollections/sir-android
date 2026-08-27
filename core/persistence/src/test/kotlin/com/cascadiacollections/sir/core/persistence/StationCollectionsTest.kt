@@ -64,6 +64,21 @@ class StationCollectionsTest {
     }
 
     @Test
+    fun `findByName trims leading and trailing whitespace before matching`() {
+        val current = listOf(station("a", name = "NPR"))
+
+        assertEquals("a", StationCollections.findByName(current, "  NPR  ")?.id)
+    }
+
+    @Test
+    fun `findByName returns null for a blank or whitespace-only query`() {
+        val current = listOf(station("a", name = "NPR"))
+
+        assertEquals(null, StationCollections.findByName(current, ""))
+        assertEquals(null, StationCollections.findByName(current, "   "))
+    }
+
+    @Test
     fun `recents are newest first`() {
         var recents = emptyList<Station>()
         recents = StationCollections.recordRecent(recents, station("a"))

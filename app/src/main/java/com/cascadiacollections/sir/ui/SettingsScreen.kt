@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -464,6 +465,12 @@ private fun EqualizerBandSliders(
     onGainsSettled: (List<Float>) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Slider's onValueChangeFinished lambda can be invoked from a composition older
+    // than the latest onValueChange-driven recomposition — rememberUpdatedState keeps
+    // this pointed at the current gains regardless, so the settled value can't be one
+    // tick stale relative to what onValueChange last reported.
+    val latestGains by rememberUpdatedState(gains)
+
     Column(modifier = modifier) {
         gains.forEachIndexed { index, gain ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -478,7 +485,7 @@ private fun EqualizerBandSliders(
                     onValueChange = { updated ->
                         onGainsChange(gains.toMutableList().apply { this[index] = updated })
                     },
-                    onValueChangeFinished = { onGainsSettled(gains) },
+                    onValueChangeFinished = { onGainsSettled(latestGains) },
                     valueRange = -1f..1f,
                     modifier = Modifier.weight(1f)
                 )

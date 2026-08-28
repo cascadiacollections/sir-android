@@ -42,9 +42,15 @@ class CastSessionCoordinator(private val context: Context) {
     private var wasPlayingBeforeCast = false
 
     init {
+        // RemoteCastPlayer's SessionAvailabilityListener can call back on an arbitrary
+        // thread, but everything these handlers do — reading/calling the
+        // MediaController, mutating wasPlayingBeforeCast — needs to happen on Main.
+        // Routing both through the coordinator's own scope dispatches onto Main and
+        // keeps the two callbacks serialized against each other and against connect()'s
+        // own state updates below.
         castPlayer.setSessionCallbacks(
-            onStarted = { _ -> onCastSessionAvailable() },
-            onEnded = { onCastSessionUnavailable() }
+            onStarted = { _ -> scope.launch { onCastSessionAvailable() } },
+            onEnded = { scope.launch { onCastSessionUnavailable() } }
         )
         connect()
     }
@@ -54,6 +60,12 @@ class CastSessionCoordinator(private val context: Context) {
         scope.launch {
             try {
                 controller = MediaController.Builder(context, sessionToken).buildAsync().await()
+                // A cast session can already be active by the time this finishes — the
+                // SessionAvailabilityListener callback that would normally trigger the
+                // transfer may already have fired and found `controller` still null
+                // (onCastSessionAvailable's early return), so nothing would ever
+                // transfer without this check.
+                if (castPlayer.isCasting()) onCastSessionAvailable()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to connect to the playback session", e)
             }

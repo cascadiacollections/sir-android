@@ -70,7 +70,7 @@ fun TrackHistorySheet(
                 )
             } else {
                 LazyColumn {
-                    items(history, key = { "${it.timestampMillis}-${it.title}" }) { entry ->
+                    items(history, key = { "${it.timestampMillis}-${it.title}-${it.artist}" }) { entry ->
                         val timeLabel = remember(entry.timestampMillis) {
                             DateFormat.getTimeFormat(context).format(Date(entry.timestampMillis))
                         }

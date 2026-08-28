@@ -717,7 +717,15 @@ class RadioPlaybackService : MediaLibraryService() {
             // history. Comparing the *displayed* title/artist text against a
             // translated fallback string would break the moment either happened to
             // equal it, or the two ran under different configurations.
-            .setExtras(Bundle().apply { putBoolean(EXTRA_HAS_RESOLVED_TRACK, currentTrackTitle != null) })
+            //
+            // Copy the existing extras rather than replacing them outright — this item
+            // already carries EXTRA_STREAM_URL from buildMediaItem(), which the :cast
+            // module reads for Chromecast handoff, and a bare Bundle() here would wipe it.
+            .setExtras(
+                (item.mediaMetadata.extras?.let { Bundle(it) } ?: Bundle()).apply {
+                    putBoolean(EXTRA_HAS_RESOLVED_TRACK, currentTrackTitle != null)
+                }
+            )
             .build()
         p.replaceMediaItem(p.currentMediaItemIndex, item.buildUpon().setMediaMetadata(resolved).build())
     }

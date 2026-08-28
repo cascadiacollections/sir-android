@@ -51,9 +51,8 @@ object StationShortcuts {
             .setRank(rank)
             .setIcon(IconCompat.createWithResource(context, R.drawable.ic_launcher_foreground))
             .setIntent(
-                Intent(Intent.ACTION_VIEW, "sir://station/${station.id}".toUri()).apply {
-                    setClassName(context, "com.cascadiacollections.sir.MainActivity")
-                }
+                Intent(Intent.ACTION_VIEW, "sir://station/${station.id}".toUri())
+                    .setClass(context, MainActivity::class.java)
             )
             .build()
 }

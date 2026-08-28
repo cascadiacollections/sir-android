@@ -87,6 +87,30 @@ class StationShortcutsTest {
     }
 
     @Test
+    fun `a station id with reserved uri characters round-trips through the deep link`() {
+        val context = RuntimeEnvironment.getApplication()
+        val reservedId = "https://example.com/stream:8000/live"
+
+        StationShortcuts.update(context, listOf(station(id = reservedId, name = "Imported Station")))
+
+        val manager = context.getSystemService(ShortcutManager::class.java)
+        val shortcut = manager.dynamicShortcuts.single()
+        assertEquals(reservedId, shortcut.intent?.data?.lastPathSegment)
+    }
+
+    @Test
+    fun `stations with a blank name are never published as shortcuts`() {
+        val context = RuntimeEnvironment.getApplication()
+
+        StationShortcuts.update(
+            context,
+            listOf(station("a"), station(id = "b", name = "   "))
+        )
+
+        assertEquals(listOf("station-a"), dynamicShortcutIds())
+    }
+
+    @Test
     fun `shortcuts are ranked in the most-played-first order they're given`() {
         val context = RuntimeEnvironment.getApplication()
         val manager = context.getSystemService(ShortcutManager::class.java)

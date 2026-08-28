@@ -54,6 +54,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="sir" android:host="station" />
             </intent-filter>
+            <!-- Voice search ("Play [station name]") when SIR isn't already the active
+                 media app — see MainActivity.handlePlayFromSearch. -->
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />

@@ -236,4 +236,37 @@ class EqualizerCurvesTest {
             }
         }
     }
+
+    @Test
+    fun `flat is located from the actual range rather than assumed at the midpoint`() {
+        // minLevel=-1200, maxLevel=400: 0 mB sits at fraction 1200/1600 = 0.75, not 0.5.
+        // BASS_BOOST's curve is 0.6 at position 0 (band 0 of a single-band sample), which
+        // is below that 0.75 flat point, so it must display as a *cut*, not the boost a
+        // symmetric-midpoint assumption (0.6 > 0.5) would have shown.
+        val result = EqualizerCurves.displayGainsFor(
+            EqualizerPreset.BASS_BOOST,
+            bandCount = 1,
+            minLevel = (-1200).toShort(),
+            maxLevel = 400.toShort()
+        )
+        assertEquals(-0.2f, result.single(), 0.001f)
+    }
+
+    @Test
+    fun `display gains agree with levelsFor's actual applied level, on an asymmetric range`() {
+        val minLevel = (-1200).toShort()
+        val maxLevel = 400.toShort()
+        EqualizerPreset.entries.forEach { preset ->
+            val gains = EqualizerCurves.displayGainsFor(preset, bandCount = 5, minLevel = minLevel, maxLevel = maxLevel)
+            val appliedLevels = EqualizerCurves.levelsFor(preset, bandCount = 5, minLevel = minLevel, maxLevel = maxLevel)
+            val gainAsLevels = EqualizerCurves.levelsForCustomBands(gains, bandCount = 5, minLevel = minLevel, maxLevel = maxLevel)
+            // Small rounding slop from the two independent Short-narrowing paths.
+            appliedLevels.zip(gainAsLevels).forEach { (applied, fromGain) ->
+                assertTrue(
+                    "$preset: applied=$applied fromDisplayGain=$fromGain",
+                    kotlin.math.abs(applied - fromGain) <= 1
+                )
+            }
+        }
+    }
 }

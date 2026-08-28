@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir
 
 import android.content.Intent
+import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -15,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ServiceController
 import org.robolectric.annotation.Config
 
@@ -131,13 +133,15 @@ class RadioPlaybackServiceLifecycleTest {
 
     @Test
     fun `onStartCommand with ACTION_PLAY_FROM_SEARCH and a blank query does not crash`() {
-        // A blank query short-circuits before resolveVoiceSearch's network lookup, so
-        // this stays a synchronous smoke test rather than needing a fake AppDirectory.
+        // The blank query is only checked inside the coroutine serviceScope.launch
+        // dispatches to Dispatchers.Main, so idle the shadow main looper afterwards —
+        // otherwise the body never runs during the test and a crash there goes unnoticed.
         val intent = Intent().apply {
             action = RadioPlaybackService.ACTION_PLAY_FROM_SEARCH
             putExtra(RadioPlaybackService.EXTRA_SEARCH_QUERY, "")
         }
         service.onStartCommand(intent, 0, 1)
+        shadowOf(Looper.getMainLooper()).idle()
     }
 
     @Test
@@ -146,6 +150,7 @@ class RadioPlaybackServiceLifecycleTest {
             action = RadioPlaybackService.ACTION_PLAY_FROM_SEARCH
         }
         service.onStartCommand(intent, 0, 1)
+        shadowOf(Looper.getMainLooper()).idle()
     }
 
     @Test

@@ -130,6 +130,25 @@ class RadioPlaybackServiceLifecycleTest {
     }
 
     @Test
+    fun `onStartCommand with ACTION_PLAY_FROM_SEARCH and a blank query does not crash`() {
+        // A blank query short-circuits before resolveVoiceSearch's network lookup, so
+        // this stays a synchronous smoke test rather than needing a fake AppDirectory.
+        val intent = Intent().apply {
+            action = RadioPlaybackService.ACTION_PLAY_FROM_SEARCH
+            putExtra(RadioPlaybackService.EXTRA_SEARCH_QUERY, "")
+        }
+        service.onStartCommand(intent, 0, 1)
+    }
+
+    @Test
+    fun `onStartCommand with ACTION_PLAY_FROM_SEARCH and no query extra does not crash`() {
+        val intent = Intent().apply {
+            action = RadioPlaybackService.ACTION_PLAY_FROM_SEARCH
+        }
+        service.onStartCommand(intent, 0, 1)
+    }
+
+    @Test
     @OptIn(UnstableApi::class)
     fun `player never receives a failed audio session id`() {
         val mockControllerInfo: androidx.media3.session.MediaSession.ControllerInfo =

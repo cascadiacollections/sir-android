@@ -90,9 +90,13 @@ class RadioViewModel(
                     trackTitle = title,
                     artist = artist,
                     trackHistory = if (realTrackTitle != null) {
+                        // Normalize a blank artist to null so it renders the same as
+                        // "no artist" and can't defeat TrackHistory's front-entry
+                        // dedupe by disagreeing with a null from a different update.
+                        val historyArtist = artist?.takeIf { it.isNotBlank() }
                         TrackHistory.record(
                             current.trackHistory,
-                            TrackHistoryEntry(realTrackTitle, artist, System.currentTimeMillis())
+                            TrackHistoryEntry(realTrackTitle, historyArtist, System.currentTimeMillis())
                         )
                     } else {
                         current.trackHistory

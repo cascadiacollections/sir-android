@@ -33,7 +33,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Bottom sheet listing the tracks resolved from ICY metadata during this session,
- * newest first, each copyable to the clipboard as "Title — Artist".
+ * newest first, each copyable to the clipboard as "Title — Artist" (or just "Title"
+ * when the entry has no artist).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

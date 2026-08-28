@@ -110,6 +110,10 @@ class RadioPlaybackService : MediaLibraryService() {
     // Equalizer
     private var equalizer: Equalizer? = null
     private var currentEqualizerPreset: EqualizerPreset = EqualizerPreset.NORMAL
+    // A custom curve and a named preset are mutually exclusive; this flag says which of
+    // currentEqualizerPreset / currentCustomEqualizerBands is currently in effect.
+    private var isUsingCustomEqualizerBands: Boolean = false
+    private var currentCustomEqualizerBands: List<Float> = emptyList()
     // Generated ourselves in onCreate so the equalizer can be constructed without racing
     // renderer initialization. Media3's C.AUDIO_SESSION_ID_UNSET is @UnstableApi and is
     // defined as this exact constant, so using the platform one keeps the property
@@ -201,8 +205,13 @@ class RadioPlaybackService : MediaLibraryService() {
         serviceScope.launch {
             applyStreamSource(resolveStreamSource())
 
-            // Load and apply equalizer preset
-            currentEqualizerPreset = settingsRepository.equalizerPreset.first()
+            // Load and apply the equalizer, whichever mode it was last left in
+            isUsingCustomEqualizerBands = settingsRepository.equalizerUseCustomBands.first()
+            if (isUsingCustomEqualizerBands) {
+                currentCustomEqualizerBands = settingsRepository.equalizerCustomBands.first()
+            } else {
+                currentEqualizerPreset = settingsRepository.equalizerPreset.first()
+            }
 
             // Restore sleep timer if it was active before process death
             val firesAt = settingsRepository.sleepTimerFiresAt.first()
@@ -662,6 +671,15 @@ class RadioPlaybackService : MediaLibraryService() {
                 applyEqualizerPreset(EqualizerPreset.fromOrdinal(presetOrdinal))
             }
 
+            ACTION_SET_EQUALIZER_BANDS -> {
+                // Fired on every slider-drag tick, so this only ever applies live audio
+                // feedback — persist = false. The UI persists once itself, directly via
+                // SettingsRepository, when the drag gesture ends (see SettingsScreen's
+                // onGainsSettled), rather than writing to DataStore on every tick here.
+                val bands = intent.getFloatArrayExtra(EXTRA_EQUALIZER_BANDS)?.toList()
+                if (bands != null) applyCustomEqualizerBands(bands, persist = false)
+            }
+
         }
         return super.onStartCommand(intent, flags, startId)
     }
@@ -932,15 +950,20 @@ class RadioPlaybackService : MediaLibraryService() {
             equalizer = Equalizer(0, sessionId).apply {
                 enabled = true
             }
-            applyEqualizerPreset(currentEqualizerPreset)
+            if (isUsingCustomEqualizerBands) {
+                applyCustomEqualizerBands(currentCustomEqualizerBands, persist = false)
+            } else {
+                applyEqualizerPreset(currentEqualizerPreset, persist = false)
+            }
             Log.d(TAG, "Equalizer initialized with session $audioSessionId")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize equalizer", e)
         }
     }
 
-    private fun applyEqualizerPreset(preset: EqualizerPreset) {
+    private fun applyEqualizerPreset(preset: EqualizerPreset, persist: Boolean = true) {
         currentEqualizerPreset = preset
+        isUsingCustomEqualizerBands = false
         val eq = equalizer ?: return
 
         try {
@@ -955,14 +978,44 @@ class RadioPlaybackService : MediaLibraryService() {
                 eq.setBandLevel(band.toShort(), level)
             }
 
-            // Persist preference
-            serviceScope.launch {
-                settingsRepository.setEqualizerPreset(preset)
+            if (persist) {
+                serviceScope.launch { settingsRepository.setEqualizerPreset(preset) }
             }
 
             Log.d(TAG, "Applied equalizer preset: ${preset.name}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply equalizer preset", e)
+        }
+    }
+
+    /**
+     * Applies a custom equalizer curve — one gain per UI slider, interpolated across
+     * however many hardware bands the device actually has.
+     */
+    private fun applyCustomEqualizerBands(bands: List<Float>, persist: Boolean = true) {
+        currentCustomEqualizerBands = bands
+        isUsingCustomEqualizerBands = true
+        val eq = equalizer ?: return
+
+        try {
+            val levels = EqualizerCurves.levelsForCustomBands(
+                gains = bands,
+                bandCount = eq.numberOfBands.toInt(),
+                minLevel = eq.bandLevelRange[0],
+                maxLevel = eq.bandLevelRange[1]
+            )
+
+            levels.forEachIndexed { band, level ->
+                eq.setBandLevel(band.toShort(), level)
+            }
+
+            if (persist) {
+                serviceScope.launch { settingsRepository.setEqualizerCustomBands(bands) }
+            }
+
+            Log.d(TAG, "Applied custom equalizer bands: $bands")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply custom equalizer bands", e)
         }
     }
 
@@ -1065,10 +1118,12 @@ class RadioPlaybackService : MediaLibraryService() {
         const val ACTION_GO_LIVE = "com.cascadiacollections.sir.action.GO_LIVE"
         const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"
         const val ACTION_SET_EQUALIZER = "com.cascadiacollections.sir.action.SET_EQUALIZER"
+        const val ACTION_SET_EQUALIZER_BANDS = "com.cascadiacollections.sir.action.SET_EQUALIZER_BANDS"
 
         // Intent extras
         const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
+        const val EXTRA_EQUALIZER_BANDS = "equalizer_bands"
 
         /**
          * [MediaMetadata.extras] key for the actual playable stream URL of the current

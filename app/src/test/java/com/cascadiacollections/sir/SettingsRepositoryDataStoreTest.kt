@@ -40,6 +40,7 @@ class SettingsRepositoryDataStoreTest {
         repo.setChromecastEnabled(false)
         repo.setSleepTimerDuration(SleepTimerDuration.OFF)
         repo.setSleepTimerFiresAt(0L)
+        repo.setEqualizerCustomBands(emptyList())
         repo.setEqualizerPreset(EqualizerPreset.NORMAL)
         repo.setCustomStreamUrl(null)
     }
@@ -111,6 +112,33 @@ class SettingsRepositoryDataStoreTest {
         val repo = createRepo()
         repo.setEqualizerPreset(EqualizerPreset.BASS_BOOST)
         assertEquals(EqualizerPreset.BASS_BOOST, repo.equalizerPreset.first())
+    }
+
+    @Test
+    fun `equalizerUseCustomBands defaults to false and equalizerCustomBands to empty`() = runBlocking {
+        val repo = createRepo()
+        assertFalse(repo.equalizerUseCustomBands.first())
+        assertEquals(emptyList<Float>(), repo.equalizerCustomBands.first())
+    }
+
+    @Test
+    fun `setEqualizerCustomBands persists the curve and switches to custom mode`() = runBlocking {
+        val repo = createRepo()
+        repo.setEqualizerCustomBands(listOf(-1f, 0f, 0.5f, 1f))
+
+        assertTrue(repo.equalizerUseCustomBands.first())
+        assertEquals(listOf(-1f, 0f, 0.5f, 1f), repo.equalizerCustomBands.first())
+    }
+
+    @Test
+    fun `setEqualizerPreset exits custom-band mode`() = runBlocking {
+        val repo = createRepo()
+        repo.setEqualizerCustomBands(listOf(1f, 1f, 1f))
+
+        repo.setEqualizerPreset(EqualizerPreset.TREBLE)
+
+        assertFalse(repo.equalizerUseCustomBands.first())
+        assertEquals(EqualizerPreset.TREBLE, repo.equalizerPreset.first())
     }
 
     @Test

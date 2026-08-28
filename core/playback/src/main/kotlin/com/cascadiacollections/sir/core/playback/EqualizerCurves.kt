@@ -30,6 +30,70 @@ object EqualizerCurves {
             curve = curve
         )
     }
+
+    /** Number of sliders in the custom-preset UI, independent of the device's real band count. */
+    const val CUSTOM_BAND_COUNT = 5
+
+    /**
+     * Maps [gains] (one per UI slider, each -1f..1f where 0 is flat) onto [bandCount]
+     * hardware bands, linearly interpolating between sliders.
+     *
+     * Unlike [levelsFor]'s preset curves — which treat their output as a fraction of the
+     * full min-to-max range — a gain's sign here picks which half of the device's range
+     * it scales against, so a full boost always reaches [maxLevel] and a full cut always
+     * reaches [minLevel] even when the device's range is asymmetric around zero.
+     */
+    fun levelsForCustomBands(
+        gains: List<Float>,
+        bandCount: Int,
+        minLevel: Short,
+        maxLevel: Short
+    ): List<Short> {
+        if (gains.isEmpty() || bandCount <= 0) return List(bandCount.coerceAtLeast(0)) { 0.toShort() }
+        return List(bandCount) { band ->
+            val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
+            val gain = interpolate(gains, position).coerceIn(-1f, 1f)
+            val level = if (gain >= 0f) gain * maxLevel else -gain * minLevel
+            level.toInt().coerceIn(minLevel.toInt(), maxLevel.toInt()).toShort()
+        }
+    }
+
+    /**
+     * Samples [preset]'s curve at [bandCount] positions for slider display, as a
+     * -1f..1f gain (0 = flat) — the same scale [levelsForCustomBands] takes — rather
+     * than the 0f..1f fraction-of-range [levelsFor] applies to the device directly.
+     */
+    fun displayGainsFor(preset: EqualizerPreset, bandCount: Int = CUSTOM_BAND_COUNT): List<Float> {
+        val curve = preset.curve ?: return List(bandCount) { 0f }
+        return List(bandCount) { band ->
+            val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
+            (curve(position) * 2f - 1f).coerceIn(-1f, 1f)
+        }
+    }
+
+    /**
+     * Normalizes an arbitrary-length, possibly out-of-range gain list — e.g. one
+     * persisted by an older build, or edited by hand — to exactly [bandCount] sliders,
+     * each clamped to -1f..1f. Interpolates rather than truncating/padding so a
+     * differently-sized list still maps onto the fixed slider UI sensibly instead of
+     * silently dropping or ignoring entries.
+     */
+    fun normalizeCustomBands(gains: List<Float>, bandCount: Int = CUSTOM_BAND_COUNT): List<Float> {
+        if (gains.isEmpty() || bandCount <= 0) return List(bandCount.coerceAtLeast(0)) { 0f }
+        return List(bandCount) { band ->
+            val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
+            interpolate(gains, position).coerceIn(-1f, 1f)
+        }
+    }
+
+    /** Piecewise-linear interpolation of [values] at normalized [position] (0f..1f). */
+    private fun interpolate(values: List<Float>, position: Float): Float {
+        if (values.size == 1) return values[0]
+        val scaled = position * (values.size - 1)
+        val lowIndex = scaled.toInt().coerceIn(0, values.size - 2)
+        val frac = scaled - lowIndex
+        return values[lowIndex] + (values[lowIndex + 1] - values[lowIndex]) * frac
+    }
 }
 
 /**

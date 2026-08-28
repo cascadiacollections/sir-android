@@ -2,10 +2,10 @@ package com.cascadiacollections.sir
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
-import androidx.core.net.toUri
 import com.cascadiacollections.sir.core.model.Station
 
 /**
@@ -34,7 +34,7 @@ object StationShortcuts {
         val maxCount = ShortcutManagerCompat.getMaxShortcutCountPerActivity(context).coerceAtLeast(0)
 
         val shortcuts = stations
-            .filter { it.isPlayable }
+            .filter { it.isPlayable && it.name.isNotBlank() }
             .take(maxCount)
             .mapIndexed { index, station -> shortcutFor(context, station, rank = index) }
 
@@ -51,8 +51,14 @@ object StationShortcuts {
             .setRank(rank)
             .setIcon(IconCompat.createWithResource(context, R.drawable.ic_launcher_foreground))
             .setIntent(
-                Intent(Intent.ACTION_VIEW, "sir://station/${station.id}".toUri())
+                Intent(Intent.ACTION_VIEW, deepLinkFor(station.id))
                     .setClass(context, MainActivity::class.java)
             )
             .build()
+
+    // Station IDs derived from imported stream URLs can contain reserved characters
+    // like ':' and '/'; appendPath percent-encodes them so MainActivity's
+    // lastPathSegment gets the whole ID back intact instead of just its trailing chunk.
+    private fun deepLinkFor(stationId: String): Uri =
+        Uri.Builder().scheme("sir").authority("station").appendPath(stationId).build()
 }

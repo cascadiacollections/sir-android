@@ -73,7 +73,8 @@ class RadioPlaybackServiceBehaviorTest {
         val extras = listOf(
             RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,
             RadioPlaybackService.EXTRA_EQUALIZER_PRESET,
-            RadioPlaybackService.EXTRA_SEARCH_QUERY
+            RadioPlaybackService.EXTRA_SEARCH_QUERY,
+            RadioPlaybackService.EXTRA_STREAM_URL
         )
         assertEquals(extras.size, extras.toSet().size)
     }

@@ -74,11 +74,11 @@ private fun StationArtwork(
     isPlaying: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // Keyed to station.id (not just favicon): StationRow is rendered in a LazyColumn
-    // without an item key, so Compose can reuse this composition slot for a different
-    // station at the same list position. If that station happened to share (or also
-    // lack) a favicon, an unkeyed remember would carry the previous station's failure
-    // state over onto it.
+    // Keyed to station.id (not just favicon): some call sites (e.g. BrowseScreen's
+    // search results) render StationRow in a LazyColumn without an item key, so Compose
+    // can reuse this composition slot for a different station at the same list
+    // position. If that station happened to share (or also lack) a favicon, an
+    // unkeyed remember would carry the previous station's failure state over onto it.
     var loadFailed by remember(station.id, station.favicon) { mutableStateOf(false) }
     val tint = if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -92,7 +92,10 @@ private fun StationArtwork(
     } else {
         AsyncImage(
             model = station.favicon,
-            contentDescription = stringResource(R.string.play_station),
+            // Decorative: the row itself is clickable and already conveys "play" via
+            // its content, so an image-specific description would just be noise for
+            // screen readers.
+            contentDescription = null,
             contentScale = ContentScale.Crop,
             onError = { loadFailed = true },
             modifier = modifier.clip(CircleShape)

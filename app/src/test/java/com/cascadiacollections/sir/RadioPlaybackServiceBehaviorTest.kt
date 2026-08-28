@@ -71,7 +71,8 @@ class RadioPlaybackServiceBehaviorTest {
     fun `all public extra key constants are distinct`() {
         val extras = listOf(
             RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,
-            RadioPlaybackService.EXTRA_EQUALIZER_PRESET
+            RadioPlaybackService.EXTRA_EQUALIZER_PRESET,
+            RadioPlaybackService.EXTRA_STREAM_URL
         )
         assertEquals(extras.size, extras.toSet().size)
     }

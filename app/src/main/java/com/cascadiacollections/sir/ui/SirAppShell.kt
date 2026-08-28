@@ -21,11 +21,14 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import com.cascadiacollections.sir.CastFeatureManager
+import com.cascadiacollections.sir.CastModuleState
 import com.cascadiacollections.sir.R
 import com.cascadiacollections.sir.RadioBrowserViewModel
 import com.cascadiacollections.sir.RadioUiState
@@ -58,6 +61,8 @@ fun SirAppShell(
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
+    val chromecastEnabled by settingsRepository.chromecastEnabled.collectAsState(initial = false)
+    val castModuleState by castFeatureManager.moduleState.collectAsState()
     val isWideLayout = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
     val layoutType = if (isWideLayout) {
         NavigationSuiteType.NavigationRail
@@ -112,6 +117,9 @@ fun SirAppShell(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+                    if (chromecastEnabled && castModuleState !is CastModuleState.Unavailable) {
+                        CastButton()
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

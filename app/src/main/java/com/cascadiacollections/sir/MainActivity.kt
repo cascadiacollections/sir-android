@@ -240,6 +240,13 @@ fun RadioScreen(
 
     if (castFeatureManager == null) return
 
+    // Dynamic per-station home-screen shortcuts, ranked by play count so the shortcuts
+    // that survive the launcher's cap are the ones actually worth a quick-launch slot.
+    val mostPlayedStations by repository.mostPlayedSavedStations.collectAsState(initial = emptyList())
+    LaunchedEffect(mostPlayedStations) {
+        StationShortcuts.update(context, mostPlayedStations)
+    }
+
     val pendingId by pendingStationId.collectAsState()
     LaunchedEffect(pendingId) {
         val id = pendingId ?: return@LaunchedEffect

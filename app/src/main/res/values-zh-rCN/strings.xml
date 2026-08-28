@@ -12,6 +12,12 @@
     <string name="sleep_timer_set">睡眠定时器已设置为 %1$s</string>
     <string name="sleep_timer_off">睡眠定时器已关闭</string>
     <string name="equalizer">均衡器</string>
+    <string name="equalizer_preset_custom">自定义</string>
+    <string name="equalizer_band_bass">低音</string>
+    <string name="equalizer_band_low_mid">中低音</string>
+    <string name="equalizer_band_mid">中音</string>
+    <string name="equalizer_band_high_mid">中高音</string>
+    <string name="equalizer_band_treble">高音</string>
     <string name="custom_stream_url">自定义直播流地址</string>
     <string name="custom_stream_hint">输入直播流地址（http/https）</string>
     <string name="custom_stream_active">正在使用自定义直播流</string>

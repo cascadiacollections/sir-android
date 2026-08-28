@@ -81,6 +81,8 @@ class SettingsRepository(private val context: Context) {
     private val sleepTimerMinutesKey = intPreferencesKey("sleep_timer_minutes")
     private val sleepTimerFiresAtKey = longPreferencesKey("sleep_timer_fires_at")
     private val equalizerPresetKey = intPreferencesKey("equalizer_preset")
+    private val equalizerUseCustomBandsKey = booleanPreferencesKey("equalizer_use_custom_bands")
+    private val equalizerCustomBandsKey = stringPreferencesKey("equalizer_custom_bands")
     private val customStreamUrlKey = stringPreferencesKey("custom_stream_url")
     private val savedStationsKey = stringPreferencesKey("saved_stations")
     private val recentStationsKey = stringPreferencesKey("recent_stations")
@@ -152,12 +154,32 @@ class SettingsRepository(private val context: Context) {
         EqualizerPreset.fromOrdinal(preferences[equalizerPresetKey] ?: 0)
     }
 
+    /** Whether the equalizer is using a custom band curve rather than [equalizerPreset]. */
+    val equalizerUseCustomBands: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[equalizerUseCustomBandsKey] ?: false
+    }
+
+    /** The custom equalizer curve, one gain per UI slider (-1f..1f, 0f = flat). */
+    val equalizerCustomBands: Flow<List<Float>> = context.dataStore.data.map { preferences ->
+        decodeFloatList(preferences[equalizerCustomBandsKey])
+    }
+
     /**
-     * Set equalizer preset
+     * Set equalizer preset, exiting custom-band mode — a preset and a custom curve are
+     * mutually exclusive, so picking one always supersedes the other.
      */
     suspend fun setEqualizerPreset(preset: EqualizerPreset) {
         context.dataStore.edit { preferences ->
             preferences[equalizerPresetKey] = preset.ordinal
+            preferences[equalizerUseCustomBandsKey] = false
+        }
+    }
+
+    /** Persists [bands] as the active equalizer curve, switching into custom-band mode. */
+    suspend fun setEqualizerCustomBands(bands: List<Float>) {
+        context.dataStore.edit { preferences ->
+            preferences[equalizerCustomBandsKey] = Json.encodeToString(bands)
+            preferences[equalizerUseCustomBandsKey] = true
         }
     }
 
@@ -307,6 +329,10 @@ class SettingsRepository(private val context: Context) {
             preferences[key] = StationCodec.encode(updated)
         }
     }
+
+    /** Decodes a JSON float list, discarding it entirely if it's unreadable. */
+    private fun decodeFloatList(raw: String?): List<Float> =
+        raw?.let { runCatching { Json.decodeFromString<List<Float>>(it) }.getOrNull() } ?: emptyList()
 
     /** Play counts keyed by station id; unreadable or negative entries are discarded. */
     private fun decodePlayCounts(raw: String?): Map<String, Int> =

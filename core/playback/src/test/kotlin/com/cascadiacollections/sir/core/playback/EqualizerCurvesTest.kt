@@ -104,4 +104,169 @@ class EqualizerCurvesTest {
 
         assertEquals(listOf(0.toShort()), low)
     }
+
+    // ---- levelsForCustomBands ----
+
+    @Test
+    fun `all-flat custom gains produce zero millibels`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = List(EqualizerCurves.CUSTOM_BAND_COUNT) { 0f },
+            bandCount = 5,
+            minLevel = minLevel,
+            maxLevel = maxLevel
+        )
+
+        assertEquals(List(5) { 0.toShort() }, result)
+    }
+
+    @Test
+    fun `a full boost reaches max level regardless of range asymmetry`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = listOf(1f, 1f, 1f, 1f, 1f),
+            bandCount = 3,
+            minLevel = (-3000).toShort(),
+            maxLevel = 300.toShort()
+        )
+
+        assertEquals(List(3) { 300.toShort() }, result)
+    }
+
+    @Test
+    fun `a full cut reaches min level regardless of range asymmetry`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = listOf(-1f, -1f, -1f, -1f, -1f),
+            bandCount = 3,
+            minLevel = (-3000).toShort(),
+            maxLevel = 300.toShort()
+        )
+
+        assertEquals(List(3) { (-3000).toShort() }, result)
+    }
+
+    @Test
+    fun `hardware bands interpolate between adjacent UI sliders`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = listOf(0f, 1f),
+            bandCount = 3,
+            minLevel = minLevel,
+            maxLevel = maxLevel
+        )
+
+        // position 0 -> gain 0, position 0.5 -> gain 0.5, position 1 -> gain 1
+        assertEquals(listOf(0.toShort(), 750.toShort(), 1500.toShort()), result)
+    }
+
+    @Test
+    fun `custom band levels never escape the supported range`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = listOf(-1f, 1f, -1f, 1f, -1f),
+            bandCount = 10,
+            minLevel = minLevel,
+            maxLevel = maxLevel
+        )
+
+        result.forEach { level -> assertTrue(level in minLevel..maxLevel) }
+    }
+
+    @Test
+    fun `empty gains produce a flat curve rather than crashing`() {
+        val result = EqualizerCurves.levelsForCustomBands(
+            gains = emptyList(),
+            bandCount = 5,
+            minLevel = minLevel,
+            maxLevel = maxLevel
+        )
+
+        assertEquals(List(5) { 0.toShort() }, result)
+    }
+
+    // ---- normalizeCustomBands ----
+
+    @Test
+    fun `normalizing an empty list produces flat gains at the requested count`() {
+        assertEquals(List(5) { 0f }, EqualizerCurves.normalizeCustomBands(emptyList(), bandCount = 5))
+    }
+
+    @Test
+    fun `normalizing a correctly-sized in-range list is a no-op`() {
+        val gains = listOf(-1f, -0.5f, 0f, 0.5f, 1f)
+        assertEquals(gains, EqualizerCurves.normalizeCustomBands(gains, bandCount = 5))
+    }
+
+    @Test
+    fun `normalizing a shorter list stretches it to the requested count`() {
+        val result = EqualizerCurves.normalizeCustomBands(listOf(0f, 1f), bandCount = 5)
+        assertEquals(5, result.size)
+        assertEquals(0f, result.first())
+        assertEquals(1f, result.last())
+    }
+
+    @Test
+    fun `normalizing a longer list still produces exactly the requested count`() {
+        val result = EqualizerCurves.normalizeCustomBands(List(9) { 1f }, bandCount = 5)
+        assertEquals(5, result.size)
+    }
+
+    @Test
+    fun `normalizing clamps out-of-range gains to -1f to 1f`() {
+        val result = EqualizerCurves.normalizeCustomBands(listOf(-5f, 5f), bandCount = 3)
+        result.forEach { gain -> assertTrue(gain in -1f..1f) }
+    }
+
+    // ---- displayGainsFor ----
+
+    @Test
+    fun `normal preset displays as all-flat gains`() {
+        assertEquals(List(5) { 0f }, EqualizerCurves.displayGainsFor(EqualizerPreset.NORMAL, bandCount = 5))
+    }
+
+    @Test
+    fun `bass boost displays as a descending gain curve`() {
+        val result = EqualizerCurves.displayGainsFor(EqualizerPreset.BASS_BOOST, bandCount = 5)
+
+        assertTrue(result.zipWithNext().all { (a, b) -> b <= a })
+        assertTrue(result.first() > result.last())
+    }
+
+    @Test
+    fun `display gains stay within -1f to 1f`() {
+        EqualizerPreset.entries.forEach { preset ->
+            EqualizerCurves.displayGainsFor(preset, bandCount = 8).forEach { gain ->
+                assertTrue("$preset produced $gain", gain in -1f..1f)
+            }
+        }
+    }
+
+    @Test
+    fun `flat is located from the actual range rather than assumed at the midpoint`() {
+        // minLevel=-1200, maxLevel=400: 0 mB sits at fraction 1200/1600 = 0.75, not 0.5.
+        // BASS_BOOST's curve is 0.6 at position 0 (band 0 of a single-band sample), which
+        // is below that 0.75 flat point, so it must display as a *cut*, not the boost a
+        // symmetric-midpoint assumption (0.6 > 0.5) would have shown.
+        val result = EqualizerCurves.displayGainsFor(
+            EqualizerPreset.BASS_BOOST,
+            bandCount = 1,
+            minLevel = (-1200).toShort(),
+            maxLevel = 400.toShort()
+        )
+        assertEquals(-0.2f, result.single(), 0.001f)
+    }
+
+    @Test
+    fun `display gains agree with levelsFor's actual applied level, on an asymmetric range`() {
+        val minLevel = (-1200).toShort()
+        val maxLevel = 400.toShort()
+        EqualizerPreset.entries.forEach { preset ->
+            val gains = EqualizerCurves.displayGainsFor(preset, bandCount = 5, minLevel = minLevel, maxLevel = maxLevel)
+            val appliedLevels = EqualizerCurves.levelsFor(preset, bandCount = 5, minLevel = minLevel, maxLevel = maxLevel)
+            val gainAsLevels = EqualizerCurves.levelsForCustomBands(gains, bandCount = 5, minLevel = minLevel, maxLevel = maxLevel)
+            // Small rounding slop from the two independent Short-narrowing paths.
+            appliedLevels.zip(gainAsLevels).forEach { (applied, fromGain) ->
+                assertTrue(
+                    "$preset: applied=$applied fromDisplayGain=$fromGain",
+                    kotlin.math.abs(applied - fromGain) <= 1
+                )
+            }
+        }
+    }
 }

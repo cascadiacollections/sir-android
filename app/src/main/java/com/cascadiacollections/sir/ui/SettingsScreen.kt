@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
@@ -26,6 +27,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,7 +38,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -49,6 +53,7 @@ import com.cascadiacollections.sir.CastModuleState
 import com.cascadiacollections.sir.R
 import com.cascadiacollections.sir.RadioPlaybackService
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
+import com.cascadiacollections.sir.core.playback.EqualizerCurves
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 import com.cascadiacollections.sir.core.playback.StreamConfig
@@ -76,6 +81,8 @@ fun SettingsContent(
     val castModuleState by castFeatureManager.moduleState.collectAsState()
     val sleepTimerDuration by settingsRepository.sleepTimerDuration.collectAsState(initial = SleepTimerDuration.OFF)
     val equalizerPreset by settingsRepository.equalizerPreset.collectAsState(initial = EqualizerPreset.NORMAL)
+    val equalizerUseCustomBands by settingsRepository.equalizerUseCustomBands.collectAsState(initial = false)
+    val equalizerCustomBands by settingsRepository.equalizerCustomBands.collectAsState(initial = emptyList())
     val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
     val savedStations by settingsRepository.savedStations.collectAsState(initial = emptyList())
 
@@ -85,6 +92,24 @@ fun SettingsContent(
     var streamPresetExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(customStreamUrl) {
         customStreamText = customStreamUrl ?: ""
+    }
+
+    // Sliders show whichever curve is actually in effect: the persisted custom bands
+    // when in custom mode, otherwise the selected preset's curve sampled for display.
+    // Not kept in sync while the user is actively dragging (see onGainsChange below) —
+    // only preset/mode switches from elsewhere should snap the sliders to a new curve.
+    var equalizerBandGains by remember {
+        mutableStateOf(EqualizerCurves.displayGainsFor(EqualizerPreset.NORMAL))
+    }
+    LaunchedEffect(equalizerPreset, equalizerUseCustomBands, equalizerCustomBands) {
+        equalizerBandGains = if (equalizerUseCustomBands) {
+            // Normalized rather than used as-is: a persisted curve could be a different
+            // length (an older install, a test fixture) or carry out-of-range values,
+            // and the sliders below assume exactly CUSTOM_BAND_COUNT entries in -1f..1f.
+            EqualizerCurves.normalizeCustomBands(equalizerCustomBands)
+        } else {
+            EqualizerCurves.displayGainsFor(equalizerPreset)
+        }
     }
 
     Column(
@@ -156,7 +181,11 @@ fun SettingsContent(
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
             OutlinedTextField(
-                value = stringResource(equalizerPreset.labelRes),
+                value = if (equalizerUseCustomBands) {
+                    stringResource(R.string.equalizer_preset_custom)
+                } else {
+                    stringResource(equalizerPreset.labelRes)
+                },
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = equalizerExpanded) },
@@ -187,6 +216,27 @@ fun SettingsContent(
                 }
             }
         }
+
+        EqualizerBandSliders(
+            gains = equalizerBandGains,
+            onGainsChange = { updated ->
+                equalizerBandGains = updated
+                // Live audio feedback while dragging — not persisted per-tick; see
+                // onGainsSettled for the single write once the drag ends.
+                context.startService(
+                    Intent(context, RadioPlaybackService::class.java).apply {
+                        action = RadioPlaybackService.ACTION_SET_EQUALIZER_BANDS
+                        putExtra(RadioPlaybackService.EXTRA_EQUALIZER_BANDS, updated.toFloatArray())
+                    }
+                )
+            },
+            onGainsSettled = { settled ->
+                scope.launch { settingsRepository.setEqualizerCustomBands(settled) }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        )
 
         // No stream quality selector: all three StreamQuality values currently resolve to
         // the same SHOUTcast mount, so the control could not change anything. The enum and
@@ -387,6 +437,58 @@ fun SettingsContent(
                 ) {
                     Text(stringResource(R.string.save))
                 }
+            }
+        }
+    }
+}
+
+private val EQUALIZER_BAND_LABEL_RES = listOf(
+    R.string.equalizer_band_bass,
+    R.string.equalizer_band_low_mid,
+    R.string.equalizer_band_mid,
+    R.string.equalizer_band_high_mid,
+    R.string.equalizer_band_treble
+)
+
+/**
+ * Visual, real-time-adjustable equalizer band display.
+ *
+ * [gains] are one per band (-1f..1f, 0f = flat) — either the selected preset's curve
+ * sampled for display, or the persisted custom curve. Dragging any slider reports every
+ * intermediate value via [onGainsChange] (for live audio feedback) and the final value
+ * via [onGainsSettled] (for a single persisted write instead of one per drag tick).
+ */
+@Composable
+private fun EqualizerBandSliders(
+    gains: List<Float>,
+    onGainsChange: (List<Float>) -> Unit,
+    onGainsSettled: (List<Float>) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Slider's onValueChangeFinished lambda can be invoked from a composition older
+    // than the latest onValueChange-driven recomposition — rememberUpdatedState keeps
+    // this pointed at the current gains regardless, so the settled value can't be one
+    // tick stale relative to what onValueChange last reported.
+    val latestGains by rememberUpdatedState(gains)
+
+    Column(modifier = modifier) {
+        gains.forEachIndexed { index, gain ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(EQUALIZER_BAND_LABEL_RES.getOrElse(index) { R.string.equalizer_band_mid }),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(72.dp)
+                )
+                Slider(
+                    value = gain,
+                    onValueChange = { updated ->
+                        onGainsChange(gains.toMutableList().apply { this[index] = updated })
+                    },
+                    onValueChangeFinished = { onGainsSettled(latestGains) },
+                    valueRange = -1f..1f,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }

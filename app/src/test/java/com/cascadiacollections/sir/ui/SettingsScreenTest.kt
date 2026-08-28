@@ -3,6 +3,7 @@ package com.cascadiacollections.sir.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import com.cascadiacollections.sir.CastFeatureManager
 import com.cascadiacollections.sir.CastModuleState
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
@@ -62,6 +63,20 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun `settings screen displays equalizer band sliders`() {
+        composeRule.setContent {
+            SirTheme {
+                SettingsContent(
+                    settingsRepository = createSettingsRepo(),
+                    castFeatureManager = createMockCastManager()
+                )
+            }
+        }
+        composeRule.onNodeWithText("Bass").assertIsDisplayed()
+        composeRule.onNodeWithText("Treble").assertIsDisplayed()
+    }
+
+    @Test
     fun `settings screen displays Chromecast toggle`() {
         composeRule.setContent {
             SirTheme {
@@ -71,7 +86,7 @@ class SettingsScreenTest {
                 )
             }
         }
-        composeRule.onNodeWithText("Enable Chromecast").assertIsDisplayed()
+        composeRule.onNodeWithText("Enable Chromecast").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -84,7 +99,7 @@ class SettingsScreenTest {
                 )
             }
         }
-        composeRule.onNodeWithText("Privacy Policy").assertIsDisplayed()
+        composeRule.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -98,7 +113,7 @@ class SettingsScreenTest {
             }
         }
         // Chromecast toggle should be interactive when not installed
-        composeRule.onNodeWithText("Enable Chromecast").assertIsDisplayed()
+        composeRule.onNodeWithText("Enable Chromecast").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -114,6 +129,6 @@ class SettingsScreenTest {
         // The FOSS build cannot install the module, so the row is absent rather than
         // present-but-disabled. The rest of the screen still renders.
         composeRule.onNodeWithText("Enable Chromecast").assertDoesNotExist()
-        composeRule.onNodeWithText("Privacy Policy").assertIsDisplayed()
+        composeRule.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed()
     }
 }

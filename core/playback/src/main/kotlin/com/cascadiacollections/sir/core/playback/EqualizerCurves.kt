@@ -81,6 +81,7 @@ object EqualizerCurves {
         minLevel: Short = -1500,
         maxLevel: Short = 1500
     ): List<Float> {
+        if (bandCount <= 0) return emptyList()
         val curve = preset.curve ?: return List(bandCount) { 0f }
         val range = (maxLevel - minLevel).coerceAtLeast(1)
         // Where curve()'s 0f..1f output lands on 0 mB — see kdoc above.

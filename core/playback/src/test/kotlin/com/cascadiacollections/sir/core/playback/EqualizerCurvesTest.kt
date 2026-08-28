@@ -238,6 +238,12 @@ class EqualizerCurvesTest {
     }
 
     @Test
+    fun `a non-positive band count produces empty display gains rather than crashing`() {
+        assertEquals(emptyList<Float>(), EqualizerCurves.displayGainsFor(EqualizerPreset.BASS_BOOST, bandCount = 0))
+        assertEquals(emptyList<Float>(), EqualizerCurves.displayGainsFor(EqualizerPreset.BASS_BOOST, bandCount = -1))
+    }
+
+    @Test
     fun `flat is located from the actual range rather than assumed at the midpoint`() {
         // minLevel=-1200, maxLevel=400: 0 mB sits at fraction 1200/1600 = 0.75, not 0.5.
         // BASS_BOOST's curve is 0.6 at position 0 (band 0 of a single-band sample), which

@@ -100,6 +100,9 @@
     <!-- Share -->
     <string name="share">分享</string>
     <string name="share_now_playing">正在 SIR 上播放：%1$s</string>
+    <string name="track_history_title">播放记录</string>
+    <string name="track_history_empty">本次收听过的曲目会显示在这里。</string>
+    <string name="copy_track">复制曲目信息</string>
     <!-- App shortcuts -->
     <string name="shortcut_play_long">播放 SIR 电台</string>
     <!-- Notification / Service -->

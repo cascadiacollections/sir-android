@@ -773,6 +773,21 @@ class RadioPlaybackService : MediaLibraryService() {
         val resolved = item.mediaMetadata.buildUpon()
             .setTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
             .setArtist(currentArtist ?: getString(R.string.stream_description))
+            // A locale-independent, non-user-facing signal that this update carries a
+            // real resolved ICY track rather than the station-name/generic-description
+            // fallback — RadioViewModel uses it to decide what belongs in track
+            // history. Comparing the *displayed* title/artist text against a
+            // translated fallback string would break the moment either happened to
+            // equal it, or the two ran under different configurations.
+            //
+            // Copy the existing extras rather than replacing them outright — this item
+            // already carries EXTRA_STREAM_URL from buildMediaItem(), which the :cast
+            // module reads for Chromecast handoff, and a bare Bundle() here would wipe it.
+            .setExtras(
+                (item.mediaMetadata.extras?.let { Bundle(it) } ?: Bundle()).apply {
+                    putBoolean(EXTRA_HAS_RESOLVED_TRACK, currentTrackTitle != null)
+                }
+            )
             .build()
         p.replaceMediaItem(p.currentMediaItemIndex, item.buildUpon().setMediaMetadata(resolved).build())
     }
@@ -1182,6 +1197,13 @@ class RadioPlaybackService : MediaLibraryService() {
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
         const val EXTRA_SEARCH_QUERY = "search_query"
         const val EXTRA_EQUALIZER_BANDS = "equalizer_bands"
+
+        /**
+         * [MediaMetadata.extras] key: whether the current metadata update carries a
+         * genuinely resolved ICY track, as opposed to the station-name/generic
+         * fallback. See [publishResolvedMetadata].
+         */
+        const val EXTRA_HAS_RESOLVED_TRACK = "has_resolved_track"
 
         /**
          * [MediaMetadata.extras] key for the actual playable stream URL of the current

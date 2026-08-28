@@ -11,6 +11,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.audiofx.Equalizer
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -874,6 +875,9 @@ class RadioPlaybackService : MediaLibraryService() {
                 .setArtist(station.displayLabel)
                 .setIsPlayable(true)
                 .setIsBrowsable(false)
+                // Auto/Automotive load this URI themselves (their own image pipeline), so
+                // it's safe to pass through even though the phone UI has no image loader.
+                .setArtworkUri(station.favicon?.takeIf { it.isNotBlank() }?.let(Uri::parse))
                 .build()
         )
         .build()

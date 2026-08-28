@@ -17,6 +17,9 @@ dependencies {
     // Cast SDK - use version catalog for consistent versioning
     implementation(libs.media3.cast)
     implementation(libs.media3.common)
+    // MediaController/SessionToken, to connect to RadioPlaybackService's session from
+    // this module the same way RadioViewModel does from :app.
+    implementation(libs.media3.session)
     implementation(libs.play.services.cast.framework)
     implementation(libs.mediarouter)
 

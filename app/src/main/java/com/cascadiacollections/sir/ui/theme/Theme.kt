@@ -12,6 +12,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import coil3.compose.setSingletonImageLoaderFactory
 
 private val DarkColorScheme = darkColorScheme(
     primary = Amber80,
@@ -33,6 +34,11 @@ fun SirTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    // Installed here rather than at an Application/MainActivity entry point so every
+    // surface that renders station artwork (including Robolectric/Compose tests, which
+    // all wrap content in SirTheme) gets the bounded-timeout loader consistently.
+    setSingletonImageLoaderFactory { context -> AppImageLoader.create(context) }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

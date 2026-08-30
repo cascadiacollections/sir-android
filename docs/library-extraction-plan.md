@@ -107,9 +107,22 @@ sir/
 
 ## Phase 1 Review Notes (Professional Critique)
 The following improvements are recommended before publishing as a standalone library:
-- **API redesign**: Introduce a `TimeShiftController` to replace `Factory.lastCreated`
-- **Time-based API**: Expose `seekBack(duration)` instead of `seekBack(bytes)` for consumer ergonomics
-- **Buffer internals**: Consider making `CircularByteBuffer` internal, exposing only via controller
-- **EOF handling**: Surface upstream EOF/errors to consumers instead of blocking forever
+- ~~**API redesign**: Introduce a `TimeShiftController` to replace `Factory.lastCreated`~~ ✅ Done
+- ~~**Time-based API**: Expose `seekBack(duration)` instead of `seekBack(bytes)`~~ ✅ Done —
+  `TimeShiftController` takes `kotlin.time.Duration` and converts using the stream byte
+  rate it is constructed with; `seekBack` returns `false` when under-buffered instead of
+  silently clamping.
+- ~~**EOF handling**: Surface upstream EOF/errors to consumers instead of blocking forever~~
+  ✅ Done — `CircularByteBuffer.signalEndOfStream()` wakes blocked readers, which drain the
+  buffer and then get `END_OF_STREAM` (-1, matching `C.RESULT_END_OF_INPUT`).
+  `TimeShiftDataSource` signals it whenever its reader thread stops and on `close()`, and
+  clears it in `open()` so a reconnect resumes normally.
+- **Buffer internals**: `CircularByteBuffer` is still public. It is a useful zero-dependency
+  type in its own right, but consumers should reach for `TimeShiftController`; revisit
+  making it internal when explicit API mode lands.
 - **Publishing**: Add `maven-publish` plugin, POM metadata, Dokka for API docs
 - **Binary compatibility**: Add Kotlin explicit API mode and API validation
+
+Also outstanding for publication: `libs/notification-colors` and `libs/okhttp-streaming`
+still use the `com.cascadiacollections.sir` namespace rather than
+`com.cascadiacollections.android`.

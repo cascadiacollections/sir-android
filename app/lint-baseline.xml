@@ -134,17 +134,6 @@
     </issue>
 
     <issue
-        id="UnsafeOptInUsageError"
-        message="This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)`"
-        errorLine1="    private var timeShiftDataSourceFactory: TimeShiftDataSource.Factory? = null"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="100"
-            column="45"/>
-    </issue>
-
-    <issue
         id="ConfigurationScreenWidthHeight"
         message="Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize"
         errorLine1="    val screenWidthDp = LocalConfiguration.current.screenWidthDp"

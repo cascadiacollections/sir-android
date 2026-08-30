@@ -43,8 +43,8 @@ import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
-import com.cascadiacollections.android.media3.timeshift.CircularByteBuffer
 import com.cascadiacollections.android.media3.timeshift.PlaybackMode
+import com.cascadiacollections.android.media3.timeshift.TimeShiftController
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
 import com.cascadiacollections.sir.core.directory.search
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
@@ -69,6 +69,7 @@ import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -133,16 +134,8 @@ class RadioPlaybackService : MediaLibraryService() {
     private var currentStationTitle: String? = null
 
     // DVR time-shift buffer
-    private val replayBuffer = CircularByteBuffer(REPLAY_BUFFER_SIZE)
+    private val timeShift = TimeShiftController(REPLAY_BUFFER_SIZE, STREAM_BYTES_PER_SEC)
     private var playbackMode: PlaybackMode = PlaybackMode.Live
-
-    // Opted in explicitly rather than left to lint-baseline.xml's single UnsafeOptInUsageError
-    // slot: that slot is matched by message text alone, so it silently absorbs whichever
-    // unannotated media3 opt-in usage lint finds first and reports any other as a build
-    // failure pointing at an unrelated line. Annotating this declaration means it produces
-    // no finding of its own, leaving the baseline slot free to flag a genuinely new one.
-    @OptIn(UnstableApi::class)
-    private var timeShiftDataSourceFactory: TimeShiftDataSource.Factory? = null
 
     private val audioBecomingNoisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -276,8 +269,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .build()
 
         // Time-shift data source wraps OkHttp for DVR-style replay
-        val timeShiftFactory = TimeShiftDataSource.Factory(httpDataSourceFactory, replayBuffer)
-        timeShiftDataSourceFactory = timeShiftFactory
+        val timeShiftFactory = TimeShiftDataSource.Factory(httpDataSourceFactory, timeShift)
 
         // Media source factory with time-shift data source
         val mediaSourceFactory = DefaultMediaSourceFactory(context)
@@ -304,7 +296,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .setLoadControl(loadControl)
             .setBandwidthMeter(bandwidthMeter)
             .setMediaSourceFactory(mediaSourceFactory)
-            .setSeekBackIncrementMs(SEEK_BACK_INCREMENT_MS)
+            .setSeekBackIncrementMs(SEEK_BACK_INCREMENT.inWholeMilliseconds)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -365,11 +357,9 @@ class RadioPlaybackService : MediaLibraryService() {
                     when (customCommand.customAction) {
                         ACTION_SEEK_BACK -> {
                             if (!SEEKBACK_ENABLED) return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
-                            val bytesToSeek = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
-                            if (!replayBuffer.canSeekBack(bytesToSeek)) {
+                            if (!timeShift.seekBack(SEEK_BACK_INCREMENT)) {
                                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
                             }
-                            timeShiftDataSourceFactory?.lastCreated?.seekBack(bytesToSeek)
                             playbackMode = PlaybackMode.TimeShifted
                             flushPlayer()
                             updateCustomLayout()
@@ -377,7 +367,7 @@ class RadioPlaybackService : MediaLibraryService() {
                         }
                         ACTION_GO_LIVE -> {
                             if (!SEEKBACK_ENABLED) return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
-                            timeShiftDataSourceFactory?.lastCreated?.goLive()
+                            timeShift.goLive()
                             playbackMode = PlaybackMode.Live
                             flushPlayer()
                             updateCustomLayout()
@@ -685,9 +675,7 @@ class RadioPlaybackService : MediaLibraryService() {
 
             ACTION_SEEK_BACK -> {
                 if (SEEKBACK_ENABLED) {
-                    val bytesToSeek = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
-                    if (replayBuffer.canSeekBack(bytesToSeek)) {
-                        timeShiftDataSourceFactory?.lastCreated?.seekBack(bytesToSeek)
+                    if (timeShift.seekBack(SEEK_BACK_INCREMENT)) {
                         playbackMode = PlaybackMode.TimeShifted
                         flushPlayer()
                         updateCustomLayout()
@@ -697,7 +685,7 @@ class RadioPlaybackService : MediaLibraryService() {
 
             ACTION_GO_LIVE -> {
                 if (SEEKBACK_ENABLED) {
-                    timeShiftDataSourceFactory?.lastCreated?.goLive()
+                    timeShift.goLive()
                     playbackMode = PlaybackMode.Live
                     flushPlayer()
                     updateCustomLayout()
@@ -740,7 +728,7 @@ class RadioPlaybackService : MediaLibraryService() {
         releaseEqualizer()
 
         // Clear replay buffer
-        replayBuffer.clear()
+        timeShift.reset()
 
         // Cancel coroutine scope
         serviceScope.cancel()
@@ -864,7 +852,7 @@ class RadioPlaybackService : MediaLibraryService() {
 
     /**
      * Force ExoPlayer to discard its internal decoded buffer and re-read from
-     * the [CircularByteBuffer] at the current read cursor position.
+     * the [timeShift] buffer at the current read cursor position.
      * Without this, ExoPlayer's 60s internal buffer would keep playing stale
      * audio after a seekBack or goLive cursor change.
      */
@@ -881,21 +869,19 @@ class RadioPlaybackService : MediaLibraryService() {
     /** Post a delayed check to reveal "Replay 30s" once enough data is buffered. */
     private fun scheduleSeekBackReveal() {
         seekBackRevealRunnable?.let { sleepTimerHandler.removeCallbacks(it) }
-        val seekBytes = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
-        if (replayBuffer.canSeekBack(seekBytes)) {
+        if (timeShift.canSeekBack(SEEK_BACK_INCREMENT)) {
             updateCustomLayout()
             return
         }
         val runnable = Runnable { updateCustomLayout() }
         seekBackRevealRunnable = runnable
         // Check shortly after 30s of buffering; add 2s margin for network jitter
-        sleepTimerHandler.postDelayed(runnable, SEEK_BACK_INCREMENT_MS + 2_000)
+        sleepTimerHandler.postDelayed(runnable, SEEK_BACK_INCREMENT.inWholeMilliseconds + 2_000)
     }
 
     private fun updateCustomLayout() {
         val session = mediaSession ?: return
-        val seekBytes = (SEEK_BACK_INCREMENT_MS / 1000 * STREAM_BYTES_PER_SEC).toInt()
-        val canSeek = replayBuffer.canSeekBack(seekBytes)
+        val canSeek = timeShift.canSeekBack(SEEK_BACK_INCREMENT)
 
         val buttons = mutableListOf<CommandButton>()
         if (SEEKBACK_ENABLED && canSeek) {
@@ -1117,7 +1103,7 @@ class RadioPlaybackService : MediaLibraryService() {
         currentStationTitle = source.title
         if (source.url == currentStreamUrl) return null
         currentStreamUrl = source.url
-        replayBuffer.clear()
+        timeShift.reset()
         playbackMode = PlaybackMode.Live
         return buildMediaItem()
     }
@@ -1175,11 +1161,11 @@ class RadioPlaybackService : MediaLibraryService() {
         // Feature flags
         const val SEEKBACK_ENABLED = false
 
-        private const val SEEK_BACK_INCREMENT_MS = 30_000L
+        private val SEEK_BACK_INCREMENT = 30.seconds
 
         // DVR time-shift buffer: 512KB ≈ 64s at 64kbps
         internal const val REPLAY_BUFFER_SIZE = 524_288
-        private const val STREAM_BYTES_PER_SEC = 8_000L  // 64kbps
+        private const val STREAM_BYTES_PER_SEC = 8_000  // 64kbps
 
         // Intent actions
         private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"

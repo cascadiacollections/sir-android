@@ -22,6 +22,7 @@ class CircularByteBuffer(val capacity: Int) {
 
     private val lock = ReentrantLock()
     private val dataAvailable = lock.newCondition()
+    private var endOfStream = false
 
     /**
      * Write bytes into the buffer from the producer thread.
@@ -47,24 +48,28 @@ class CircularByteBuffer(val capacity: Int) {
     }
 
     /**
-     * Read bytes from the buffer. Blocks when no data is available.
+     * Read bytes from the buffer. Blocks while the buffer is empty and the producer
+     * is still running.
      *
      * Uses [System.arraycopy] for bulk reads when possible.
      *
      * @param dst Destination byte array to write into.
      * @param offset Starting offset in [dst].
      * @param length Maximum number of bytes to read.
-     * @return The number of bytes actually read, or -1 if the thread was interrupted.
+     * @return The number of bytes actually read, or [END_OF_STREAM] if the producer
+     *   signalled [signalEndOfStream] with no buffered data left, or if the reading
+     *   thread was interrupted.
      */
     fun read(dst: ByteArray, offset: Int, length: Int): Int {
         if (length <= 0) return 0
         lock.withLock {
             while (availableInternal() == 0) {
+                if (endOfStream) return END_OF_STREAM
                 try {
                     dataAvailable.await()
                 } catch (_: InterruptedException) {
                     Thread.currentThread().interrupt()
-                    return -1
+                    return END_OF_STREAM
                 }
             }
             val toRead = length.coerceAtMost(availableInternal())
@@ -112,13 +117,39 @@ class CircularByteBuffer(val capacity: Int) {
     /** Number of bytes available to read (ahead of read cursor). */
     fun available(): Int = lock.withLock { availableInternal() }
 
-    /** Reset the buffer to its initial empty state. */
+    /** Reset the buffer to its initial empty state, clearing any end-of-stream signal. */
     fun clear() {
         lock.withLock {
             writeOffset = 0L
             readOffset = 0L
+            endOfStream = false
         }
     }
+
+    /**
+     * Signal that the producer has finished. Readers blocked in [read] wake up and,
+     * once the remaining buffered data is drained, receive [END_OF_STREAM] instead of
+     * blocking forever.
+     *
+     * Data already in the buffer stays readable, so [seekBack] can still replay it.
+     */
+    fun signalEndOfStream() {
+        lock.withLock {
+            endOfStream = true
+            dataAvailable.signalAll()
+        }
+    }
+
+    /**
+     * Clear a previous [signalEndOfStream], so [read] blocks for new data again.
+     * Called when a new producer takes over the buffer (for example a stream reconnect).
+     */
+    fun resumeStream() {
+        lock.withLock { endOfStream = false }
+    }
+
+    /** True once [signalEndOfStream] has been called and not yet undone. */
+    fun isEndOfStream(): Boolean = lock.withLock { endOfStream }
 
     /** True when at least [bytes] of previously read data can be replayed via [seekBack]. */
     fun canSeekBack(bytes: Int): Boolean = lock.withLock { seekBackAvailable() >= bytes }
@@ -142,5 +173,13 @@ class CircularByteBuffer(val capacity: Int) {
 
     private fun indexFor(offset: Long): Int {
         return (offset % capacity).toInt()
+    }
+
+    companion object {
+        /**
+         * Returned by [read] when the stream has ended and the buffer is drained.
+         * Matches Media3's `C.RESULT_END_OF_INPUT`.
+         */
+        const val END_OF_STREAM = -1
     }
 }

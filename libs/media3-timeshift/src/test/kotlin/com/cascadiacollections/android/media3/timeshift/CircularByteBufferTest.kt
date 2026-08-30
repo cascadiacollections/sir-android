@@ -189,4 +189,73 @@ class CircularByteBufferTest {
         assertEquals(40.toByte(), replayed[1])
         assertEquals(50.toByte(), replayed[2])
     }
+
+    @Test
+    fun `read returns END_OF_STREAM once the producer ends and the buffer drains`() {
+        val buf = CircularByteBuffer(100)
+        buf.write(byteArrayOf(1, 2, 3), 0, 3)
+        buf.signalEndOfStream()
+
+        val dst = ByteArray(3)
+        assertEquals(3, buf.read(dst, 0, 3))
+        assertEquals(CircularByteBuffer.END_OF_STREAM, buf.read(dst, 0, 3))
+    }
+
+    @Test
+    fun `signalEndOfStream unblocks a reader waiting on an empty buffer`() {
+        val buf = CircularByteBuffer(100)
+        val result = java.util.concurrent.atomic.AtomicInteger(Int.MIN_VALUE)
+        val started = CountDownLatch(1)
+        val finished = CountDownLatch(1)
+
+        val reader = thread {
+            started.countDown()
+            result.set(buf.read(ByteArray(16), 0, 16))
+            finished.countDown()
+        }
+
+        assertTrue(started.await(2, TimeUnit.SECONDS))
+        buf.signalEndOfStream()
+
+        assertTrue("reader stayed blocked after end of stream", finished.await(2, TimeUnit.SECONDS))
+        assertEquals(CircularByteBuffer.END_OF_STREAM, result.get())
+        reader.join()
+    }
+
+    @Test
+    fun `data buffered before end of stream can still be replayed`() {
+        val buf = CircularByteBuffer(100)
+        val src = ByteArray(20) { it.toByte() }
+        buf.write(src, 0, 20)
+        buf.read(ByteArray(20), 0, 20)
+        buf.signalEndOfStream()
+
+        buf.seekBack(10)
+        val dst = ByteArray(10)
+        assertEquals(10, buf.read(dst, 0, 10))
+        assertArrayEquals(src.copyOfRange(10, 20), dst)
+    }
+
+    @Test
+    fun `resumeStream makes reads block for new data again`() {
+        val buf = CircularByteBuffer(100)
+        buf.signalEndOfStream()
+        assertTrue(buf.isEndOfStream())
+
+        buf.resumeStream()
+
+        assertFalse(buf.isEndOfStream())
+        buf.write(byteArrayOf(7), 0, 1)
+        assertEquals(1, buf.read(ByteArray(1), 0, 1))
+    }
+
+    @Test
+    fun `clear resets the end of stream signal`() {
+        val buf = CircularByteBuffer(100)
+        buf.signalEndOfStream()
+
+        buf.clear()
+
+        assertFalse(buf.isEndOfStream())
+    }
 }

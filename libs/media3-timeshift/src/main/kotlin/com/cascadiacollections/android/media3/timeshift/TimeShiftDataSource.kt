@@ -12,24 +12,32 @@ import kotlin.concurrent.thread
 private const val TAG = "TimeShiftDataSource"
 
 /**
- * A [DataSource] that proxies an upstream source through a [CircularByteBuffer],
- * enabling DVR-style time-shift on live streams.
+ * A [DataSource] that proxies an upstream source through a [TimeShiftController]'s
+ * buffer, enabling DVR-style time-shift on live streams.
  *
  * A background daemon thread continuously reads from the upstream into the buffer.
- * The consumer thread reads from the buffer via a movable read cursor.
+ * The consumer thread reads from the buffer via a movable read cursor; seeking and
+ * returning to live are driven through the [TimeShiftController], not through this
+ * data source, so callers keep working across the data sources a player creates and
+ * discards over the life of a stream.
+ *
+ * When the upstream ends or fails, the buffer is marked end-of-stream so the consumer
+ * drains what is buffered and then sees [C.RESULT_END_OF_INPUT] rather than blocking.
  *
  * @param upstream The upstream [DataSource] to read from.
- * @param buffer The [CircularByteBuffer] used for buffering.
+ * @param controller Controller owning the buffer these bytes stream into.
  * @param threadName Name for the background reader thread.
  * @param chunkSize Size of the read buffer used by the background thread.
  */
 @UnstableApi
 class TimeShiftDataSource(
     private val upstream: DataSource,
-    private val buffer: CircularByteBuffer,
+    private val controller: TimeShiftController,
     private val threadName: String = "TimeShift",
     private val chunkSize: Int = DEFAULT_CHUNK_SIZE
 ) : DataSource {
+
+    private val buffer: CircularByteBuffer get() = controller.buffer
 
     private var readerThread: Thread? = null
 
@@ -39,6 +47,9 @@ class TimeShiftDataSource(
 
     override fun open(dataSpec: DataSpec): Long {
         upstream.open(dataSpec)
+
+        // A previous data source over this buffer may have ended it; this one is live again.
+        buffer.resumeStream()
 
         readerThread = thread(isDaemon = true, name = threadName) {
             val chunk = ByteArray(chunkSize)
@@ -54,6 +65,10 @@ class TimeShiftDataSource(
                 // Expected on close
             } catch (e: Exception) {
                 Log.w(TAG, "TimeShift reader stopped", e)
+            } finally {
+                // Whether the upstream ended, failed or was interrupted, no more bytes
+                // are coming — release any consumer blocked waiting for them.
+                buffer.signalEndOfStream()
             }
         }
 
@@ -69,37 +84,32 @@ class TimeShiftDataSource(
     override fun close() {
         readerThread?.interrupt()
         readerThread = null
+        buffer.signalEndOfStream()
         upstream.close()
     }
 
-    fun seekBack(bytes: Int) = buffer.seekBack(bytes)
-    fun goLive() = buffer.goLive()
-    fun isLive() = buffer.isLive()
-
     /**
      * Factory that creates [TimeShiftDataSource] instances wrapping an upstream factory.
-     * Exposes [lastCreated] so the service can access seek/goLive controls.
+     *
+     * Seek and go-live controls live on [controller], which stays valid regardless of
+     * how many data sources the player creates.
      *
      * @param upstreamFactory Factory for creating upstream [DataSource] instances.
-     * @param buffer Shared [CircularByteBuffer] for all created data sources.
+     * @param controller Controller shared by all created data sources.
      * @param threadName Name for the background reader thread.
      * @param chunkSize Size of the read buffer used by the background thread.
      */
     @UnstableApi
     class Factory(
         private val upstreamFactory: DataSource.Factory,
-        private val buffer: CircularByteBuffer,
+        private val controller: TimeShiftController,
         private val threadName: String = "TimeShift",
         private val chunkSize: Int = DEFAULT_CHUNK_SIZE
     ) : DataSource.Factory {
 
-        @Volatile
-        var lastCreated: TimeShiftDataSource? = null
-            private set
-
         override fun createDataSource(): TimeShiftDataSource {
             val upstream = upstreamFactory.createDataSource()
-            return TimeShiftDataSource(upstream, buffer, threadName, chunkSize).also { lastCreated = it }
+            return TimeShiftDataSource(upstream, controller, threadName, chunkSize)
         }
     }
 

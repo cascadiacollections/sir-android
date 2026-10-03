@@ -94,6 +94,7 @@ class SettingsRepository(private val context: Context) {
     private val stationPlayCountsKey = stringPreferencesKey("station_play_counts")
     private val connectionPrewarmingEnabledKey = booleanPreferencesKey("connection_prewarming_enabled")
     private val reportPlaysToDirectoryKey = booleanPreferencesKey("report_plays_to_directory")
+    private val fetchAlbumArtworkKey = booleanPreferencesKey("fetch_album_artwork")
 
     val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
         StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
@@ -245,6 +246,20 @@ class SettingsRepository(private val context: Context) {
     suspend fun setReportPlaysToDirectory(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[reportPlaysToDirectoryKey] = enabled
+        }
+    }
+
+    /**
+     * Whether the current track's artist and title are sent to Apple's iTunes Search API to
+     * find its cover art. On by default, matching ShoutKit; when off, no request is made.
+     */
+    val fetchAlbumArtwork: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[fetchAlbumArtworkKey] ?: true
+    }
+
+    suspend fun setFetchAlbumArtwork(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[fetchAlbumArtworkKey] = enabled
         }
     }
 

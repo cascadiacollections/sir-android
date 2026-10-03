@@ -3,6 +3,7 @@ package com.cascadiacollections.sir
 import android.app.Application
 import android.content.ComponentName
 import android.net.ConnectivityManager
+import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -13,10 +14,12 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.HeardTrack
 import com.cascadiacollections.sir.core.persistence.HeardTracks
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.core.persistence.TrackHistoryRepository
+import com.cascadiacollections.sir.core.playback.StreamFailure
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -24,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -46,6 +50,18 @@ data class RadioUiState(
     // destructuring order other tests/call sites may rely on for the fields above.
     /** The most recent persisted Recently Heard tracks, newest first. */
     val trackHistory: List<HeardTrack> = emptyList(),
+    /** The selected directory/saved station; null for the app's own stream. */
+    val station: Station? = null,
+    /** Whether [station] is in the user's favourites. */
+    val isFavorite: Boolean = false,
+    /** Why the stream stopped, as classified by the service; null while healthy. */
+    val failure: StreamFailure? = null,
+    /** Whether the service has a reconnect attempt scheduled or in flight for [failure]. */
+    val isReconnecting: Boolean = false,
+    /** Cover art for the current track, when the iTunes lookup found some. */
+    val albumArtUrl: String? = null,
+    /** The current track's Apple Music page, when the iTunes lookup found one. */
+    val trackViewUrl: String? = null,
 )
 
 class RadioViewModel(
@@ -82,12 +98,14 @@ class RadioViewModel(
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
             // Track history is recorded by RadioPlaybackService, which sees every resolved
             // track whether or not this UI is alive; here we only mirror what's on screen.
-            _uiState.update { current ->
-                current.copy(
-                    trackTitle = mediaMetadata.title?.toString(),
-                    artist = mediaMetadata.artist?.toString()
-                )
-            }
+            _uiState.update { it.withMediaMetadata(mediaMetadata) }
+        }
+    }
+
+    // The service publishes its typed StreamFailure as session extras (PlaybackFailureExtras).
+    private val controllerListener = object : MediaController.Listener {
+        override fun onExtrasChanged(controller: MediaController, extras: Bundle) {
+            _uiState.update { it.withSessionExtras(extras) }
         }
     }
 
@@ -96,6 +114,17 @@ class RadioViewModel(
         checkMeteredNetwork()
         observeSleepTimer()
         observeTrackHistory()
+        observeStation()
+    }
+
+    private fun observeStation() {
+        viewModelScope.launch {
+            combine(settingsRepository.selectedStation, settingsRepository.savedStations) { station, saved ->
+                station to (station != null && saved.any { it.id == station.id })
+            }.collect { (station, isFavorite) ->
+                _uiState.update { it.copy(station = station, isFavorite = isFavorite) }
+            }
+        }
     }
 
     private fun observeTrackHistory() {
@@ -111,6 +140,7 @@ class RadioViewModel(
             getApplication<Application>().ensureRadioServiceRunning()
             try {
                 val newController = MediaController.Builder(getApplication(), sessionToken)
+                    .setListener(controllerListener)
                     .buildAsync()
                     .await()
                 controller = newController
@@ -120,9 +150,9 @@ class RadioViewModel(
                         isConnected = true,
                         isPlaying = newController.isActuallyPlaying,
                         isBuffering = newController.playbackState == Player.STATE_BUFFERING,
-                        trackTitle = newController.mediaMetadata.title?.toString(),
-                        artist = newController.mediaMetadata.artist?.toString()
                     )
+                        .withMediaMetadata(newController.mediaMetadata)
+                        .withSessionExtras(newController.sessionExtras)
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
@@ -180,11 +210,33 @@ class RadioViewModel(
             getApplication<Application>().ensureRadioServiceRunning()
             return
         }
-        if (_uiState.value.isPlaying) {
-            activeController.pause()
-        } else {
-            getApplication<Application>().ensureRadioServiceRunning()
-            activeController.play()
+        when (_uiState.value.transportAction) {
+            TransportAction.PAUSE -> activeController.pause()
+            // Pause first so the service treats it as the listener's choice (dismissing
+            // the failure and skipping any scheduled reconnect), then drop the connection.
+            TransportAction.CANCEL -> {
+                activeController.pause()
+                activeController.stop()
+            }
+            TransportAction.PLAY, TransportAction.RETRY -> {
+                getApplication<Application>().ensureRadioServiceRunning()
+                // A failed, stalled or cancelled player is idle and must be re-prepared.
+                if (activeController.playbackState == Player.STATE_IDLE) activeController.prepare()
+                activeController.play()
+            }
+        }
+    }
+
+    /** Saves or unsaves the current station. A no-op for the app's own stream. */
+    fun toggleFavorite() {
+        val state = _uiState.value
+        val station = state.station?.takeIf { state.canFavorite } ?: return
+        viewModelScope.launch {
+            if (state.isFavorite) {
+                settingsRepository.removeStation(station.id)
+            } else {
+                settingsRepository.saveStation(station)
+            }
         }
     }
 

@@ -86,6 +86,7 @@ fun SettingsContent(
     val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
     val savedStations by settingsRepository.savedStations.collectAsState(initial = emptyList())
     val reportPlays by settingsRepository.reportPlaysToDirectory.collectAsState(initial = true)
+    val fetchAlbumArtwork by settingsRepository.fetchAlbumArtwork.collectAsState(initial = true)
 
     var sleepTimerExpanded by remember { mutableStateOf(false) }
     var equalizerExpanded by remember { mutableStateOf(false) }
@@ -300,6 +301,18 @@ fun SettingsContent(
                     checked = reportPlays,
                     onCheckedChange = { enabled ->
                         scope.launch { settingsRepository.setReportPlaysToDirectory(enabled) }
+                    }
+                )
+            }
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.fetch_album_artwork)) },
+            supportingContent = { Text(stringResource(R.string.fetch_album_artwork_summary)) },
+            trailingContent = {
+                Switch(
+                    checked = fetchAlbumArtwork,
+                    onCheckedChange = { enabled ->
+                        scope.launch { settingsRepository.setFetchAlbumArtwork(enabled) }
                     }
                 )
             }

@@ -117,6 +117,19 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun `settings screen displays the album artwork toggle under privacy`() {
+        composeRule.setContent {
+            SirTheme {
+                SettingsContent(
+                    settingsRepository = createSettingsRepo(),
+                    castFeatureManager = createMockCastManager()
+                )
+            }
+        }
+        composeRule.onNodeWithText("Fetch album artwork").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun `settings screen renders Chromecast section with NotInstalled state`() {
         composeRule.setContent {
             SirTheme {

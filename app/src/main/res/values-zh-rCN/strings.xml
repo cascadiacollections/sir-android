@@ -27,22 +27,12 @@
     <string name="stream_station_unavailable">该电台当前不可用</string>
     <string name="stream_unplayable">此设备无法播放该电台的直播流</string>
     <string name="stream_stalled">直播流已停滞——点按播放以重新连接</string>
-    <string name="stream_error">直播流不可用——点按重试</string>
     <string name="metered_network_title">移动数据</string>
     <string name="metered_network_message">你当前处于按流量计费的网络。播放直播将消耗移动数据。</string>
     <string name="metered_network_dismiss">知道了</string>
     <!-- Main UI: titles -->
-    <string name="title_connecting">正在连接 SIR</string>
-    <string name="title_stream_error">直播流错误</string>
-    <string name="title_buffering">正在缓冲…</string>
-    <string name="now_playing">正在播放</string>
     <string name="tap_to_play">点按任意位置播放</string>
     <!-- Main UI: subtitles -->
-    <string name="subtitle_connecting">正在启动播放服务</string>
-    <string name="subtitle_reconnecting">正在尝试重新连接</string>
-    <string name="subtitle_buffering">请稍候，直播流正在加载</string>
-    <string name="subtitle_live">SIR • 直播</string>
-    <string name="subtitle_idle">SIR • 网络电台</string>
     <!-- Main UI: hints / labels -->
     <string name="tap_to_stop">点按停止</string>
     <!-- %1$d = minutes remaining -->
@@ -52,6 +42,27 @@
     <string name="privacy_heading">隐私</string>
     <string name="report_plays">向 Radio Browser 报告播放</string>
     <string name="report_plays_summary">当你开始播放 radio-browser.info 的电台时通知该目录，以便热门电台排名更靠前。不会发送账户或个人数据。</string>
+    <string name="fetch_album_artwork">获取专辑封面</string>
+    <string name="fetch_album_artwork_summary">显示当前歌曲的封面。会将歌曲的艺术家和标题发送至 Apple 的 iTunes Search。</string>
+    <!-- Now Playing (Listen tab and mini-player) -->
+    <string name="track_live_radio">直播电台</string>
+    <string name="status_connecting">正在连接…</string>
+    <string name="status_live">直播</string>
+    <string name="failure_no_network">无网络连接。请检查网络后重试。</string>
+    <string name="failure_no_network_short">无连接</string>
+    <string name="failure_station_unavailable">该电台目前不可用。请尝试其他电台。</string>
+    <string name="failure_station_unavailable_short">不可用</string>
+    <string name="failure_stream_error">音频流意外中断。点按即可重试。</string>
+    <string name="failure_stream_error_short">音频流错误</string>
+    <string name="failure_stalled">音频流已停止响应。点按即可重试。</string>
+    <string name="failure_stalled_short">音频流停滞</string>
+    <string name="retry">重试</string>
+    <string name="cancel_connection">取消连接</string>
+    <string name="favorite">收藏</string>
+    <string name="favorite_on">已收藏</string>
+    <string name="favorite_off">未收藏</string>
+    <string name="more_options">更多选项</string>
+    <string name="open_in_apple_music">在 Apple Music 中打开</string>
     <string name="open_source_licenses">开源许可证</string>
     <string name="done">完成</string>
     <string name="save">保存</string>

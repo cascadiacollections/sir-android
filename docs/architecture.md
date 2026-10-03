@@ -15,6 +15,7 @@ once.
 ├── :core:playback        playback policy: equalizer, buffering, sleep timer, metadata,
 │                         audio route, retry backoff, stream source and quality
 ├── :core:persistence     settings store, favourites/recents rules, station serialization
+├── :core:artwork         iTunes Search album-art lookup, generated station monograms
 ├── :cast                 on-demand dynamic feature (Chromecast)
 ├── :libs:media3-timeshift    DVR/time-shift DataSource (publishable)
 └── :libs:okhttp-streaming    streaming-tuned OkHttp client factory (publishable)
@@ -144,6 +145,12 @@ setup, HTTP, wake locks, equalizer, sleep timer and media session in one class.
   The Media3 half of the mapping lives in `:app` (`PlaybackFailureMapping`) because this
   module deliberately has no player dependency; the policy — which kinds are retryable, and
   that 408/429/5xx are the exceptions to "a 4xx is permanent" — is tested here without one.
+  The service also publishes the current failure to its controllers as session extras
+  (`PlaybackFailureExtras`, encoded by `StreamFailureCodes`) with a flag saying whether a
+  reconnect is pending, because a `PlaybackException` loses its HTTP cause crossing the
+  session and a stall give-up is not a player error at all. `RadioViewModel` turns that
+  into the status badge (Connecting… / Reconnecting… / Live / the failure's short text),
+  ShoutKit's long error copy, and the play button's action (Play / Pause / Cancel / Retry).
 - `AudioRoutePolicy` is the noisy/resume state machine. Pausing on
   `ACTION_AUDIO_BECOMING_NOISY` is mandatory; resuming when the route returns is only
   correct if *we* paused. The claim is released when playback **starts** again, from
@@ -160,6 +167,25 @@ setup, HTTP, wake locks, equalizer, sleep timer and media session in one class.
 `audioplayer-dependency-synergies.md` catalogues which playback policy is worth porting
 from ShoutKit's `AudioPlayer`-backed engine, and which of it Media3 already owns — where
 the work is to delete our own rather than write more.
+
+## `:core:artwork`
+
+Now Playing artwork, as ShoutKit's `AlbumArtLookup` does it.
+
+- `ITunesSearch` builds the request (`term=<artist title>&media=music&entity=song&limit=1`
+  in the device's two-letter storefront, `US` otherwise) and reads the answer: the first
+  result's `artworkUrl100` rewritten from `100x100bb` to `600x600bb`, plus its
+  `trackViewUrl` for "Open in Apple Music".
+- `AlbumArtLookup` performs it over OkHttp with a descriptive `User-Agent` and an 8 s call
+  timeout, memoising hits *and* misses per case-insensitive (artist, title) in a 128-entry
+  LRU. Transport errors, HTTP errors and unreadable bodies are not cached.
+- `StationMonogram` is the placeholder for a station without usable artwork: up to two
+  initials, on a hue derived from the station id (FNV-1a, so it is stable everywhere).
+
+The lookup runs in `RadioPlaybackService` (`AlbumArtResolver`), not in a ViewModel, so the
+notification, lock screen, Auto and Wear get the art with no UI alive. The result is set
+as the session `artworkUri` and mirrored into metadata extras for the phone UI. It is gated
+on the "Fetch album artwork" privacy setting (default on): when off, no request is made.
 
 ## `:core:persistence`
 

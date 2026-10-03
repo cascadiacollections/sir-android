@@ -64,6 +64,7 @@ fun SirAppShell(
     onOpenLicenses: () -> Unit,
     windowSizeClass: WindowSizeClass,
     modifier: Modifier = Modifier,
+    onToggleFavorite: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -152,11 +153,7 @@ fun SirAppShell(
             // content swaps between the idle placeholder and the live now-playing row.
             if (selectedTab != SirTab.LISTEN) {
                 MiniPlayer(
-                    isPlaying = uiState.isPlaying,
-                    isBuffering = uiState.isBuffering,
-                    isIdle = !uiState.isConnected,
-                    title = uiState.trackTitle?.takeIf { it.isNotBlank() },
-                    subtitle = uiState.artist,
+                    state = uiState,
                     onToggle = onToggle,
                     onClick = { onSelectTab(SirTab.LISTEN) }
                 )
@@ -170,15 +167,10 @@ fun SirAppShell(
 
         when (selectedTab) {
             SirTab.LISTEN -> ListenScreen(
+                state = uiState,
                 modifier = contentModifier,
-                isConnected = uiState.isConnected,
-                isPlaying = uiState.isPlaying,
-                isBuffering = uiState.isBuffering,
-                isError = uiState.isError,
-                trackTitle = uiState.trackTitle,
-                artist = uiState.artist,
-                sleepTimerLabel = uiState.sleepTimerLabel,
                 isWideLayout = isWideLayout,
+                onToggleFavorite = onToggleFavorite,
                 onToggle = onToggle
             )
 

@@ -28,24 +28,14 @@
     <string name="stream_station_unavailable">This station isn\'t available right now</string>
     <string name="stream_unplayable">This station\'s stream can\'t be played on this device</string>
     <string name="stream_stalled">Stream stalled — tap play to reconnect</string>
-    <string name="stream_error">Stream unavailable — tap to retry</string>
     <string name="metered_network_title">Mobile Data</string>
     <string name="metered_network_message">You\'re on a metered connection. Streaming will use mobile data.</string>
     <string name="metered_network_dismiss">Got it</string>
 
     <!-- Main UI: titles -->
-    <string name="title_connecting">Connecting to SIR</string>
-    <string name="title_stream_error">Stream error</string>
-    <string name="title_buffering">Buffering…</string>
-    <string name="now_playing">Now playing</string>
     <string name="tap_to_play">Tap anywhere to play</string>
 
     <!-- Main UI: subtitles -->
-    <string name="subtitle_connecting">Starting playback service</string>
-    <string name="subtitle_reconnecting">Attempting to reconnect</string>
-    <string name="subtitle_buffering">Hang tight, stream is loading</string>
-    <string name="subtitle_live">SIR • Live</string>
-    <string name="subtitle_idle">SIR • Internet radio</string>
 
     <!-- Main UI: hints / labels -->
     <string name="tap_to_stop">Tap to stop</string>
@@ -57,6 +47,26 @@
     <string name="privacy_heading">Privacy</string>
     <string name="report_plays">Report plays to Radio Browser</string>
     <string name="report_plays_summary">Tells radio-browser.info when you start one of its stations, so popular stations rank higher. No account or personal data is sent.</string>
+    <string name="fetch_album_artwork">Fetch album artwork</string>
+    <string name="fetch_album_artwork_summary">Shows cover art for the current song. Sends its artist and title to Apple\'s iTunes Search.</string>
+    <!-- Now Playing (Listen tab and mini-player) -->
+    <string name="track_live_radio">Live radio</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_live">Live</string>
+    <string name="failure_no_network">No internet connection. Check your network and try again.</string>
+    <string name="failure_no_network_short">No connection</string>
+    <string name="failure_station_unavailable">This station isn\'t available right now. Try another station.</string>
+    <string name="failure_station_unavailable_short">Unavailable</string>
+    <string name="failure_stream_error">The stream stopped unexpectedly. Tap to retry.</string>
+    <string name="failure_stream_error_short">Stream error</string>
+    <string name="failure_stalled">The stream stopped responding. Tap to retry.</string>
+    <string name="failure_stalled_short">Stream stalled</string>
+    <string name="cancel_connection">Cancel connection</string>
+    <string name="favorite">Favorite</string>
+    <string name="favorite_on">Saved to favorites</string>
+    <string name="favorite_off">Not in favorites</string>
+    <string name="more_options">More options</string>
+    <string name="open_in_apple_music">Open in Apple Music</string>
     <string name="open_source_licenses">Open Source Licenses</string>
     <string name="privacy_policy_url" translatable="false">https://cascadiacollections.github.io/sir-android/privacy/</string>
     <string name="done">Done</string>

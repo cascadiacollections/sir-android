@@ -271,6 +271,7 @@ fun RadioScreen(
         selectedTab = selectedTab,
         onSelectTab = { selectedTab = it },
         onToggle = { viewModel.togglePlayback() },
+        onToggleFavorite = { viewModel.toggleFavorite() },
         browserViewModel = browserViewModel,
         settingsRepository = repository,
         castFeatureManager = castFeatureManager,

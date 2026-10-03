@@ -163,6 +163,17 @@ class RadioPlaybackService : MediaLibraryService() {
     // Directory id of the current stream (null for the app's own stream), for track history
     private var currentStationId: String? = null
 
+    // Cover art for the current track (iTunes Search), gated on the privacy setting
+    private val albumArt by lazy {
+        AlbumArtResolver(serviceScope, settingsRepository.fetchAlbumArtwork, AppAlbumArt::lookup) {
+            publishResolvedMetadata()
+        }
+    }
+
+    // The typed failure last published to controllers as session extras (see reportFailure)
+    private var reportedFailure: StreamFailure? = null
+    private var reportedFailureRetrying = false
+
     // Persisted Recently Heard history, recorded here so it accrues without any UI alive
     private val trackHistoryRepository: TrackHistoryRepository by lazy { TrackHistoryRepository(this) }
 
@@ -257,6 +268,8 @@ class RadioPlaybackService : MediaLibraryService() {
                 }
             }
         }
+
+        albumArt.start()
 
         // React to the user picking a different station while the service is alive
         serviceScope.launch {
@@ -559,6 +572,7 @@ class RadioPlaybackService : MediaLibraryService() {
                     Player.STATE_READY -> {
                         retryBackoff.reset()
                         stallCeiling.clear()
+                        reportFailure(null)
                         if (player?.playWhenReady == true) {
                             updateCustomLayout()
                         }
@@ -572,7 +586,12 @@ class RadioPlaybackService : MediaLibraryService() {
                     // Arm the stall ceiling only when we actually want audio: a manual
                     // pause leaves the player briefly buffering on its way to a stop, and
                     // that is not a stall.
-                    Player.STATE_BUFFERING -> armStallCeiling()
+                    // A buffer with no reconnect of ours pending is the user retrying a
+                    // failure we had given up on, so the failure is over.
+                    Player.STATE_BUFFERING -> {
+                        armStallCeiling()
+                        if (!reportedFailureRetrying) reportFailure(null)
+                    }
 
                     // Idle only follows a stop we asked for or a re-prepare on its way to
                     // buffering. Clear here too: a user-initiated stop while a stall was
@@ -580,6 +599,12 @@ class RadioPlaybackService : MediaLibraryService() {
                     // reconnect attempt on playback nobody wants anymore.
                     Player.STATE_IDLE -> stallCeiling.clear()
                 }
+            }
+
+            // Pausing (or cancelling a connection attempt) dismisses a failure: the listener
+            // has acknowledged it, and the transport should offer Play again, not Retry.
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (!playWhenReady) reportFailure(null)
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -612,7 +637,8 @@ class RadioPlaybackService : MediaLibraryService() {
                     stationName = stationName,
                 )
                 streamMetadata = update.metadata
-                if (update.notifyChanged) publishResolvedMetadata()
+                val artCleared = albumArt.onTrackChanged(currentArtist, currentTrackTitle)
+                if (update.notifyChanged || artCleared) publishResolvedMetadata()
                 recordHeardTrack(previous, update.metadata, stationName)
             }
 
@@ -625,11 +651,13 @@ class RadioPlaybackService : MediaLibraryService() {
                     // decode, fails identically on every attempt. Spending the backoff on
                     // it held a wake lock for about a minute to show the same message.
                     retryBackoff.reset()
+                    reportFailure(failure)
                     return
                 }
                 val delayMs = retryBackoff.nextDelayMs()
+                reportFailure(failure, retrying = delayMs != null)
                 if (delayMs != null) {
-                    sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
+                    sleepTimerHandler.postDelayed({ reconnectIfWanted() }, delayMs)
                 } else {
                     Log.e(TAG, "Retries exhausted: $failure")
                 }
@@ -820,6 +848,7 @@ class RadioPlaybackService : MediaLibraryService() {
     private fun publishResolvedMetadata() {
         val p = player ?: return
         val item = p.currentMediaItem ?: return
+        val art = albumArt.current?.takeIf { currentTrackTitle != null }
         val resolved = item.mediaMetadata.buildUpon()
             .setTitle(currentTrackTitle ?: currentStation ?: getString(R.string.station_name))
             .setArtist(currentArtist ?: getString(R.string.stream_description))
@@ -833,9 +862,15 @@ class RadioPlaybackService : MediaLibraryService() {
             // Copy the existing extras rather than replacing them outright — this item
             // already carries EXTRA_STREAM_URL from buildMediaItem(), which the :cast
             // module reads for Chromecast handoff, and a bare Bundle() here would wipe it.
+            //
+            // Album art (when the lookup found some) is both the session artwork — so the
+            // notification, lock screen and Auto show it — and an extra the phone UI reads.
+            .setArtworkUri(art?.artworkUrl?.let(Uri::parse))
             .setExtras(
                 (item.mediaMetadata.extras?.let { Bundle(it) } ?: Bundle()).apply {
                     putBoolean(EXTRA_HAS_RESOLVED_TRACK, currentTrackTitle != null)
+                    putString(EXTRA_ALBUM_ART_URL, art?.artworkUrl)
+                    putString(EXTRA_TRACK_VIEW_URL, art?.trackViewUrl)
                 }
             )
             .build()
@@ -859,8 +894,9 @@ class RadioPlaybackService : MediaLibraryService() {
 
         Log.w(TAG, "Live stream ended unexpectedly (attempt ${retryBackoff.attemptLabel})")
         val delayMs = retryBackoff.nextDelayMs()
+        reportFailure(StreamFailure.Transient, retrying = delayMs != null)
         if (delayMs != null) {
-            sleepTimerHandler.postDelayed({ player?.prepare() }, delayMs)
+            sleepTimerHandler.postDelayed({ reconnectIfWanted() }, delayMs)
         } else {
             Log.e(TAG, "Retries exhausted after unexpected end")
         }
@@ -887,13 +923,14 @@ class RadioPlaybackService : MediaLibraryService() {
         }
         Log.w(TAG, "Stream stalled past the ceiling (attempt ${retryBackoff.attemptLabel})")
         val delayMs = retryBackoff.nextDelayMs()
+        reportFailure(StreamFailure.Stalled, retrying = delayMs != null)
         if (delayMs != null) {
             // Re-arm explicitly rather than relying on a fresh STATE_BUFFERING callback:
             // a player already sitting in STATE_BUFFERING may not emit one for prepare(),
             // which would otherwise leave this reconnect attempt with no ceiling of its own.
             sleepTimerHandler.postDelayed(
                 {
-                    player?.prepare()
+                    reconnectIfWanted()
                     armStallCeiling()
                 },
                 delayMs
@@ -902,7 +939,29 @@ class RadioPlaybackService : MediaLibraryService() {
         }
         retryBackoff.reset()
         player?.stop()
+        reportFailure(StreamFailure.Stalled)
         Log.e(TAG, "Gave up: ${StreamFailure.Stalled}")
+    }
+
+    /**
+     * A scheduled reconnect, skipped when the listener paused or cancelled in the meantime —
+     * otherwise "Cancel connection" would be undone by the backoff a few seconds later.
+     */
+    private fun reconnectIfWanted() {
+        if (player?.playWhenReady == true) player?.prepare()
+    }
+
+    /**
+     * Publishes the typed failure (or its absence) to every controller as session extras,
+     * where `RadioViewModel` turns it into ShoutKit's error copy. [retrying] says a reconnect
+     * is scheduled or in flight, which the UI shows as "Reconnecting…".
+     */
+    private fun reportFailure(failure: StreamFailure?, retrying: Boolean = false) {
+        val isRetrying = failure != null && retrying
+        if (failure == reportedFailure && isRetrying == reportedFailureRetrying) return
+        reportedFailure = failure
+        reportedFailureRetrying = isRetrying
+        mediaSession?.setSessionExtras(PlaybackFailureExtras.bundle(failure, isRetrying))
     }
 
     /** Arms [stallCeiling] and schedules its expiry check, if audio is still wanted. */
@@ -1222,6 +1281,8 @@ class RadioPlaybackService : MediaLibraryService() {
      */
     private suspend fun applyStreamSource(source: StreamSource, startPlayback: Boolean = false) {
         val item = adoptStreamSource(source) ?: return
+        // A new station starts with a clean slate; its own failures are reported afresh.
+        reportFailure(null)
         // Read after adopting: a playlist fetch may have suspended, and the old stream
         // keeps playing meanwhile.
         val wasPlaying = player?.isPlaying == true
@@ -1310,6 +1371,12 @@ class RadioPlaybackService : MediaLibraryService() {
          * when the player was told one explicitly (HLS). Absent means a progressive stream.
          */
         const val EXTRA_STREAM_MIME_TYPE = "stream_mime_type"
+
+        /** [MediaMetadata.extras] key: the current track's album art URL, when one was found. */
+        const val EXTRA_ALBUM_ART_URL = "album_art_url"
+
+        /** [MediaMetadata.extras] key: the current track's Apple Music page, when one was found. */
+        const val EXTRA_TRACK_VIEW_URL = "track_view_url"
 
         private val USER_AGENT = "SIR Android/${Build.VERSION.SDK_INT}"
     }

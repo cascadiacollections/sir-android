@@ -189,6 +189,8 @@ dependencies {
     implementation(projects.core.playback)
     // Favorites/recents collection rules and station serialization
     implementation(projects.core.persistence)
+    // iTunes Search album-art lookup and the generated station monogram
+    implementation(projects.core.artwork)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

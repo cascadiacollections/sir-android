@@ -113,3 +113,34 @@ object StreamFailureClassifier {
     private const val HTTP_REQUEST_TIMEOUT = 408
     private const val HTTP_TOO_MANY_REQUESTS = 429
 }
+
+/**
+ * A stable wire name for each [StreamFailure], so the service can hand the typed failure to
+ * its controllers through session extras (a `Bundle` of primitives) and the UI can read it
+ * back. Names, not ordinals, so reordering the sealed hierarchy never changes their meaning.
+ */
+object StreamFailureCodes {
+    const val NO_NETWORK = "no_network"
+    const val STATION_UNAVAILABLE = "station_unavailable"
+    const val UNPLAYABLE = "unplayable"
+    const val TRANSIENT = "transient"
+    const val STALLED = "stalled"
+
+    fun encode(failure: StreamFailure): String = when (failure) {
+        StreamFailure.NoNetwork -> NO_NETWORK
+        is StreamFailure.StationUnavailable -> STATION_UNAVAILABLE
+        StreamFailure.Unplayable -> UNPLAYABLE
+        StreamFailure.Transient -> TRANSIENT
+        StreamFailure.Stalled -> STALLED
+    }
+
+    /** The failure named by [code]; null for no code, and for one this build doesn't know. */
+    fun decode(code: String?): StreamFailure? = when (code) {
+        NO_NETWORK -> StreamFailure.NoNetwork
+        STATION_UNAVAILABLE -> StreamFailure.StationUnavailable()
+        UNPLAYABLE -> StreamFailure.Unplayable
+        TRANSIENT -> StreamFailure.Transient
+        STALLED -> StreamFailure.Stalled
+        else -> null
+    }
+}

@@ -14,6 +14,9 @@ object StationCollections {
     /** How many recently played stations are retained. */
     const val RECENTS_LIMIT: Int = 20
 
+    /** How many recent stations the Browse tab's Recently Played shelf shows (ShoutKit's five). */
+    const val RECENT_SHELF_LIMIT: Int = 5
+
     /**
      * Adds [station] to favourites, or refreshes it in place when already saved.
      *
@@ -103,5 +106,27 @@ object StationCollections {
         require(limit > 0) { "limit must be positive" }
         if (!station.isPlayable) return current
         return (listOf(station) + current.filterNot { it.id == station.id }).take(limit)
+    }
+
+    /**
+     * The Recently Played shelf: the newest [limit] recents minus the ones the user hid.
+     *
+     * The window is taken *before* hidden stations are removed, so hiding a tile leaves a
+     * gap instead of pulling the next-oldest station up into it (ShoutKit's behaviour) —
+     * the shelf is "what you played last", not "the last five you didn't hide".
+     */
+    fun recentShelf(
+        recents: List<Station>,
+        hiddenIds: Set<String>,
+        limit: Int = RECENT_SHELF_LIMIT
+    ): List<Station> = recents.take(limit).filterNot { it.id in hiddenIds }
+
+    /**
+     * Hidden shelf ids after [played] is selected: playing a station again un-hides it,
+     * and ids no longer in [recents] are dropped so the set never outgrows the recents list.
+     */
+    fun hiddenAfterPlay(hiddenIds: Set<String>, recents: List<Station>, played: Station): Set<String> {
+        val recentIds = recents.mapTo(HashSet()) { it.id }
+        return hiddenIds.filterTo(LinkedHashSet()) { it != played.id && it in recentIds }
     }
 }

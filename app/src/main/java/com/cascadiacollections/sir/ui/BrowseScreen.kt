@@ -4,6 +4,20 @@ package com.cascadiacollections.sir.ui
 
 import android.content.res.Resources
 import android.widget.Toast
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.rememberCoroutineScope
+import com.cascadiacollections.sir.core.persistence.RecentShelfStore
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +67,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -83,6 +98,7 @@ object BrowseScreenTestTags {
     const val FILTER_MAX_BITRATE = "browse_filter_max_bitrate"
     const val FILTER_DONE = "browse_filter_done"
     const val FILTER_CLEAR = "browse_filter_clear"
+    const val LISTEN_NOW_GRID = "browse_listen_now_grid"
 }
 
 /** Bitrate choices offered by the filter sheet, matching ShoutKit; null is "Any". */
@@ -99,7 +115,10 @@ internal val BITRATE_OPTIONS_KBPS: List<Int?> = listOf(null, 64, 96, 128, 160, 1
 fun BrowseScreen(
     viewModel: RadioBrowserViewModel,
     modifier: Modifier = Modifier,
-    searchViewModel: SearchViewModel = viewModel(factory = SearchViewModel.Factory(AppDirectory.instance))
+    shelfStore: RecentShelfStore? = null,
+    searchViewModel: SearchViewModel = viewModel(
+        factory = SearchViewModel.Factory(AppDirectory.instance, shelfStore)
+    )
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -119,6 +138,10 @@ fun BrowseScreen(
         onFiltersChange = searchViewModel::setFilters,
         onRetry = searchViewModel::retry,
         onPlay = viewModel::playStation,
+        onRefresh = searchViewModel::refresh,
+        onRetryPopular = searchViewModel::retryPopular,
+        onHideRecent = searchViewModel::hideFromRecentlyPlayed,
+        onUndoHideRecent = searchViewModel::undoHideFromRecentlyPlayed,
         onToggleSaved = { station, isSaved ->
             if (isSaved) {
                 viewModel.removeStation(station.id)
@@ -145,132 +168,98 @@ fun BrowseContent(
     onRetry: () -> Unit,
     onPlay: (Station) -> Unit,
     onToggleSaved: (Station, Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRefresh: () -> Unit = {},
+    onRetryPopular: () -> Unit = {},
+    onHideRecent: (Station) -> Unit = {},
+    onUndoHideRecent: (Station) -> Unit = {}
 ) {
     var showFilters by rememberSaveable { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
     val resources = LocalResources.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
 
-    Column(modifier = modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = onQueryChange,
-                placeholder = { Text(stringResource(R.string.search_stations_hint)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = {
-                    onSubmit()
-                    keyboard?.hide()
-                }),
+    // A Box so the hide-from-shelf snackbar floats over the content.
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .testTag(BrowseScreenTestTags.SEARCH_FIELD),
-                trailingIcon = {
-                    if (state.query.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search))
-                        }
-                    }
-                }
-            )
-            FilterButton(
-                active = state.filters.isActive,
-                onClick = { showFilters = true }
-            )
-        }
-
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            if (state.showsGenres) {
-                item(key = "genres_header") { SectionHeader(stringResource(R.string.browse_genres_header)) }
-                item(key = "genres") {
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        state.genres.forEach { tag ->
-                            val selected = state.selectedGenre?.name == tag.name
-                            FilterChip(
-                                selected = selected,
-                                onClick = { onSelectGenre(tag) },
-                                label = { Text(tag.displayName) },
-                                leadingIcon = if (selected) {
-                                    { Icon(Icons.Default.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }
-                                } else {
-                                    null
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            val stationRow: LazyListScope.(List<Station>) -> Unit = { stations ->
-                // Unkeyed: directory results are not guaranteed unique, and a duplicate key crashes.
-                items(stations) { station ->
-                    val isSaved = station.id in savedStationIds
-                    StationRow(
-                        station = station,
-                        isPlaying = station.id == selectedStationId,
-                        onPlay = { onPlay(station) },
-                        subtitle = station.browseSubtitle { resources.getString(R.string.bitrate_kbps, it) },
-                        trailing = {
-                            IconButton(onClick = { onToggleSaved(station, isSaved) }) {
-                                if (isSaved) {
-                                    Icon(Icons.Default.Check, contentDescription = stringResource(R.string.station_saved))
-                                } else {
-                                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.save_station))
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-
-            when (val phase = state.phase) {
-                SearchPhase.Idle -> {
-                    item(key = "popular_header") { SectionHeader(stringResource(R.string.popular_stations)) }
-                    if (state.popularStations.isEmpty() && state.isLoadingPopular) {
-                        item(key = "popular_loading") { LoadingRow() }
-                    }
-                    stationRow(state.popularStations)
-                }
-
-                SearchPhase.Searching -> item(key = "searching") { LoadingRow() }
-
-                is SearchPhase.Results -> stationRow(phase.stations)
-
-                SearchPhase.Empty -> item(key = "empty") {
-                    MessageBlock(stringResource(R.string.search_no_results)) {
-                        if (state.filters.isActive) {
-                            Text(
-                                text = filterSummary(resources, state.filters),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            OutlinedButton(onClick = { onFiltersChange(StationSearchFilters.NONE) }) {
-                                Text(stringResource(R.string.clear_filters))
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = state.query,
+                    onValueChange = onQueryChange,
+                    placeholder = { Text(stringResource(R.string.search_stations_hint)) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        onSubmit()
+                        keyboard?.hide()
+                    }),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(BrowseScreenTestTags.SEARCH_FIELD),
+                    trailingIcon = {
+                        if (state.query.isNotEmpty()) {
+                            IconButton(onClick = { onQueryChange("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search))
                             }
                         }
                     }
-                }
+                )
+                FilterButton(
+                    active = state.filters.isActive,
+                    onClick = { showFilters = true }
+                )
+            }
 
-                SearchPhase.Failed -> item(key = "failed") {
-                    MessageBlock(stringResource(R.string.search_unavailable)) {
-                        Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
-                    }
-                }
+            if (state.phase == SearchPhase.Idle) {
+                ListenNowContent(
+                    state = state,
+                    savedStationIds = savedStationIds,
+                    selectedStationId = selectedStationId,
+                    onSelectGenre = onSelectGenre,
+                    onPlay = onPlay,
+                    onToggleSaved = onToggleSaved,
+                    onRefresh = onRefresh,
+                    onRetryPopular = onRetryPopular,
+                    onHideRecent = { station ->
+                        onHideRecent(station)
+                        snackbarScope.launch {
+                            // One undo at a time: a second hide replaces the first's snackbar.
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            val result = snackbarHostState.showSnackbar(
+                                message = resources.getString(R.string.recently_played_removed),
+                                actionLabel = resources.getString(R.string.undo),
+                                duration = SnackbarDuration.Short
+                            )
+                            if (result == SnackbarResult.ActionPerformed) onUndoHideRecent(station)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                SearchResultsList(
+                    state = state,
+                    savedStationIds = savedStationIds,
+                    selectedStationId = selectedStationId,
+                    onSelectGenre = onSelectGenre,
+                    onFiltersChange = onFiltersChange,
+                    onRetry = onRetry,
+                    onPlay = onPlay,
+                    onToggleSaved = onToggleSaved
+                )
             }
         }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
     if (showFilters) {
@@ -279,6 +268,211 @@ fun BrowseContent(
             onApply = onFiltersChange,
             onDismiss = { showFilters = false }
         )
+    }
+}
+
+/**
+ * The idle browse tab, ShoutKit's Listen Now: the Recently Played shelf, genre chips and
+ * the Popular Stations grid, in one pull-to-refresh grid so the whole page scrolls together.
+ */
+@Composable
+private fun ListenNowContent(
+    state: SearchUiState,
+    savedStationIds: Set<String>,
+    selectedStationId: String?,
+    onSelectGenre: (Tag) -> Unit,
+    onPlay: (Station) -> Unit,
+    onToggleSaved: (Station, Boolean) -> Unit,
+    onRefresh: () -> Unit,
+    onRetryPopular: () -> Unit,
+    onHideRecent: (Station) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier
+    ) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(POPULAR_TILE_MIN_WIDTH),
+            contentPadding = PaddingValues(start = GRID_GUTTER, end = GRID_GUTTER, bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag(BrowseScreenTestTags.LISTEN_NOW_GRID)
+        ) {
+            val fullSpan: (LazyGridItemSpanScope.() -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
+
+            if (state.recentShelf.isNotEmpty()) {
+                item(key = "recent_header", span = fullSpan) {
+                    SectionHeader(stringResource(R.string.recent_stations), Modifier.bleed())
+                }
+                item(key = "recent_shelf", span = fullSpan) {
+                    RecentlyPlayedShelf(
+                        stations = state.recentShelf,
+                        selectedStationId = selectedStationId,
+                        onPlay = onPlay,
+                        onHide = onHideRecent,
+                        modifier = Modifier.bleed()
+                    )
+                }
+            }
+
+            item(key = "genres_header", span = fullSpan) {
+                SectionHeader(stringResource(R.string.browse_genres_header), Modifier.bleed())
+            }
+            item(key = "genres", span = fullSpan) { GenreChips(state, onSelectGenre, Modifier.bleed()) }
+
+            if (state.showsPopularHeader) {
+                item(key = "popular_header", span = fullSpan) {
+                    SectionHeader(stringResource(R.string.popular_stations), Modifier.bleed())
+                }
+            }
+            if (state.showsSavedStationsNotice) {
+                item(key = "saved_notice", span = fullSpan) { SavedStationsNotice(Modifier.bleed()) }
+            }
+
+            when {
+                state.popularStations.isEmpty() && (state.isLoadingPopular || state.isRefreshing) ->
+                    item(key = "popular_loading", span = fullSpan) {
+                        MessageBlock(stringResource(R.string.tuning_in)) { CircularProgressIndicator() }
+                    }
+
+                state.showsDirectoryUnavailable ->
+                    item(key = "popular_failed", span = fullSpan) {
+                        MessageBlock(stringResource(R.string.directory_unavailable)) {
+                            Button(onClick = onRetryPopular) { Text(stringResource(R.string.try_again)) }
+                        }
+                    }
+
+                // Unkeyed: directory results are not guaranteed unique, and a duplicate key crashes.
+                else -> gridItems(state.popularStations) { station ->
+                    val isSaved = station.id in savedStationIds
+                    PopularStationTile(
+                        station = station,
+                        isSaved = isSaved,
+                        isPlaying = station.id == selectedStationId,
+                        onPlay = { onPlay(station) },
+                        onToggleSaved = { onToggleSaved(station, isSaved) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private val GRID_GUTTER = 16.dp
+
+/**
+ * Lets a full-span grid item draw across the grid's side gutters, so headers, chips and the
+ * shelf keep the same 16dp insets (and the shelf scrolls edge to edge) as on the list.
+ */
+private fun Modifier.bleed(): Modifier = layout { measurable, constraints ->
+    val extra = (GRID_GUTTER * 2).roundToPx()
+    val placeable = measurable.measure(
+        constraints.copy(
+            minWidth = constraints.minWidth + extra,
+            maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra else constraints.maxWidth
+        )
+    )
+    layout((placeable.width - extra).coerceAtLeast(0), placeable.height) { placeable.place(-extra / 2, 0) }
+}
+
+/** Typed search and genre browse results, with the genre chips kept while browsing a genre. */
+@Composable
+private fun SearchResultsList(
+    state: SearchUiState,
+    savedStationIds: Set<String>,
+    selectedStationId: String?,
+    onSelectGenre: (Tag) -> Unit,
+    onFiltersChange: (StationSearchFilters) -> Unit,
+    onRetry: () -> Unit,
+    onPlay: (Station) -> Unit,
+    onToggleSaved: (Station, Boolean) -> Unit
+) {
+    val resources = LocalResources.current
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        if (state.showsGenres) {
+            item(key = "genres_header") { SectionHeader(stringResource(R.string.browse_genres_header)) }
+            item(key = "genres") { GenreChips(state, onSelectGenre) }
+        }
+
+        val stationRow: LazyListScope.(List<Station>) -> Unit = { stations ->
+            // Unkeyed: directory results are not guaranteed unique, and a duplicate key crashes.
+            items(stations) { station ->
+                val isSaved = station.id in savedStationIds
+                StationRow(
+                    station = station,
+                    isPlaying = station.id == selectedStationId,
+                    onPlay = { onPlay(station) },
+                    subtitle = station.browseSubtitle { resources.getString(R.string.bitrate_kbps, it) },
+                    trailing = {
+                        IconButton(onClick = { onToggleSaved(station, isSaved) }) {
+                            if (isSaved) {
+                                Icon(Icons.Default.Check, contentDescription = stringResource(R.string.station_saved))
+                            } else {
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.save_station))
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        when (val phase = state.phase) {
+            // Idle renders ListenNowContent instead.
+            SearchPhase.Idle -> Unit
+
+            SearchPhase.Searching -> item(key = "searching") { LoadingRow() }
+
+            is SearchPhase.Results -> stationRow(phase.stations)
+
+            SearchPhase.Empty -> item(key = "empty") {
+                MessageBlock(stringResource(R.string.search_no_results)) {
+                    if (state.filters.isActive) {
+                        Text(
+                            text = filterSummary(resources, state.filters),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedButton(onClick = { onFiltersChange(StationSearchFilters.NONE) }) {
+                            Text(stringResource(R.string.clear_filters))
+                        }
+                    }
+                }
+            }
+
+            SearchPhase.Failed -> item(key = "failed") {
+                MessageBlock(stringResource(R.string.search_unavailable)) {
+                    Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenreChips(state: SearchUiState, onSelectGenre: (Tag) -> Unit, modifier: Modifier = Modifier) {
+    FlowRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        state.genres.forEach { tag ->
+            val selected = state.selectedGenre?.name == tag.name
+            FilterChip(
+                selected = selected,
+                onClick = { onSelectGenre(tag) },
+                label = { Text(tag.displayName) },
+                leadingIcon = if (selected) {
+                    { Icon(Icons.Default.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }
+                } else {
+                    null
+                }
+            )
+        }
     }
 }
 
@@ -300,12 +494,12 @@ private fun FilterButton(active: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SectionHeader(text: String) {
+private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier
+        modifier = modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .semantics { heading() }
     )

@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.cascadiacollections.sir.core.model.Station
@@ -78,7 +79,7 @@ private val Context.dataStore: DataStore<Preferences> get() = SettingsDataStore[
 /**
  * Settings repository using DataStore for persistence.
  */
-class SettingsRepository(private val context: Context) {
+class SettingsRepository(private val context: Context) : RecentShelfStore {
 
     private val streamQualityKey = intPreferencesKey("stream_quality")
     private val chromecastEnabledKey = booleanPreferencesKey("chromecast_enabled")
@@ -96,6 +97,7 @@ class SettingsRepository(private val context: Context) {
     private val reportPlaysToDirectoryKey = booleanPreferencesKey("report_plays_to_directory")
     private val fetchAlbumArtworkKey = booleanPreferencesKey("fetch_album_artwork")
     private val hasCompletedFirstRunKey = booleanPreferencesKey("has_completed_first_run")
+    private val hiddenRecentStationIdsKey = stringSetPreferencesKey("hidden_recent_station_ids")
 
     val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
         StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
@@ -281,8 +283,27 @@ class SettingsRepository(private val context: Context) {
     /**
      * Flow of recently played stations, newest first.
      */
-    val recentStations: Flow<List<Station>> = context.dataStore.data.map { preferences ->
+    override val recentStations: Flow<List<Station>> = context.dataStore.data.map { preferences ->
         StationCodec.decode(preferences[recentStationsKey])
+    }
+
+    override val hiddenRecentStationIds: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[hiddenRecentStationIdsKey].orEmpty()
+    }
+
+    override suspend fun hideRecentStation(stationId: String) {
+        context.dataStore.edit { preferences ->
+            val recentIds = StationCodec.decode(preferences[recentStationsKey]).map { it.id }
+            if (stationId in recentIds) {
+                preferences[hiddenRecentStationIdsKey] = preferences[hiddenRecentStationIdsKey].orEmpty() + stationId
+            }
+        }
+    }
+
+    override suspend fun unhideRecentStation(stationId: String) {
+        context.dataStore.edit { preferences ->
+            preferences.putHiddenRecentIds(preferences[hiddenRecentStationIdsKey].orEmpty() - stationId)
+        }
     }
 
     /**
@@ -349,6 +370,9 @@ class SettingsRepository(private val context: Context) {
                 station
             )
             preferences[recentStationsKey] = StationCodec.encode(recents)
+            preferences.putHiddenRecentIds(
+                StationCollections.hiddenAfterPlay(preferences[hiddenRecentStationIdsKey].orEmpty(), recents, station)
+            )
         }
         // After the write commits, so an observer never acts on a selection that failed.
         selections.tryEmit(station)
@@ -365,7 +389,10 @@ class SettingsRepository(private val context: Context) {
      * Clears the recently played list, e.g. from the privacy settings.
      */
     suspend fun clearRecentStations() {
-        context.dataStore.edit { preferences -> preferences.remove(recentStationsKey) }
+        context.dataStore.edit { preferences ->
+            preferences.remove(recentStationsKey)
+            preferences.remove(hiddenRecentStationIdsKey)
+        }
     }
 
     /**
@@ -420,6 +447,10 @@ class SettingsRepository(private val context: Context) {
         raw?.let { runCatching { Json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
             ?.filterValues { it >= 0 }
             ?: emptyMap()
+
+    private fun MutablePreferences.putHiddenRecentIds(ids: Set<String>) {
+        if (ids.isEmpty()) remove(hiddenRecentStationIdsKey) else this[hiddenRecentStationIdsKey] = ids
+    }
 
     /** Removes the preference entirely once empty rather than persisting an empty "{}". */
     private fun MutablePreferences.putPlayCounts(counts: Map<String, Int>) {

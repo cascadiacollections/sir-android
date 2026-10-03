@@ -83,6 +83,11 @@ CuratedFallbackDirectory( CachingRadioDirectory( RadioBrowserDirectory ) )
   successful response is passed through untouched, because "no such station" is a real
   answer and must not be masked. A failed `topTags` falls back to 18 bundled genres;
   `reportClick` has no fallback.
+- `topStations`/`topTags` also take `forceRefresh`, used only by pull-to-refresh on the
+  browse tab. `CachingRadioDirectory` skips the lookup (but stores a success, so the next
+  ordinary call sees it), and `CuratedFallbackDirectory` passes a forced failure through
+  instead of substituting bundled data — the caller already has stations on screen and
+  keeps them, flagged "Showing saved stations".
 
 Ordering is owned by the factory rather than by call sites, so the chain can be
 re-tuned in one place.
@@ -203,6 +208,14 @@ Collection rules for saved and recently-heard stations, kept out of
   It also owns `StreamQuality` and `StreamConfig`, which moved here from `:app` so that
   nothing in the settings layer depends on the application module.
 
+- `RecentShelfStore` is the slice of `SettingsRepository` behind the browse tab's Recently
+  Played shelf (recents plus a persisted set of ids hidden from the shelf), so its ViewModel
+  tests against a fake. `StationCollections.recentShelf` takes the newest five *before*
+  removing hidden ones, so hiding leaves a gap rather than pulling an older station up.
+  Hiding never touches the recents themselves (the Library's history keeps the station);
+  `selectStation` un-hides a station when it is played again, in the same transaction, and
+  prunes hidden ids that have fallen out of the recents.
+
 - `TrackHistoryRepository` persists Recently Heard — every ICY track resolved by
   `RadioPlaybackService`, up to 1000, newest first — in its own `track_history` DataStore
   file, so a track change never rewrites the settings file and a settings toggle never
@@ -249,6 +262,12 @@ browse and library screens share one `RadioBrowserViewModel`; extracting them to
 relocate that coupling rather than remove it. The screens are already split into
 content-only composables (`ListenScreen`, `BrowseScreen`, `LibraryScreen`,
 `SettingsContent`), which is the prerequisite for the move.
+
+The browse tab's idle state is ShoutKit's Listen Now home: the Recently Played shelf,
+the genre chips and a Popular Stations grid (`topStations(24)`, `GridCells.Adaptive(160.dp)`),
+in one `LazyVerticalGrid` under a `PullToRefreshBox`. The grid is titled only when the shelf
+is shown, as on iOS. Tiles are single merged semantics nodes whose long-press menu entries
+are repeated as custom accessibility actions.
 
 Browse search state lives in its own `SearchViewModel` (search-as-you-type with a 300 ms
 debounce, genre browse via `stationsByTag`, in-memory `StationSearchFilters`), so the

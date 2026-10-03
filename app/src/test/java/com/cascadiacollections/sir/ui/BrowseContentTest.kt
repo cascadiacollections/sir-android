@@ -63,7 +63,9 @@ class BrowseContentTest {
         )
 
         composeRule.onNodeWithText("Browse by Genre").assertIsDisplayed()
-        composeRule.onNodeWithText("Popular stations").assertIsDisplayed()
+        // No shelf above it, so the grid is untitled (ShoutKit).
+        composeRule.onNodeWithText("Popular stations").assertDoesNotExist()
+        composeRule.onNodeWithText("Recently Played").assertDoesNotExist()
         composeRule.onNodeWithText("Station A").assertIsDisplayed()
         composeRule.onNodeWithText("Hip Hop").assertIsNotSelected().performClick()
         assertEquals(Tag("hip hop"), selectedGenre)

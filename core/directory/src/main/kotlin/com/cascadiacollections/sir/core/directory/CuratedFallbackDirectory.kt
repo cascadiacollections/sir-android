@@ -26,6 +26,13 @@ class CuratedFallbackDirectory(
     override suspend fun topStations(limit: Int): Result<List<Station>> =
         delegate.topStations(limit).orCurated { curated.take(limit) }
 
+    /**
+     * A forced refresh is passed through without a fallback: the user asked for live data,
+     * and a failure has to reach the caller so it can keep what it shows and say so.
+     */
+    override suspend fun topStations(limit: Int, forceRefresh: Boolean): Result<List<Station>> =
+        if (forceRefresh) delegate.topStations(limit, forceRefresh = true) else topStations(limit)
+
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
         stationsByTag(tag, limit, StationSearchFilters.NONE)
 
@@ -43,6 +50,10 @@ class CuratedFallbackDirectory(
         delegate.topTags(limit).recoverCatching { error ->
             curatedTags.take(limit.coerceAtLeast(1)).ifEmpty { throw error }
         }
+
+    /** As the [topStations] overload: a forced refresh is never answered from bundled genres. */
+    override suspend fun topTags(limit: Int, forceRefresh: Boolean): Result<List<Tag>> =
+        if (forceRefresh) delegate.topTags(limit, forceRefresh = true) else topTags(limit)
 
     /** Passed straight through: a click report has no meaningful fallback. */
     override suspend fun reportClick(stationId: String): Result<Unit> = delegate.reportClick(stationId)

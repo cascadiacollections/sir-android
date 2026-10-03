@@ -3,7 +3,7 @@ package com.cascadiacollections.sir.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import com.cascadiacollections.sir.core.playback.TrackHistoryEntry
+import com.cascadiacollections.sir.core.persistence.HeardTrack
 import com.cascadiacollections.sir.ui.theme.SirTheme
 import org.junit.Rule
 import org.junit.Test
@@ -24,7 +24,7 @@ class TrackHistorySheetTest {
             SirTheme { TrackHistorySheet(history = emptyList(), onDismiss = {}) }
         }
 
-        composeRule.onNodeWithText("Tracks you've heard this session will show up here.")
+        composeRule.onNodeWithText("Tracks you've heard will show up here.")
             .assertIsDisplayed()
     }
 
@@ -34,7 +34,7 @@ class TrackHistorySheetTest {
             SirTheme {
                 TrackHistorySheet(
                     history = listOf(
-                        TrackHistoryEntry(title = "Song A", artist = "Artist A", timestampMillis = 1L)
+                        HeardTrack(title = "Song A", artist = "Artist A", timestampMillis = 1L)
                     ),
                     onDismiss = {}
                 )

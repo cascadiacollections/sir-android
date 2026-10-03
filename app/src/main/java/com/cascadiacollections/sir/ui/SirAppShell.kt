@@ -3,6 +3,8 @@
 package com.cascadiacollections.sir.ui
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -66,6 +68,7 @@ fun SirAppShell(
     val context = LocalContext.current
     val resources = LocalResources.current
     var showTrackHistory by remember { mutableStateOf(false) }
+    var showRecentlyHeard by remember { mutableStateOf(false) }
     val chromecastEnabled by settingsRepository.chromecastEnabled.collectAsState(initial = false)
     val castModuleState by castFeatureManager.moduleState.collectAsState()
     val isWideLayout = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
@@ -75,8 +78,10 @@ fun SirAppShell(
         NavigationSuiteType.NavigationBar
     }
 
+    // A Box so the Recently Heard overlay stacks over the whole shell, nav chrome included.
+    Box(modifier = modifier) {
     NavigationSuiteScaffold(
-        modifier = modifier,
+        modifier = Modifier.fillMaxSize(),
         navigationSuiteItems = {
             SirTab.entries.forEach { tab ->
                 item(
@@ -184,6 +189,7 @@ fun SirAppShell(
 
             SirTab.LIBRARY -> LibraryScreen(
                 viewModel = browserViewModel,
+                onOpenRecentlyHeard = { showRecentlyHeard = true },
                 modifier = contentModifier
             )
 
@@ -194,6 +200,20 @@ fun SirAppShell(
                 onOpenLicenses = onOpenLicenses
             )
         }
+    }
+    }
+
+    // Full-screen drill-in from the Library tab. Composed after the scaffold so it draws on
+    // top, and its BackHandler is registered last so back closes it before any tab reset.
+    if (showRecentlyHeard) {
+        val browserState by browserViewModel.uiState.collectAsState()
+        BackHandler { showRecentlyHeard = false }
+        RecentlyHeardScreen(
+            tracks = browserState.heardTracks,
+            onBack = { showRecentlyHeard = false },
+            onClear = { browserViewModel.clearHeardTracks() },
+            modifier = Modifier.fillMaxSize()
+        )
     }
     }
 

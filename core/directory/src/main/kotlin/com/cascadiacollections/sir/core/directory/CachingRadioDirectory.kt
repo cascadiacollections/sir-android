@@ -17,17 +17,27 @@ class CachingRadioDirectory(
     private val delegate: RadioDirectory,
     private val ttlMillis: Long = DEFAULT_TTL_MILLIS,
     private val maxEntries: Int = DEFAULT_MAX_ENTRIES,
-    private val clock: () -> Long = System::currentTimeMillis
+    private val clock: () -> Long = System::currentTimeMillis,
+    private val tagTtlMillis: Long = DEFAULT_TAG_TTL_MILLIS
 ) : RadioDirectory {
 
     private data class Entry(val stations: List<Station>, val storedAt: Long)
+    private data class TagEntry(val tags: List<Tag>, val storedAt: Long)
+
+    /** Keyed by limit; only a handful of distinct limits are ever requested. */
+    private val tagEntries = HashMap<Int, TagEntry>()
 
     private val mutex = Mutex()
     private val entries = LinkedHashMap<String, Entry>(0, 0.75f, true)
 
     override suspend fun search(query: StationQuery): Result<List<Station>> =
-        cached("search:${query.normalizedText.lowercase(Locale.ROOT)}:${query.effectiveLimit}") {
-            delegate.search(query)
+        search(query, StationSearchFilters.NONE)
+
+    override suspend fun search(query: StationQuery, filters: StationSearchFilters): Result<List<Station>> =
+        cached(
+            "search:${query.normalizedText.lowercase(Locale.ROOT)}:${query.effectiveLimit}:${filters.cacheKey}"
+        ) {
+            delegate.search(query, filters)
         }
 
     override suspend fun topStations(limit: Int): Result<List<Station>> {
@@ -35,12 +45,37 @@ class CachingRadioDirectory(
         return cached("top:$clamped") { delegate.topStations(clamped) }
     }
 
-    override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> {
+    override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
+        stationsByTag(tag, limit, StationSearchFilters.NONE)
+
+    override suspend fun stationsByTag(
+        tag: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ): Result<List<Station>> {
         val clamped = clampLimit(limit)
-        return cached("tag:${tag.trim().lowercase(Locale.ROOT)}:$clamped") {
-            delegate.stationsByTag(tag, clamped)
+        return cached("tag:${tag.trim().lowercase(Locale.ROOT)}:$clamped:${filters.cacheKey}") {
+            delegate.stationsByTag(tag, clamped, filters)
         }
     }
+
+    /**
+     * Tags change slowly — station counts drift, the ranking barely moves — so they get
+     * their own, much longer TTL instead of sharing the station entries' five minutes.
+     */
+    override suspend fun topTags(limit: Int): Result<List<Tag>> {
+        val key = limit.coerceIn(1, RadioBrowserDirectory.MAX_TAG_LIMIT)
+        mutex.withLock {
+            val entry = tagEntries[key]
+            if (entry != null && clock() - entry.storedAt <= tagTtlMillis) return Result.success(entry.tags)
+        }
+        return delegate.topTags(key).onSuccess { tags ->
+            mutex.withLock { tagEntries[key] = TagEntry(tags, clock()) }
+        }
+    }
+
+    /** Never cached: every explicit play must reach radio-browser to be counted. */
+    override suspend fun reportClick(stationId: String): Result<Unit> = delegate.reportClick(stationId)
 
     override suspend fun getStation(id: String): Result<Station?> =
         cached("byuuid:$id") {
@@ -55,7 +90,10 @@ class CachingRadioDirectory(
     private fun clampLimit(limit: Int): Int = limit.coerceIn(1, StationQuery.MAX_LIMIT)
 
     /** Drops every cached entry, e.g. after a user-initiated refresh. */
-    suspend fun invalidate() = mutex.withLock { entries.clear() }
+    suspend fun invalidate() = mutex.withLock {
+        entries.clear()
+        tagEntries.clear()
+    }
 
     private suspend fun cached(
         key: String,
@@ -87,5 +125,6 @@ class CachingRadioDirectory(
     companion object {
         const val DEFAULT_TTL_MILLIS: Long = 5 * 60 * 1000L
         const val DEFAULT_MAX_ENTRIES: Int = 32
+        const val DEFAULT_TAG_TTL_MILLIS: Long = 60 * 60 * 1000L
     }
 }

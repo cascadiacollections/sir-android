@@ -18,7 +18,7 @@ data class StationQuery(
     val effectiveLimit: Int = limit.coerceIn(1, MAX_LIMIT)
 
     companion object {
-        const val DEFAULT_LIMIT = 30
+        const val DEFAULT_LIMIT = 40
         const val MAX_LIMIT = 100
     }
 }

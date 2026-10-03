@@ -85,6 +85,7 @@ fun SettingsContent(
     val equalizerCustomBands by settingsRepository.equalizerCustomBands.collectAsState(initial = emptyList())
     val customStreamUrl by settingsRepository.customStreamUrl.collectAsState(initial = null)
     val savedStations by settingsRepository.savedStations.collectAsState(initial = emptyList())
+    val reportPlays by settingsRepository.reportPlaysToDirectory.collectAsState(initial = true)
 
     var sleepTimerExpanded by remember { mutableStateOf(false) }
     var equalizerExpanded by remember { mutableStateOf(false) }
@@ -283,6 +284,26 @@ fun SettingsContent(
 
             HorizontalDivider()
         }
+
+        // Privacy
+        Text(
+            text = stringResource(R.string.privacy_heading),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.report_plays)) },
+            supportingContent = { Text(stringResource(R.string.report_plays_summary)) },
+            trailingContent = {
+                Switch(
+                    checked = reportPlays,
+                    onCheckedChange = { enabled ->
+                        scope.launch { settingsRepository.setReportPlaysToDirectory(enabled) }
+                    }
+                )
+            }
+        )
 
         // Privacy Policy
         TextButton(

@@ -1,5 +1,6 @@
 plugins {
     id("sir.android.lib")
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {

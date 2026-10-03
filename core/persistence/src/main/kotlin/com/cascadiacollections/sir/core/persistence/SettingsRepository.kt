@@ -317,6 +317,35 @@ class SettingsRepository(private val context: Context) {
     }
 
     /**
+     * Moves the favourite at [from] to [to] (e.g. an accessibility "Move up" action) in one
+     * transaction. New favourites still append to the end via [saveStation].
+     */
+    suspend fun moveSavedStation(from: Int, to: Int) = editStations(savedStationsKey) { current ->
+        StationCollections.moveFavorite(current, from, to)
+    }
+
+    /** Persists the order the user dragged favourites into, in one transaction. */
+    suspend fun reorderSavedStations(orderedIds: List<String>) = editStations(savedStationsKey) { current ->
+        StationCollections.reorderFavorites(current, orderedIds)
+    }
+
+    /**
+     * Merges [imported] favourites (e.g. from a ShoutKit JSON backup) by station id,
+     * appending new ones at the end, in one transaction. Returns what was added/skipped.
+     */
+    suspend fun importSavedStations(imported: List<Station>): StationCollections.MergeResult {
+        var result = StationCollections.MergeResult(emptyList(), added = 0, skipped = 0)
+        context.dataStore.edit { preferences ->
+            result = StationCollections.mergeFavorites(
+                StationCodec.decode(preferences[savedStationsKey]),
+                imported
+            )
+            preferences[savedStationsKey] = StationCodec.encode(result.stations)
+        }
+        return result
+    }
+
+    /**
      * Read-modify-write inside a single DataStore transaction so concurrent edits
      * from the UI and the playback service cannot clobber each other.
      */

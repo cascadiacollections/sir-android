@@ -13,9 +13,10 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.cascadiacollections.sir.core.persistence.HeardTrack
+import com.cascadiacollections.sir.core.persistence.HeardTracks
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
-import com.cascadiacollections.sir.core.playback.TrackHistory
-import com.cascadiacollections.sir.core.playback.TrackHistoryEntry
+import com.cascadiacollections.sir.core.persistence.TrackHistoryRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -43,12 +44,14 @@ data class RadioUiState(
     val showMeteredWarning: Boolean = false,
     // Appended last, after showMeteredWarning, to avoid shifting the componentN()
     // destructuring order other tests/call sites may rely on for the fields above.
-    val trackHistory: List<TrackHistoryEntry> = emptyList(),
+    /** The most recent persisted Recently Heard tracks, newest first. */
+    val trackHistory: List<HeardTrack> = emptyList(),
 )
 
 class RadioViewModel(
     application: Application,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val trackHistoryRepository: TrackHistoryRepository = TrackHistoryRepository(application),
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(RadioUiState())
@@ -77,30 +80,12 @@ class RadioViewModel(
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            val title = mediaMetadata.title?.toString()
-            val artist = mediaMetadata.artist?.toString()
-            // A locale-independent, non-user-facing flag rather than comparing the
-            // displayed artist text against a translated fallback string — that would
-            // break the moment a real track's artist happened to equal it.
-            val hasResolvedTrack = mediaMetadata.extras
-                ?.getBoolean(RadioPlaybackService.EXTRA_HAS_RESOLVED_TRACK, false) == true
-            val realTrackTitle = title?.takeIf { it.isNotBlank() && hasResolvedTrack }
+            // Track history is recorded by RadioPlaybackService, which sees every resolved
+            // track whether or not this UI is alive; here we only mirror what's on screen.
             _uiState.update { current ->
                 current.copy(
-                    trackTitle = title,
-                    artist = artist,
-                    trackHistory = if (realTrackTitle != null) {
-                        // Normalize a blank artist to null so it renders the same as
-                        // "no artist" and can't defeat TrackHistory's front-entry
-                        // dedupe by disagreeing with a null from a different update.
-                        val historyArtist = artist?.takeIf { it.isNotBlank() }
-                        TrackHistory.record(
-                            current.trackHistory,
-                            TrackHistoryEntry(realTrackTitle, historyArtist, System.currentTimeMillis())
-                        )
-                    } else {
-                        current.trackHistory
-                    }
+                    trackTitle = mediaMetadata.title?.toString(),
+                    artist = mediaMetadata.artist?.toString()
                 )
             }
         }
@@ -110,6 +95,15 @@ class RadioViewModel(
         connectMediaController()
         checkMeteredNetwork()
         observeSleepTimer()
+        observeTrackHistory()
+    }
+
+    private fun observeTrackHistory() {
+        viewModelScope.launch {
+            trackHistoryRepository.tracks.collect { tracks ->
+                _uiState.update { it.copy(trackHistory = tracks.take(HeardTracks.SHEET_LIMIT)) }
+            }
+        }
     }
 
     private fun connectMediaController() {

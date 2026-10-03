@@ -139,6 +139,75 @@ class RadioBrowserViewModelPlaylistTest {
 
         assertEquals("#EXTM3U\n#EXTINF:-1,Station A\nhttps://example.com/a\n", exported)
     }
+
+    private fun RadioBrowserViewModel.importStationsAndAwait(text: String, fileName: String?): PlaylistImportResult {
+        val latch = CountDownLatch(1)
+        var result: PlaylistImportResult? = null
+        importStations(text = text, fileName = fileName) { result = it; latch.countDown() }
+        assertTrue("import did not complete in time", latch.await(5, TimeUnit.SECONDS))
+        return result!!
+    }
+
+    @Test
+    fun `importing a JSON backup merges by id and appends new favourites at the end`() {
+        val repo = repo()
+        runBlocking { repo.saveStation(Station(id = "b", name = "Mine", url = "https://example.com/b")) }
+        val vm = viewModel(repo)
+        vm.awaitSavedStationsSize(1)
+
+        val result = vm.importStationsAndAwait(
+            text = """{"schemaVersion":1,"favorites":[
+                {"id":"c","name":"C","streamURL":"https://example.com/c","genre":"Jazz","sortIndex":1},
+                {"id":"b","name":"Theirs","streamURL":"https://example.com/b2","genre":"","sortIndex":0}]}""",
+            fileName = "favorites.txt"
+        )
+
+        assertEquals(PlaylistImportResult.Imported(added = 1, skipped = 1), result)
+        val saved = runBlocking { repo.savedStations.first() }
+        assertEquals(listOf("b", "c"), saved.map { it.id })
+        assertEquals("Mine", saved[0].name)
+        assertEquals("Jazz", saved[1].tags)
+    }
+
+    @Test
+    fun `a backup with an unknown schema is reported unreadable`() {
+        val vm = viewModel(repo())
+
+        val result = vm.importStationsAndAwait("""{"schemaVersion":99,"favorites":[]}""", "x.json")
+
+        assertEquals(PlaylistImportResult.Unreadable, result)
+    }
+
+    @Test
+    fun `a playlist picked through importStations still imports as M3U or PLS`() {
+        val vm = viewModel(repo())
+
+        assertEquals(
+            PlaylistImportResult.Imported(added = 1, skipped = 0),
+            vm.importStationsAndAwait("[playlist]\nFile1=https://example.com/p\n", "list.pls")
+        )
+    }
+
+    @Test
+    fun `exported backup round-trips through import into an empty library`() {
+        val repo = repo()
+        runBlocking {
+            repo.saveStation(Station(id = "a", name = "A", url = "https://example.com/a", tags = "rock,pop"))
+            repo.saveStation(Station(id = "b", name = "B", url = "https://example.com/b"))
+        }
+        val vm = viewModel(repo)
+        vm.awaitSavedStationsSize(2)
+        val backup = vm.exportFavoritesBackup()
+
+        runBlocking { repo.savedStations.first().forEach { repo.removeStation(it.id) } }
+        vm.awaitSavedStationsSize(0)
+        val result = vm.importStationsAndAwait(backup, "shoutkit-favorites.json")
+
+        assertEquals(PlaylistImportResult.Imported(added = 2, skipped = 0), result)
+        val saved = runBlocking { repo.savedStations.first() }
+        assertEquals(listOf("a", "b"), saved.map { it.id })
+        assertEquals("rock", saved[0].tags)
+    }
 }
 
 private object NoopDirectory : RadioDirectory {

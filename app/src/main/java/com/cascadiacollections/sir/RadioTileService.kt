@@ -48,12 +48,11 @@ class RadioTileService : TileService() {
     override fun onClick() {
         super.onClick()
         controller?.takeIf { it.isConnected }?.let { ctrl ->
-            if (ctrl.isPlaying) ctrl.pause() else {
-                ensureRadioServiceRunning()
-                ctrl.play()
-            }
+            if (ctrl.isPlaying) ctrl.pause() else ctrl.play()
         } ?: run {
-            ensureRadioServiceRunning()
+            // ACTION_PLAY starts playback, which is what puts the service in the
+            // foreground; a bare start alongside it only added a startForeground()
+            // deadline nothing was obliged to meet.
             ContextCompat.startForegroundService(
                 this,
                 android.content.Intent(this, RadioPlaybackService::class.java).apply {

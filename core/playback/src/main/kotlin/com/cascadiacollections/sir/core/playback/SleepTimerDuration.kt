@@ -3,12 +3,14 @@ package com.cascadiacollections.sir.core.playback
 import androidx.annotation.StringRes
 
 /**
- * Available sleep timer durations, in minutes.
+ * Available sleep timer durations, in minutes. ShoutKit offers 15/30/45/60; 90 is kept for
+ * existing users. Persisted by [minutes], never by ordinal, so inserting an entry is safe.
  */
 enum class SleepTimerDuration(val minutes: Int, @StringRes val labelRes: Int) {
     OFF(0, R.string.sleep_timer_duration_off),
     FIFTEEN(15, R.string.sleep_timer_duration_15m),
     THIRTY(30, R.string.sleep_timer_duration_30m),
+    FORTY_FIVE(45, R.string.sleep_timer_duration_45m),
     SIXTY(60, R.string.sleep_timer_duration_1h),
     NINETY(90, R.string.sleep_timer_duration_1h30m);
 

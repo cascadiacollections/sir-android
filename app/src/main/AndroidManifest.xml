@@ -84,6 +84,16 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+        <!-- Quick Play widget: pick which saved station it plays -->
+        <activity
+            android:name=".QuickPlayConfigActivity"
+            android:exported="true"
+            android:label="@string/quick_play_choose_station"
+            android:theme="@style/Theme.Sir">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
         <receiver
             android:name=".RadioWidgetReceiver"
             android:exported="true"

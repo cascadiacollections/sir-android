@@ -132,8 +132,33 @@
     <string name="go_live">Live</string>
 
     <!-- Widget -->
-    <string name="widget_description">Play/pause SIR radio from your home screen</string>
-    <string name="widget_label">SIR Radio</string>
+    <string name="widget_description">Play a favorite station from your home screen</string>
+    <string name="widget_label">SIR Quick Play</string>
+    <string name="quick_play_choose_station">Choose a station</string>
+    <string name="quick_play_first_saved">First saved station</string>
+    <string name="quick_play_no_saved_stations">Save stations in the app to choose one here. Until then, the widget plays the current station.</string>
+
+    <!-- First-run welcome. %1$s = app display name -->
+    <string name="welcome_title">Welcome to %1$s</string>
+    <string name="welcome_message">No accounts, no tracking. Find a station and press play.</string>
+    <string name="welcome_get_started">Get started</string>
+
+    <!-- Settings: Playback -->
+    <string name="playback_heading">Playback</string>
+    <string name="prewarm_connections">Pre-connect to favorite stations</string>
+    <string name="prewarm_connections_summary">Starts your most-played favorites faster. Uses a little data when the app launches.</string>
+
+    <!-- Settings: About -->
+    <string name="about_heading">About</string>
+    <string name="about_version">Version</string>
+    <!-- %1$s = version name, %2$d = version code, %3$s = short git commit -->
+    <string name="about_version_value" translatable="false">%1$s (%2$d) · %3$s</string>
+    <string name="about_source_code">Source code</string>
+    <string name="about_report_issue">Report an issue</string>
+    <string name="about_station_data">Station data from Radio Browser</string>
+    <string name="about_source_code_url" translatable="false">https://github.com/cascadiacollections/sir-android</string>
+    <string name="about_report_issue_url" translatable="false">https://github.com/cascadiacollections/sir-android/issues/new</string>
+    <string name="about_station_data_url" translatable="false">https://www.radio-browser.info</string>
 
     <!-- Library: ordering, backup, Recently Heard, Top Tracks -->
     <string name="reorder_stations">Reorder</string>

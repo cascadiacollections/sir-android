@@ -211,6 +211,12 @@ relocate that coupling rather than remove it. The screens are already split into
 content-only composables (`ListenScreen`, `BrowseScreen`, `LibraryScreen`,
 `SettingsContent`), which is the prerequisite for the move.
 
+Browse search state lives in its own `SearchViewModel` (search-as-you-type with a 300 ms
+debounce, genre browse via `stationsByTag`, in-memory `StationSearchFilters`), so the
+browse tab only borrows `RadioBrowserViewModel` for play/save. Every request goes through
+one `collectLatest` pipeline, and a generation counter guards each write, so a directory
+call that completes after being superseded can never repaint the screen.
+
 ## Distribution flavors
 
 The `distribution` dimension has two flavors, `play` and `foss`. They are not a

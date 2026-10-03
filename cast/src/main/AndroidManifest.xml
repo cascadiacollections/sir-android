@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:dist="http://schemas.android.com/apk/distribution">
 
+    <!-- Components and code live in src/play: the Cast SDK is proprietary, so the
+         foss variant of this module is intentionally empty. -->
     <dist:module
         dist:instant="false"
         dist:title="@string/cast_feature_title">
@@ -11,18 +13,4 @@
         <dist:fusing dist:include="true" />
     </dist:module>
 
-    <application>
-        <!-- CastOptionsProvider for Cast SDK initialization -->
-        <meta-data
-            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
-            android:value="com.cascadiacollections.sir.cast.CastOptionsProvider" />
-
-        <!-- Bootstraps CastSessionCoordinator at process start; see its kdoc. -->
-        <provider
-            android:name="com.cascadiacollections.sir.cast.CastAutoInitializer"
-            android:authorities="${applicationId}.castautoinitializer"
-            android:exported="false" />
-    </application>
-
 </manifest>
-

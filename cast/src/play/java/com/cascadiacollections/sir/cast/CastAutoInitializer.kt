@@ -18,7 +18,8 @@ import androidx.media3.common.util.UnstableApi
  * contains it (the same mechanism several Jetpack libraries use internally, e.g. App
  * Startup). Since this module ships install-time (fused into the base APK, not a true
  * on-demand split — see the module's own manifest), its manifest merges into the
- * app's like any other component, so this runs unconditionally.
+ * app's like any other component, so this runs unconditionally in the play flavor.
+ * The foss flavor of this module ships none of it: the Cast SDK is proprietary.
  */
 @UnstableApi
 class CastAutoInitializer : ContentProvider() {

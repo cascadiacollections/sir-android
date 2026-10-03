@@ -5,8 +5,16 @@ plugins {
 android {
     namespace = "com.cascadiacollections.sir.cast"
 
-    defaultConfig {
-        missingDimensionStrategy("distribution", "play")
+    // Mirrors :app's flavors so each base variant gets its own build of this
+    // module. Previously this module always built against :app's play variant,
+    // which provides the Cast SDK's transitive deps (play-services-basement,
+    // mediarouter), so they were stripped from the feature — and the foss APK
+    // shipped Cast code without them and crashed at startup in
+    // CastAutoInitializer. All Cast code and dependencies are play-only now.
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") { dimension = "distribution" }
+        create("foss") { dimension = "distribution" }
     }
 }
 
@@ -15,14 +23,14 @@ dependencies {
     implementation(project(":app"))
 
     // Cast SDK - use version catalog for consistent versioning
-    implementation(libs.media3.cast)
-    implementation(libs.media3.common)
+    "playImplementation"(libs.media3.cast)
+    "playImplementation"(libs.media3.common)
     // MediaController/SessionToken, to connect to RadioPlaybackService's session from
     // this module the same way RadioViewModel does from :app.
-    implementation(libs.media3.session)
-    implementation(libs.play.services.cast.framework)
-    implementation(libs.mediarouter)
+    "playImplementation"(libs.media3.session)
+    "playImplementation"(libs.play.services.cast.framework)
+    "playImplementation"(libs.mediarouter)
 
     // Coroutines
-    implementation(libs.kotlinx.coroutines.guava)
+    "playImplementation"(libs.kotlinx.coroutines.guava)
 }

@@ -205,6 +205,8 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
     implementation(libs.media3.datasource.okhttp)
+    // HLS: radio-browser lists a growing number of broadcaster streams as .m3u8 only.
+    implementation(libs.media3.exoplayer.hls)
     // Declared for HttpDataSource.InvalidResponseCodeException, which the failure
     // classification reads directly rather than relying on a transitive dependency.
     implementation(libs.media3.datasource)

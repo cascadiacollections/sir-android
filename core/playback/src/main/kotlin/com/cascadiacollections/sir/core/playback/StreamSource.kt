@@ -2,11 +2,15 @@ package com.cascadiacollections.sir.core.playback
 
 /**
  * The stream the player should be pointed at, plus the label to show for it.
+ *
+ * [isHls] carries the directory's HLS flag for URLs whose path doesn't say so; see
+ * [StreamEndpoints.classify].
  */
 data class StreamSource(
     val url: String,
     val title: String? = null,
-    val stationId: String? = null
+    val stationId: String? = null,
+    val isHls: Boolean = false
 )
 
 /**

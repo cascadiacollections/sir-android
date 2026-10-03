@@ -41,7 +41,7 @@ class SirApp : Application() {
                     isPowerSaveMode = {
                         getSystemService(android.os.PowerManager::class.java)?.isPowerSaveMode == true
                     }
-                ).prewarm(settings.mostPlayedSavedStations.first().map { it.url })
+                ).prewarm(settings.mostPlayedSavedStations.first().map { it.streamUrl })
             }
         }
     }

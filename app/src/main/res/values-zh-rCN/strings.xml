@@ -74,7 +74,7 @@
     <string name="custom_stream_invalid">地址必须以 http:// 或 https:// 开头</string>
     <string name="custom_stream_reset">恢复默认直播流</string>
     <!-- Station Search -->
-    <string name="search_stations_hint">按名称或风格搜索</string>
+    <string name="search_stations_hint">电台、风格</string>
     <string name="saved_stations">我的电台</string>
     <string name="station_saved">电台已保存</string>
     <string name="station_removed">电台已移除</string>
@@ -84,11 +84,28 @@
     <string name="play_default_stream">返回 SIR 直播流</string>
     <string name="clear_recent_stations">清除播放记录</string>
     <string name="clear_search">清除搜索内容</string>
-    <string name="search">搜索</string>
     <string name="save_station">保存电台</string>
     <string name="remove_station">移除电台</string>
-    <string name="browse_empty">按名称或风格搜索电台即可开始。</string>
     <string name="library_empty">你保存或播放过的电台会显示在这里。</string>
+    <string name="browse_genres_header">按风格浏览</string>
+    <string name="popular_stations">热门电台</string>
+    <string name="search_no_results">没有匹配的电台</string>
+    <string name="search_unavailable">搜索暂不可用</string>
+    <string name="retry">重试</string>
+    <string name="bitrate_kbps">%1$d kbps</string>
+    <string name="search_filters">筛选</string>
+    <string name="search_filters_active">筛选已启用</string>
+    <string name="filter_min_bitrate">最低码率</string>
+    <string name="filter_max_bitrate">最高码率</string>
+    <string name="filter_any">不限</string>
+    <string name="filter_tag">标签</string>
+    <string name="filter_country_code">国家/地区代码</string>
+    <string name="clear_filters">清除筛选</string>
+    <string name="filter_summary">筛选：%1$s</string>
+    <string name="filter_summary_min">最低 %1$d kbps</string>
+    <string name="filter_summary_max">最高 %1$d kbps</string>
+    <string name="filter_summary_tag">标签 %1$s</string>
+    <string name="filter_summary_country">国家/地区 %1$s</string>
     <!-- Edit saved station -->
     <string name="edit_station">编辑电台</string>
     <string name="station_name_label">名称</string>

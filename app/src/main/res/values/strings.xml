@@ -81,7 +81,7 @@
     <string name="custom_stream_reset">Reset to default stream</string>
 
     <!-- Station Search -->
-    <string name="search_stations_hint">Search by name or genre</string>
+    <string name="search_stations_hint">Stations, genres</string>
     <string name="saved_stations">My Stations</string>
     <string name="station_saved">Station saved</string>
     <string name="station_removed">Station removed</string>
@@ -91,11 +91,28 @@
     <string name="play_default_stream">Back to SIR stream</string>
     <string name="clear_recent_stations">Clear history</string>
     <string name="clear_search">Clear search</string>
-    <string name="search">Search</string>
     <string name="save_station">Save station</string>
     <string name="remove_station">Remove station</string>
-    <string name="browse_empty">Search for a station by name or genre to get started.</string>
     <string name="library_empty">Stations you save or play will show up here.</string>
+    <string name="browse_genres_header">Browse by Genre</string>
+    <string name="popular_stations">Popular stations</string>
+    <string name="search_no_results">No matching stations</string>
+    <string name="search_unavailable">Search unavailable</string>
+    <string name="retry">Retry</string>
+    <string name="bitrate_kbps">%1$d kbps</string>
+    <string name="search_filters">Filters</string>
+    <string name="search_filters_active">Filters active</string>
+    <string name="filter_min_bitrate">Min bitrate</string>
+    <string name="filter_max_bitrate">Max bitrate</string>
+    <string name="filter_any">Any</string>
+    <string name="filter_tag">Tag</string>
+    <string name="filter_country_code">Country code</string>
+    <string name="clear_filters">Clear filters</string>
+    <string name="filter_summary">Filters: %1$s</string>
+    <string name="filter_summary_min">min %1$d kbps</string>
+    <string name="filter_summary_max">max %1$d kbps</string>
+    <string name="filter_summary_tag">tag %1$s</string>
+    <string name="filter_summary_country">country %1$s</string>
 
     <!-- Edit saved station -->
     <string name="edit_station">Edit station</string>

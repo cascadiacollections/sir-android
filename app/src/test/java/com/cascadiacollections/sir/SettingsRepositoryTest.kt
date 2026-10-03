@@ -12,6 +12,7 @@ class SettingsRepositoryTest {
     fun `fromMinutes returns correct SleepTimerDuration for valid values`() {
         assertEquals(SleepTimerDuration.FIFTEEN, SleepTimerDuration.fromMinutes(15))
         assertEquals(SleepTimerDuration.THIRTY, SleepTimerDuration.fromMinutes(30))
+        assertEquals(SleepTimerDuration.FORTY_FIVE, SleepTimerDuration.fromMinutes(45))
         assertEquals(SleepTimerDuration.SIXTY, SleepTimerDuration.fromMinutes(60))
         assertEquals(SleepTimerDuration.NINETY, SleepTimerDuration.fromMinutes(90))
         assertEquals(SleepTimerDuration.OFF, SleepTimerDuration.fromMinutes(0))
@@ -20,7 +21,7 @@ class SettingsRepositoryTest {
     @Test
     fun `fromMinutes returns OFF for invalid values`() {
         assertEquals(SleepTimerDuration.OFF, SleepTimerDuration.fromMinutes(-1))
-        assertEquals(SleepTimerDuration.OFF, SleepTimerDuration.fromMinutes(45))
+        assertEquals(SleepTimerDuration.OFF, SleepTimerDuration.fromMinutes(44))
         assertEquals(SleepTimerDuration.OFF, SleepTimerDuration.fromMinutes(120))
         assertEquals(SleepTimerDuration.OFF, SleepTimerDuration.fromMinutes(Int.MAX_VALUE))
     }
@@ -44,8 +45,8 @@ class SettingsRepositoryTest {
     // SleepTimerDuration comprehensive tests
 
     @Test
-    fun `SleepTimerDuration has exactly 5 entries`() {
-        assertEquals(5, SleepTimerDuration.entries.size)
+    fun `SleepTimerDuration has exactly 6 entries`() {
+        assertEquals(6, SleepTimerDuration.entries.size)
     }
 
     @Test
@@ -62,12 +63,9 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun `SleepTimerDuration ordinal stability`() {
-        assertEquals(0, SleepTimerDuration.OFF.ordinal)
-        assertEquals(1, SleepTimerDuration.FIFTEEN.ordinal)
-        assertEquals(2, SleepTimerDuration.THIRTY.ordinal)
-        assertEquals(3, SleepTimerDuration.SIXTY.ordinal)
-        assertEquals(4, SleepTimerDuration.NINETY.ordinal)
+    fun `SleepTimerDuration options match ShoutKit plus 90 minutes, in order`() {
+        // Persisted by minutes, not ordinal, so the menu order is free to change.
+        assertEquals(listOf(0, 15, 30, 45, 60, 90), SleepTimerDuration.entries.map { it.minutes })
     }
 
     @Test
@@ -75,6 +73,7 @@ class SettingsRepositoryTest {
         assertEquals(0L, SleepTimerDuration.OFF.minutes * 60 * 1000L)
         assertEquals(900_000L, SleepTimerDuration.FIFTEEN.minutes * 60 * 1000L)
         assertEquals(1_800_000L, SleepTimerDuration.THIRTY.minutes * 60 * 1000L)
+        assertEquals(2_700_000L, SleepTimerDuration.FORTY_FIVE.minutes * 60 * 1000L)
         assertEquals(3_600_000L, SleepTimerDuration.SIXTY.minutes * 60 * 1000L)
         assertEquals(5_400_000L, SleepTimerDuration.NINETY.minutes * 60 * 1000L)
     }

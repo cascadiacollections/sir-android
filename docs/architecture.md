@@ -283,8 +283,14 @@ playing.
 - **Quick-settings tile** takes its subtitle from the media session metadata, so it
   follows a directory station and ICY title updates. It falls back to the app's station
   name when no controller is connected.
-- **Glance widget** reads `selectedStation` directly — `provideGlance` is suspending, so
-  no controller connection is needed to render the correct name.
+- **Quick Play widget** (Glance) plays one favourite: the station pinned per widget in
+  `QuickPlayConfigActivity` (its own Glance state), or the first saved station.
+  `QuickPlaySelection` (`:core:persistence`) decides what a tap does — select-and-play
+  when that station isn't current, otherwise play/pause — and which icon to show. The tap
+  is a suspending `ActionCallback` that sends the service an intent; nothing blocks on a
+  controller future. `QuickPlayWidgetUpdater` re-renders it (debounced `updateAll`) when
+  playback, the selection or the favourites change, and only runs while a widget is
+  placed; the service's one hook is publishing `isPlaying` to it.
 - **Wear** is a standalone player and does not share a session with the phone, but it now
   takes its URL from `StreamConfig.DEFAULT_STREAM_URL` in `:core:playback` instead of
   duplicating the literal.

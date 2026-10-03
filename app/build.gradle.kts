@@ -65,6 +65,17 @@ android {
             .standardOutput.asText.get().trim().toIntOrNull() ?: 1
         versionName = "1.2.0"
 
+        // Short commit for Settings → About. providers.exec keeps this configuration-cache
+        // safe (the output is a tracked input); a missing git binary, or a source tree that
+        // isn't a checkout (a tarball build), falls back to "unknown" rather than failing.
+        val gitCommit = runCatching {
+            providers.exec {
+                commandLine("git", "rev-parse", "--short", "HEAD")
+                isIgnoreExitValue = true
+            }.standardOutput.asText.get().trim()
+        }.getOrNull()?.takeIf { it.matches(Regex("[0-9a-f]{4,40}")) } ?: "unknown"
+        buildConfigField("String", "GIT_COMMIT", "\"$gitCommit\"")
+
         // Include ARM ABIs for phones/tablets + x86_64 for ChromeOS
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")

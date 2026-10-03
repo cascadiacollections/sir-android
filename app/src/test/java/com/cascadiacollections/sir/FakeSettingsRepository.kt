@@ -32,6 +32,14 @@ class FakeSettingsRepository {
     private val _customStreamUrl = MutableStateFlow<String?>(null)
     val customStreamUrl: Flow<String?> = _customStreamUrl
 
+    // Defaults to completed so nothing built on the fake ever renders the first-run welcome.
+    private val _hasCompletedFirstRun = MutableStateFlow(true)
+    val hasCompletedFirstRun: Flow<Boolean> = _hasCompletedFirstRun
+
+    suspend fun setHasCompletedFirstRun(completed: Boolean) {
+        _hasCompletedFirstRun.value = completed
+    }
+
     suspend fun setStreamQuality(quality: StreamQuality) {
         _streamQuality.value = quality
     }

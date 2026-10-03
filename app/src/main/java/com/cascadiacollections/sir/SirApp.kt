@@ -39,6 +39,8 @@ class SirApp : Application() {
             isEnabled = { SettingsRepository(applicationContext).reportPlaysToDirectory.first() },
             directory = { AppDirectory.instance }
         ).start(applicationScope)
+        // Re-renders the Quick Play widget as playback changes; idle unless one is placed.
+        QuickPlayWidgetUpdater.startIfWidgetsPlaced(this)
         applicationScope.launch {
             val settings = SettingsRepository(applicationContext)
             if (settings.connectionPrewarmingEnabled.first()) {

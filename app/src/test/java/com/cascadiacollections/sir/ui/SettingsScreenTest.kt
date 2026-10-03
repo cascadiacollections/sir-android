@@ -3,7 +3,9 @@ package com.cascadiacollections.sir.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.cascadiacollections.sir.BuildConfig
 import com.cascadiacollections.sir.CastFeatureManager
 import com.cascadiacollections.sir.CastModuleState
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
@@ -11,6 +13,7 @@ import com.cascadiacollections.sir.ui.theme.SirTheme
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -144,5 +147,56 @@ class SettingsScreenTest {
         // present-but-disabled. The rest of the screen still renders.
         composeRule.onNodeWithText("Enable Chromecast").assertDoesNotExist()
         composeRule.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `settings screen shows the prewarming toggle under playback`() {
+        composeRule.setContent {
+            SirTheme {
+                SettingsContent(
+                    settingsRepository = createSettingsRepo(),
+                    castFeatureManager = createMockCastManager()
+                )
+            }
+        }
+        composeRule.onNodeWithText("Playback").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Pre-connect to favorite stations").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `settings screen ends with an about section`() {
+        composeRule.setContent {
+            SirTheme {
+                SettingsContent(
+                    settingsRepository = createSettingsRepo(),
+                    castFeatureManager = createMockCastManager()
+                )
+            }
+        }
+        composeRule.onNodeWithText("About").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Version").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(
+            "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · ${BuildConfig.GIT_COMMIT}"
+        ).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Source code").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Report an issue").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Station data from Radio Browser").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Open Source Licenses").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `about links open the licenses screen`() {
+        var opened = false
+        composeRule.setContent {
+            SirTheme {
+                SettingsContent(
+                    settingsRepository = createSettingsRepo(),
+                    castFeatureManager = createMockCastManager(),
+                    onOpenLicenses = { opened = true }
+                )
+            }
+        }
+        composeRule.onNodeWithText("Open Source Licenses").performScrollTo().performClick()
+        assertTrue(opened)
     }
 }

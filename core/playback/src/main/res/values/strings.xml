@@ -3,6 +3,7 @@
     <string name="sleep_timer_duration_off">Off</string>
     <string name="sleep_timer_duration_15m">15 minutes</string>
     <string name="sleep_timer_duration_30m">30 minutes</string>
+    <string name="sleep_timer_duration_45m">45 minutes</string>
     <string name="sleep_timer_duration_1h">1 hour</string>
     <string name="sleep_timer_duration_1h30m">1.5 hours</string>
 

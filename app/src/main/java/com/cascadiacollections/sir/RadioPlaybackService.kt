@@ -608,6 +608,7 @@ class RadioPlaybackService : MediaLibraryService() {
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                QuickPlayWidgetUpdater.onPlaybackChanged(isPlaying)
                 if (isPlaying) {
                     // Every transport route ends here — notification, in-app, Auto, Wear,
                     // Bluetooth — so this is the one place that sees all resumes.
@@ -798,6 +799,7 @@ class RadioPlaybackService : MediaLibraryService() {
 
         // Cancel coroutine scope
         serviceScope.cancel()
+        QuickPlayWidgetUpdater.onPlaybackChanged(false)
 
         playbackLocks?.release()
         mediaSession?.release()
@@ -1334,7 +1336,7 @@ class RadioPlaybackService : MediaLibraryService() {
         // Intent actions
         private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"
         const val ACTION_PLAY = "com.cascadiacollections.sir.action.PLAY"
-        private const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
+        const val ACTION_PAUSE = "com.cascadiacollections.sir.action.PAUSE"
         const val ACTION_SEEK_BACK = "com.cascadiacollections.sir.action.SEEK_BACK"
         const val ACTION_GO_LIVE = "com.cascadiacollections.sir.action.GO_LIVE"
         const val ACTION_SET_SLEEP_TIMER = "com.cascadiacollections.sir.action.SET_SLEEP_TIMER"

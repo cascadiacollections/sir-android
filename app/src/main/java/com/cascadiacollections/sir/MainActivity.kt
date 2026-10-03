@@ -31,6 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -45,6 +46,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.core.persistence.TrackHistoryRepository
+import com.cascadiacollections.sir.ui.FirstRunWelcome
 import com.cascadiacollections.sir.ui.LicensesScreen
 import com.cascadiacollections.sir.ui.RadioUi
 import com.cascadiacollections.sir.ui.SirAppShell
@@ -53,6 +55,7 @@ import com.cascadiacollections.sir.ui.theme.SirTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private const val ACTION_SHORTCUT_PLAY = "com.cascadiacollections.sir.SHORTCUT_PLAY"
 private const val DEEP_LINK_SCHEME = "sir"
@@ -283,6 +286,15 @@ fun RadioScreen(
             showLicenses = false
         }
         LicensesScreen(onBack = { showLicenses = false })
+    }
+
+    // First-run welcome. Starts as null (unknown) rather than false so returning users
+    // never see it flash while DataStore loads.
+    val hasCompletedFirstRun by repository.hasCompletedFirstRun
+        .collectAsState<Boolean, Boolean?>(initial = null)
+    val welcomeScope = rememberCoroutineScope()
+    if (hasCompletedFirstRun == false && !showLicenses) {
+        FirstRunWelcome(onDone = { welcomeScope.launch { repository.setHasCompletedFirstRun(true) } })
     }
 
     // Metered network warning dialog (shown once per session on cellular)

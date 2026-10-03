@@ -95,6 +95,7 @@ class SettingsRepository(private val context: Context) {
     private val connectionPrewarmingEnabledKey = booleanPreferencesKey("connection_prewarming_enabled")
     private val reportPlaysToDirectoryKey = booleanPreferencesKey("report_plays_to_directory")
     private val fetchAlbumArtworkKey = booleanPreferencesKey("fetch_album_artwork")
+    private val hasCompletedFirstRunKey = booleanPreferencesKey("has_completed_first_run")
 
     val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
         StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
@@ -260,6 +261,20 @@ class SettingsRepository(private val context: Context) {
     suspend fun setFetchAlbumArtwork(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[fetchAlbumArtworkKey] = enabled
+        }
+    }
+
+    /**
+     * Whether the one-time first-run welcome has been dismissed. Absent means "not yet",
+     * so existing installs see the welcome once after upgrading, which is intended.
+     */
+    val hasCompletedFirstRun: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[hasCompletedFirstRunKey] ?: false
+    }
+
+    suspend fun setHasCompletedFirstRun(completed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[hasCompletedFirstRunKey] = completed
         }
     }
 

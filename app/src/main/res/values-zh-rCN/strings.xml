@@ -142,8 +142,28 @@
     <string name="seek_back_30">回放 30 秒</string>
     <string name="go_live">直播</string>
     <!-- Widget -->
-    <string name="widget_description">在主屏幕上播放/暂停 SIR 电台</string>
-    <string name="widget_label">SIR 电台</string>
+    <string name="widget_description">在主屏幕上播放收藏的电台</string>
+    <string name="widget_label">SIR 快速播放</string>
+    <string name="quick_play_choose_station">选择电台</string>
+    <string name="quick_play_first_saved">第一个收藏的电台</string>
+    <string name="quick_play_no_saved_stations">在应用中收藏电台后即可在此选择。在此之前，小组件将播放当前电台。</string>
+
+    <!-- First-run welcome -->
+    <string name="welcome_title">欢迎使用 %1$s</string>
+    <string name="welcome_message">无需账户，没有跟踪。找到电台，按下播放。</string>
+    <string name="welcome_get_started">开始使用</string>
+
+    <!-- Settings: Playback -->
+    <string name="playback_heading">播放</string>
+    <string name="prewarm_connections">预先连接收藏的电台</string>
+    <string name="prewarm_connections_summary">让最常播放的收藏电台更快开始播放。应用启动时会使用少量数据。</string>
+
+    <!-- Settings: About -->
+    <string name="about_heading">关于</string>
+    <string name="about_version">版本</string>
+    <string name="about_source_code">源代码</string>
+    <string name="about_report_issue">报告问题</string>
+    <string name="about_station_data">电台数据来自 Radio Browser</string>
 
     <!-- Library: ordering, backup, Recently Heard, Top Tracks -->
     <string name="reorder_stations">重新排序</string>

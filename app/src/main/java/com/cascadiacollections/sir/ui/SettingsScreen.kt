@@ -240,6 +240,8 @@ fun SettingsContent(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
+        PlaybackSettingsSection(settingsRepository)
+
         // No stream quality selector: all three StreamQuality values currently resolve to
         // the same SHOUTcast mount, so the control could not change anything. The enum and
         // its persisted value stay — StreamSourceResolver reads them for the default
@@ -330,15 +332,8 @@ fun SettingsContent(
             Text(stringResource(R.string.privacy_policy))
         }
 
-        // Open Source Licenses
-        TextButton(
-            onClick = onOpenLicenses,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        ) {
-            Text(stringResource(R.string.open_source_licenses))
-        }
+        // About (version, source, issues, data attribution, open source licenses)
+        AboutSettingsSection(onOpenLicenses = onOpenLicenses)
 
         // Debug-only: Custom Stream URL
         if (BuildConfig.DEBUG) {

@@ -49,7 +49,7 @@ class RadioTileServiceTest {
             .get()
 
         // onClick with null controller (no session connected) should
-        // call ensureRadioServiceRunning and startForegroundService
+        // start the service with ACTION_PLAY
         controller.onClick()
 
         val shadow = shadowOf(RuntimeEnvironment.getApplication())
@@ -66,7 +66,7 @@ class RadioTileServiceTest {
         controller.onClick()
 
         val shadow = shadowOf(RuntimeEnvironment.getApplication())
-        // Two intents may be sent: ensureRadioServiceRunning + explicit ACTION_PLAY
+        // The ACTION_PLAY start is the only intent sent
         val intents = mutableListOf<Intent>()
         var intent = shadow.nextStartedService
         while (intent != null) {

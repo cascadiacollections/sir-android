@@ -175,10 +175,13 @@ class RadioBrowserViewModelTest {
 
     private val station = Station(id = "a", name = "A", url = "https://example.com/a")
 
+    // Registered so the rule clears it (cancelling its DataStore collectors) before
+    // resetting Dispatchers.Main; a late emission after the reset failed the test
+    // intermittently with an IllegalStateException from TestMainDispatcher.
     private fun viewModel(result: Result<List<Station>>) = RadioBrowserViewModel(
         FakeDirectory(result),
         SettingsRepository(RuntimeEnvironment.getApplication())
-    )
+    ).also(coroutineRule::registerViewModel)
 
     @Test
     fun `blank query is rejected without hitting the directory`() = runBlocking {

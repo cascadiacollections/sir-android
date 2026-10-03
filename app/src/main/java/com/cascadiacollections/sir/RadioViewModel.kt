@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir
 
 import android.app.Application
+import android.content.Intent
 import android.content.ComponentName
 import android.net.ConnectivityManager
 import android.os.Bundle
@@ -137,7 +138,11 @@ class RadioViewModel(
 
     private fun connectMediaController() {
         viewModelScope.launch {
-            getApplication<Application>().ensureRadioServiceRunning()
+            // Binding the controller starts the service; Media3 promotes it to the
+            // foreground itself once playback begins. A bare startForegroundService()
+            // here obliged the service to call startForeground() within seconds even when
+            // nothing played (e.g. a cold start that selects the current station), which
+            // Android reports as an ANR.
             try {
                 val newController = MediaController.Builder(getApplication(), sessionToken)
                     .setListener(controllerListener)
@@ -207,7 +212,14 @@ class RadioViewModel(
     fun togglePlayback() {
         val activeController = controller
         if (activeController == null) {
-            getApplication<Application>().ensureRadioServiceRunning()
+            // Not bound yet: ask the service to play directly. A plain startService is
+            // allowed because the user just tapped in the foreground activity, and it
+            // carries no startForeground() deadline if playback can't begin.
+            val app = getApplication<Application>()
+            app.startService(
+                Intent(app, RadioPlaybackService::class.java)
+                    .setAction(RadioPlaybackService.ACTION_PLAY)
+            )
             return
         }
         when (_uiState.value.transportAction) {
@@ -219,7 +231,6 @@ class RadioViewModel(
                 activeController.stop()
             }
             TransportAction.PLAY, TransportAction.RETRY -> {
-                getApplication<Application>().ensureRadioServiceRunning()
                 // A failed, stalled or cancelled player is idle and must be re-prepared.
                 if (activeController.playbackState == Player.STATE_IDLE) activeController.prepare()
                 activeController.play()

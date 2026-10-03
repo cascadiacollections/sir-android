@@ -61,7 +61,6 @@
     <string name="failure_stream_error_short">Stream error</string>
     <string name="failure_stalled">The stream stopped responding. Tap to retry.</string>
     <string name="failure_stalled_short">Stream stalled</string>
-    <string name="retry">Retry</string>
     <string name="cancel_connection">Cancel connection</string>
     <string name="favorite">Favorite</string>
     <string name="favorite_on">Saved to favorites</string>

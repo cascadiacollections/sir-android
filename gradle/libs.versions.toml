@@ -38,6 +38,7 @@ wearCompose = "1.7.0"
 androidxAnnotation = "1.11.0"
 wearTiles = "1.6.2"
 protolayout = "1.4.2"
+reorderable = "3.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -99,6 +100,7 @@ androidx-wear-tiles-tooling-preview = { group = "androidx.wear.tiles", name = "t
 androidx-wear-protolayout = { group = "androidx.wear.protolayout", name = "protolayout", version.ref = "protolayout" }
 androidx-wear-protolayout-material = { group = "androidx.wear.protolayout", name = "protolayout-material", version.ref = "protolayout" }
 androidx-wear-protolayout-expression = { group = "androidx.wear.protolayout", name = "protolayout-expression", version.ref = "protolayout" }
+reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-annotation = { group = "androidx.annotation", name = "annotation", version.ref = "androidxAnnotation" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }

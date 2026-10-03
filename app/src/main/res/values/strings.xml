@@ -117,7 +117,7 @@
 
     <!-- Track history -->
     <string name="track_history_title">Track history</string>
-    <string name="track_history_empty">Tracks you\'ve heard this session will show up here.</string>
+    <string name="track_history_empty">Tracks you\'ve heard will show up here.</string>
     <string name="copy_track">Copy track info</string>
 
     <!-- App shortcuts -->
@@ -134,4 +134,24 @@
     <!-- Widget -->
     <string name="widget_description">Play/pause SIR radio from your home screen</string>
     <string name="widget_label">SIR Radio</string>
+
+    <!-- Library: ordering, backup, Recently Heard, Top Tracks -->
+    <string name="reorder_stations">Reorder</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="drag_to_reorder">Drag to reorder</string>
+    <string name="export_favorites_backup">Export favorites backup (JSON)</string>
+    <string name="import_unreadable">Couldn\'t read that favorites backup</string>
+    <string name="top_tracks">Top Tracks</string>
+    <string name="top_tracks_week">This Week</string>
+    <string name="top_tracks_month">This Month</string>
+    <string name="top_tracks_all_time">All Time</string>
+    <string name="top_tracks_empty">No repeated tracks yet.</string>
+    <string name="recently_heard">Recently Heard</string>
+    <string name="recently_heard_empty">No Tracks Yet</string>
+    <string name="recently_heard_empty_description">Tracks you hear while listening appear here.</string>
+    <string name="clear">Clear</string>
+    <string name="back">Back</string>
+    <!-- %1$d = play count, e.g. "3×" -->
+    <string name="top_track_play_count" translatable="false">%1$d×</string>
 </resources>

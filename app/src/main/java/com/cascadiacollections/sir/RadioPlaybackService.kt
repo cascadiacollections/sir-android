@@ -49,8 +49,10 @@ import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftController
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
 import com.cascadiacollections.sir.core.directory.search
+import com.cascadiacollections.sir.core.persistence.HeardTrack
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.core.persistence.StationCollections
+import com.cascadiacollections.sir.core.persistence.TrackHistoryRepository
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.AudioRoutePolicy
 import com.cascadiacollections.sir.core.playback.EqualizerCurves
@@ -157,6 +159,12 @@ class RadioPlaybackService : MediaLibraryService() {
 
     // Display title for the current stream; null falls back to the bundled station name
     private var currentStationTitle: String? = null
+
+    // Directory id of the current stream (null for the app's own stream), for track history
+    private var currentStationId: String? = null
+
+    // Persisted Recently Heard history, recorded here so it accrues without any UI alive
+    private val trackHistoryRepository: TrackHistoryRepository by lazy { TrackHistoryRepository(this) }
 
     // DVR time-shift buffer
     private val timeShift = TimeShiftController(REPLAY_BUFFER_SIZE, STREAM_BYTES_PER_SEC)
@@ -595,13 +603,16 @@ class RadioPlaybackService : MediaLibraryService() {
                 )
                 Log.d(TAG, "Stream metadata: $raw")
 
+                val stationName = currentStationTitle ?: getString(R.string.station_name)
+                val previous = streamMetadata
                 val update = metadataResolver.resolve(
-                    previous = streamMetadata,
+                    previous = previous,
                     raw = raw,
-                    stationName = currentStationTitle ?: getString(R.string.station_name),
+                    stationName = stationName,
                 )
                 streamMetadata = update.metadata
                 if (update.notifyChanged) publishResolvedMetadata()
+                recordHeardTrack(previous, update.metadata, stationName)
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -775,6 +786,28 @@ class RadioPlaybackService : MediaLibraryService() {
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
+    }
+
+    /**
+     * Appends a newly resolved track to the persisted Recently Heard history.
+     *
+     * Only a track the resolver actually moved to counts: a rejected or placeholder update
+     * keeps the previous track in [next], and recording that would file the last station's
+     * song under a station that has since been switched to. Consecutive repeats that do
+     * get through (a service restart re-announcing the current track) are merged by
+     * `HeardTracks.record`.
+     */
+    private fun recordHeardTrack(previous: StreamMetadata, next: StreamMetadata, stationName: String) {
+        val title = next.trackTitle ?: return
+        if (title == previous.trackTitle && next.artist == previous.artist) return
+        val track = HeardTrack(
+            title = title,
+            artist = next.artist,
+            stationId = currentStationId,
+            stationName = stationName,
+            timestampMillis = System.currentTimeMillis(),
+        )
+        serviceScope.launch { trackHistoryRepository.record(track) }
     }
 
     /**
@@ -1149,6 +1182,7 @@ class RadioPlaybackService : MediaLibraryService() {
      */
     private suspend fun adoptStreamSource(source: StreamSource): MediaItem? {
         currentStationTitle = source.title
+        currentStationId = source.stationId
         requestedStreamUrl = source.url
         if (source.url == currentStreamUrl) return null
         val endpoint = endpointFor(source)

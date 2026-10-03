@@ -33,6 +33,47 @@ object StationCollections {
         current.filterNot { it.id == stationId }
 
     /**
+     * Moves the favourite at [from] to [to], shifting the stations in between. Out-of-range
+     * indices leave the list unchanged rather than throwing: the indices come from UI that
+     * can be one emission behind the store.
+     */
+    fun moveFavorite(current: List<Station>, from: Int, to: Int): List<Station> {
+        if (from !in current.indices || to !in current.indices || from == to) return current
+        return current.toMutableList().apply { add(to, removeAt(from)) }
+    }
+
+    /**
+     * Reorders favourites to follow [orderedIds] — the order the user dragged them into.
+     * Unknown ids are ignored, and saved stations missing from [orderedIds] (saved while
+     * the drag was in progress) keep their relative order after the ordered ones, so a
+     * stale drag can reorder but never drop a favourite.
+     */
+    fun reorderFavorites(current: List<Station>, orderedIds: List<String>): List<Station> {
+        val byId = current.associateBy { it.id }
+        val ordered = orderedIds.distinct().mapNotNull { byId[it] }
+        val placed = ordered.mapTo(mutableSetOf()) { it.id }
+        return ordered + current.filterNot { it.id in placed }
+    }
+
+    /** Outcome of [mergeFavorites]. */
+    data class MergeResult(val stations: List<Station>, val added: Int, val skipped: Int)
+
+    /**
+     * Merges [imported] favourites into [current] by station id: stations already saved
+     * are skipped (the user's copy, which may have been edited, wins) and new ones are
+     * appended in import order — ShoutKit's import semantics.
+     */
+    fun mergeFavorites(current: List<Station>, imported: List<Station>): MergeResult {
+        val seen = current.mapTo(mutableSetOf()) { it.id }
+        val added = imported.filter { it.id.isNotBlank() && seen.add(it.id) }
+        return MergeResult(
+            stations = current + added,
+            added = added.size,
+            skipped = imported.size - added.size,
+        )
+    }
+
+    /**
      * Finds a station by name for voice search ("Play [station name]"): an exact
      * case-insensitive match first, falling back to a substring match, so "Play NPR"
      * finds a station named exactly "NPR" before matching "Classical NPR" and doesn't

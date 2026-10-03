@@ -27,19 +27,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cascadiacollections.sir.R
-import com.cascadiacollections.sir.core.playback.TrackHistoryEntry
+import com.cascadiacollections.sir.core.persistence.HeardTrack
 import java.util.Date
 import kotlinx.coroutines.launch
 
 /**
- * Bottom sheet listing the tracks resolved from ICY metadata during this session,
+ * Bottom sheet listing the most recent tracks from the persisted Recently Heard history,
  * newest first, each copyable to the clipboard as "Title — Artist" (or just "Title"
  * when the entry has no artist).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackHistorySheet(
-    history: List<TrackHistoryEntry>,
+    history: List<HeardTrack>,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -71,7 +71,8 @@ fun TrackHistorySheet(
                 )
             } else {
                 LazyColumn {
-                    items(history, key = { "${it.timestampMillis}-${it.title}-${it.artist}" }) { entry ->
+                    // No item keys: two hearings can legitimately share title, artist and timestamp.
+                    items(history) { entry ->
                         val timeLabel = remember(entry.timestampMillis) {
                             DateFormat.getTimeFormat(context).format(Date(entry.timestampMillis))
                         }
@@ -83,9 +84,10 @@ fun TrackHistorySheet(
                             trailingContent = {
                                 IconButton(
                                     onClick = {
-                                        val text = listOfNotNull(entry.title, entry.artist).joinToString(" — ")
                                         scope.launch {
-                                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(entry.title, text)))
+                                            clipboard.setClipEntry(
+                                                ClipEntry(ClipData.newPlainText(entry.title, entry.copyText))
+                                            )
                                         }
                                     }
                                 ) {

@@ -6,8 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.directory.search
 import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.core.persistence.FavoritesBackupCodec
+import com.cascadiacollections.sir.core.persistence.HeardTrack
 import com.cascadiacollections.sir.core.persistence.PlaylistCodec
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
+import com.cascadiacollections.sir.core.persistence.TrackHistoryRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,13 +26,17 @@ data class RadioBrowserUiState(
     val error: String? = null,
     val savedStations: List<Station> = emptyList(),
     val recentStations: List<Station> = emptyList(),
-    val selectedStationId: String? = null
+    val selectedStationId: String? = null,
+    /** Persisted Recently Heard tracks, newest first. */
+    val heardTracks: List<HeardTrack> = emptyList()
 )
 
 /** Outcome of [RadioBrowserViewModel.importPlaylist], reported back to the UI for a toast. */
 sealed interface PlaylistImportResult {
     data class Imported(val added: Int, val skipped: Int) : PlaylistImportResult
     data object Empty : PlaylistImportResult
+    /** The file was a favourites backup this build can't read (bad JSON or schema). */
+    data object Unreadable : PlaylistImportResult
 }
 
 /**
@@ -40,7 +47,8 @@ sealed interface PlaylistImportResult {
  */
 class RadioBrowserViewModel(
     private val directory: RadioDirectory,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val trackHistoryRepository: TrackHistoryRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RadioBrowserUiState())
@@ -68,6 +76,13 @@ class RadioBrowserViewModel(
         viewModelScope.launch {
             settingsRepository.selectedStation.collect { station ->
                 _uiState.update { it.copy(selectedStationId = station?.id) }
+            }
+        }
+        trackHistoryRepository?.let { history ->
+            viewModelScope.launch {
+                history.tracks.collect { tracks ->
+                    _uiState.update { it.copy(heardTracks = tracks) }
+                }
             }
         }
         loadTopStations()
@@ -213,16 +228,75 @@ class RadioBrowserViewModel(
         }
     }
 
+    /** Moves the saved station at [from] to [to] (accessibility move actions). */
+    fun moveSavedStation(from: Int, to: Int) {
+        viewModelScope.launch {
+            settingsRepository.moveSavedStation(from, to)
+        }
+    }
+
+    /** Persists the saved-station order the user dragged into. */
+    fun reorderSavedStations(orderedIds: List<String>) {
+        viewModelScope.launch {
+            settingsRepository.reorderSavedStations(orderedIds)
+        }
+    }
+
+    /** Clears the persisted Recently Heard history (and with it Top Tracks). */
+    fun clearHeardTracks() {
+        viewModelScope.launch {
+            trackHistoryRepository?.clear()
+        }
+    }
+
+    /**
+     * Imports a picked file, deciding by content (then extension) whether it is a
+     * ShoutKit-compatible JSON favourites backup or an M3U/PLS playlist.
+     */
+    fun importStations(text: String, fileName: String?, onResult: (PlaylistImportResult) -> Unit) {
+        if (FavoritesBackupCodec.looksLikeBackup(text, fileName)) {
+            importFavoritesBackup(text, onResult)
+        } else {
+            importPlaylist(text, isPls = fileName?.endsWith(".pls", ignoreCase = true) == true, onResult)
+        }
+    }
+
+    /**
+     * Merges a JSON favourites backup by station id — already-saved stations are skipped,
+     * new ones appended in the backup's order — in a single transaction.
+     */
+    fun importFavoritesBackup(text: String, onResult: (PlaylistImportResult) -> Unit) {
+        viewModelScope.launch {
+            val stations = try {
+                FavoritesBackupCodec.decode(text)
+            } catch (_: IllegalArgumentException) {
+                // SerializationException and UnsupportedSchemaException both extend it.
+                onResult(PlaylistImportResult.Unreadable)
+                return@launch
+            }
+            if (stations.isEmpty()) {
+                onResult(PlaylistImportResult.Empty)
+                return@launch
+            }
+            val result = settingsRepository.importSavedStations(stations)
+            onResult(PlaylistImportResult.Imported(added = result.added, skipped = result.skipped))
+        }
+    }
+
+    /** Renders the saved stations, in order, as a ShoutKit-compatible JSON backup. */
+    fun exportFavoritesBackup(): String = FavoritesBackupCodec.encode(_uiState.value.savedStations)
+
     /** Renders the current saved stations as M3U text for export/backup. */
     fun exportPlaylist(): String = PlaylistCodec.toM3u(_uiState.value.savedStations)
 
     class Factory(
         private val directory: RadioDirectory,
-        private val settingsRepository: SettingsRepository
+        private val settingsRepository: SettingsRepository,
+        private val trackHistoryRepository: TrackHistoryRepository? = null
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
-            return RadioBrowserViewModel(directory, settingsRepository) as T
+            return RadioBrowserViewModel(directory, settingsRepository, trackHistoryRepository) as T
         }
     }
 }

@@ -44,6 +44,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
+import com.cascadiacollections.sir.core.persistence.TrackHistoryRepository
 import com.cascadiacollections.sir.ui.LicensesScreen
 import com.cascadiacollections.sir.ui.RadioUi
 import com.cascadiacollections.sir.ui.SirAppShell
@@ -216,7 +217,8 @@ fun RadioScreen(
     val browserViewModel: RadioBrowserViewModel = viewModel(
         factory = RadioBrowserViewModel.Factory(
             directory = AppDirectory.instance,
-            settingsRepository = repository
+            settingsRepository = repository,
+            trackHistoryRepository = TrackHistoryRepository(context.applicationContext)
         )
     )
 

@@ -104,7 +104,7 @@
     <string name="share">分享</string>
     <string name="share_now_playing">正在 SIR 上播放：%1$s</string>
     <string name="track_history_title">播放记录</string>
-    <string name="track_history_empty">本次收听过的曲目会显示在这里。</string>
+    <string name="track_history_empty">听过的曲目会显示在这里。</string>
     <string name="copy_track">复制曲目信息</string>
     <!-- App shortcuts -->
     <string name="shortcut_play_long">播放 SIR 电台</string>
@@ -117,4 +117,22 @@
     <!-- Widget -->
     <string name="widget_description">在主屏幕上播放/暂停 SIR 电台</string>
     <string name="widget_label">SIR 电台</string>
+
+    <!-- Library: ordering, backup, Recently Heard, Top Tracks -->
+    <string name="reorder_stations">重新排序</string>
+    <string name="move_up">上移</string>
+    <string name="move_down">下移</string>
+    <string name="drag_to_reorder">拖动以排序</string>
+    <string name="export_favorites_backup">导出收藏备份（JSON）</string>
+    <string name="import_unreadable">无法读取该收藏备份</string>
+    <string name="top_tracks">热门曲目</string>
+    <string name="top_tracks_week">本周</string>
+    <string name="top_tracks_month">本月</string>
+    <string name="top_tracks_all_time">全部</string>
+    <string name="top_tracks_empty">还没有重复播放的曲目。</string>
+    <string name="recently_heard">最近听过</string>
+    <string name="recently_heard_empty">暂无曲目</string>
+    <string name="recently_heard_empty_description">收听时听到的曲目会显示在这里。</string>
+    <string name="clear">清除</string>
+    <string name="back">返回</string>
 </resources>

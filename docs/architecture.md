@@ -177,6 +177,19 @@ Collection rules for saved and recently-heard stations, kept out of
   It also owns `StreamQuality` and `StreamConfig`, which moved here from `:app` so that
   nothing in the settings layer depends on the application module.
 
+- `TrackHistoryRepository` persists Recently Heard — every ICY track resolved by
+  `RadioPlaybackService`, up to 1000, newest first — in its own `track_history` DataStore
+  file, so a track change never rewrites the settings file and a settings toggle never
+  rewrites the history. The service records it, not a ViewModel, so history accrues with no
+  UI alive. `HeardTracks` owns the rules: consecutive repeats on the same station merge
+  (refreshing the timestamp, as ShoutKit does) and the list is capped. `TopTracks` ranks the
+  history for the Library (this week / month / all time, ≥2 plays, ties to the most recent).
+- `FavoritesBackupCodec` reads and writes ShoutKit's favourites backup
+  (`{"schemaVersion":1,"favorites":[…]}`), so saved stations move between iOS and Android.
+  Both apps key stations by radio-browser's `stationuuid`; import merges by id and appends.
+  Favourites are user-ordered: `StationCollections.moveFavorite`/`reorderFavorites` reorder
+  in one transaction, and new favourites still append.
+
 The DataStore instance is tracked against its owning application context rather than
 through the `preferencesDataStore` property delegate. The delegate caches against the
 first context it ever sees, which is correct in production but wrong under Robolectric,

@@ -54,6 +54,9 @@
 
     <!-- Settings dialog -->
     <string name="privacy_policy">Privacy Policy</string>
+    <string name="privacy_heading">Privacy</string>
+    <string name="report_plays">Report plays to Radio Browser</string>
+    <string name="report_plays_summary">Tells radio-browser.info when you start one of its stations, so popular stations rank higher. No account or personal data is sent.</string>
     <string name="open_source_licenses">Open Source Licenses</string>
     <string name="privacy_policy_url" translatable="false">https://cascadiacollections.github.io/sir-android/privacy/</string>
     <string name="done">Done</string>

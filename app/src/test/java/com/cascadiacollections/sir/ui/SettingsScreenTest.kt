@@ -103,6 +103,20 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun `settings screen displays the report plays toggle under privacy`() {
+        composeRule.setContent {
+            SirTheme {
+                SettingsContent(
+                    settingsRepository = createSettingsRepo(),
+                    castFeatureManager = createMockCastManager()
+                )
+            }
+        }
+        composeRule.onNodeWithText("Privacy").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Report plays to Radio Browser").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun `settings screen renders Chromecast section with NotInstalled state`() {
         composeRule.setContent {
             SirTheme {

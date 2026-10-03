@@ -42,26 +42,46 @@ behaviour is assembled from decorators by `RadioDirectories.create()`:
 CuratedFallbackDirectory( CachingRadioDirectory( RadioBrowserDirectory ) )
 ```
 
-- `RadioBrowserDirectory` — talks to radio-browser.info, builds URLs with
-  `HttpUrl.Builder` (no hand-rolled escaping) and fails over across mirrors supplied by
-  `RotatingMirrorProvider`. radio-browser has no single stable host, so rotation both
-  spreads load and survives a single-mirror outage.
+- `RadioBrowserDirectory` — talks to radio-browser.info following its published
+  guidance: a descriptive `User-Agent`, no single hard-coded server, and a
+  `/json/url/{stationuuid}` report for every user click. URLs are built with
+  `HttpUrl.Builder` (no hand-rolled escaping). Mirrors come from
+  `DiscoveringMirrorProvider`, which reads `all.api.radio-browser.info/json/servers`
+  once per process (24h TTL), shuffles the result per request, falls back to the
+  hard-coded `RotatingMirrorProvider.DEFAULT_MIRRORS` when discovery fails, and always
+  keeps `all.api.radio-browser.info` as the last resort.
 
-  Failover only applies to `IOException`. A decode error or a 4xx is a property of the
-  request, so it fails identically on every mirror and retrying just multiplies the wait;
-  those stop at the first mirror. The loop checks `ensureActive()` per iteration because
-  OkHttp's `execute()` blocks and never observes cancellation on its own, and it holds a
-  wall-clock budget so a run of slow mirrors cannot hold the search spinner for the sum of
-  their timeouts. A blank HTTP body is treated as a malfunction rather than "no results" —
-  radio-browser answers an empty search with `[]`, so a blank body means the mirror is
-  broken and the next one should be tried.
+  Each call makes at most three attempts (ShoutKit's `RetryPolicy`), each on the next
+  mirror with a 350 ms × 2ⁿ backoff, inside a 30 s wall-clock budget. Failover applies
+  to transport errors and to 5xx/408/429 (`HttpStatusException.isRetryable`). A decode
+  error or another 4xx is a property of the request, so it fails identically on every
+  mirror and stops at the first. The loop checks `ensureActive()` per iteration because
+  OkHttp's `execute()` blocks and never observes cancellation on its own. A blank HTTP
+  body is treated as a malfunction rather than "no results" — radio-browser answers an
+  empty search with `[]`, so a blank body means the mirror is broken.
+
+  Name search and genre browse both use `/json/stations/search` ordered by click count
+  (`tagList` for genres, lowercase). `StationSearchFilters` (bitrate range, tag,
+  country) are sent as query parameters and re-applied locally after decoding, with a
+  missing value never counting as a mismatch. API results pass through
+  `StationNameFormatter` (underscores, `[HD]`/`(128k)` clutter, whitespace; http
+  favicons upgraded to https). `topTags` feeds the genre list from `/json/tags`.
+- Click reporting is wired once, in `:app`: `SettingsRepository.stationSelections`
+  fires for every `selectStation` — the one path every entry point (Browse/Library,
+  Android Auto, shortcuts, deep links, voice search) uses to start a station, and one
+  that resume/reconnect/retry never take — and `StationPlayReporter` turns it into a
+  fire-and-forget `reportClick`, gated on the "Report plays to Radio Browser" setting
+  (default on). Only radio-browser UUIDs are reported; bundled and imported stations
+  are skipped.
 - `CachingRadioDirectory` — short-TTL, LRU-bounded, in-memory. Only successful
-  responses are stored, so an error never poisons the cache. Built once per process by
+  responses are stored, so an error never poisons the cache. Filters are part of the
+  key; tags get a separate one-hour TTL; `reportClick` is never cached. Built once per process by
   `AppDirectory`, not per composition, so it survives rotation and back-navigation.
 - `CuratedFallbackDirectory` — sits *outside* the cache so its results are never
   memoized. It converts a failure into bundled `CuratedStations`; an empty but
   successful response is passed through untouched, because "no such station" is a real
-  answer and must not be masked.
+  answer and must not be masked. A failed `topTags` falls back to 18 bundled genres;
+  `reportClick` has no fallback.
 
 Ordering is owned by the factory rather than by call sites, so the chain can be
 re-tuned in one place.

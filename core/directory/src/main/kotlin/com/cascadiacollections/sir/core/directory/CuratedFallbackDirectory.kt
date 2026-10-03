@@ -11,17 +11,41 @@ import com.cascadiacollections.sir.core.model.StationQuery
  */
 class CuratedFallbackDirectory(
     private val delegate: RadioDirectory,
-    private val curated: List<Station> = CuratedStations.ALL
+    private val curated: List<Station> = CuratedStations.ALL,
+    private val curatedTags: List<Tag> = Tag.CURATED
 ) : RadioDirectory {
 
     override suspend fun search(query: StationQuery): Result<List<Station>> =
-        delegate.search(query).orCurated { CuratedStations.matching(query.normalizedText, curated) }
+        search(query, StationSearchFilters.NONE)
+
+    override suspend fun search(query: StationQuery, filters: StationSearchFilters): Result<List<Station>> =
+        delegate.search(query, filters).orCurated {
+            filters.applyTo(CuratedStations.matching(query.normalizedText, curated))
+        }
 
     override suspend fun topStations(limit: Int): Result<List<Station>> =
         delegate.topStations(limit).orCurated { curated.take(limit) }
 
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
-        delegate.stationsByTag(tag, limit).orCurated { CuratedStations.matching(tag, curated).take(limit) }
+        stationsByTag(tag, limit, StationSearchFilters.NONE)
+
+    override suspend fun stationsByTag(
+        tag: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ): Result<List<Station>> =
+        delegate.stationsByTag(tag, limit, filters).orCurated {
+            filters.applyTo(CuratedStations.matching(tag, curated)).take(limit)
+        }
+
+    /** The genre list is never empty: a failure falls back to the bundled genres. */
+    override suspend fun topTags(limit: Int): Result<List<Tag>> =
+        delegate.topTags(limit).recoverCatching { error ->
+            curatedTags.take(limit.coerceAtLeast(1)).ifEmpty { throw error }
+        }
+
+    /** Passed straight through: a click report has no meaningful fallback. */
+    override suspend fun reportClick(stationId: String): Result<Unit> = delegate.reportClick(stationId)
 
     override suspend fun getStation(id: String): Result<Station?> =
         delegate.getStation(id).recoverCatching { curated.firstOrNull { it.id == id } }

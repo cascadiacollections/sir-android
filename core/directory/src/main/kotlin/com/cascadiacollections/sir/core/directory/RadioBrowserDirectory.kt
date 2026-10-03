@@ -4,21 +4,28 @@ import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import java.util.Locale
 
 /**
  * [RadioDirectory] backed by the public radio-browser.info API.
  *
- * No authentication is required; the API asks clients to identify themselves via
- * `User-Agent` and stay under ~100 requests/minute. Requests fail over across the
- * mirrors returned by [mirrorProvider] before surfacing an error.
+ * Follows the API's published guidance: a descriptive `User-Agent`, no single
+ * hard-coded server (mirrors come from [mirrorProvider], which discovers them), and a
+ * `/json/url/{stationuuid}` report for every user click ([reportClick]).
+ *
+ * Each call makes at most [retryPolicy]`.maxAttempts` requests, each on the next mirror
+ * with exponential backoff between them, all inside [failoverBudgetMs].
  */
 class RadioBrowserDirectory(
     private val httpClient: OkHttpClient,
@@ -28,77 +35,162 @@ class RadioBrowserDirectory(
     /** Wall-clock ceiling on one call's failover across all mirrors. */
     private val failoverBudgetMs: Long = DEFAULT_FAILOVER_BUDGET_MS,
     /** Injectable so the budget can be tested without sleeping. */
-    private val nanoTime: () -> Long = System::nanoTime
+    private val nanoTime: () -> Long = System::nanoTime,
+    private val retryPolicy: RetryPolicy = RetryPolicy.DEFAULT
 ) : RadioDirectory {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    override suspend fun search(query: StationQuery): Result<List<Station>> {
+    @Serializable
+    private data class WireTag(
+        val name: String = "",
+        @SerialName("stationcount") val stationCount: Int = 0
+    )
+
+    override suspend fun search(query: StationQuery): Result<List<Station>> =
+        search(query, StationSearchFilters.NONE)
+
+    override suspend fun search(query: StationQuery, filters: StationSearchFilters): Result<List<Station>> {
         if (query.isBlank) return Result.success(emptyList())
-        return get(query.effectiveLimit) { base ->
+        return getStations(query.effectiveLimit, filters) { base ->
             base.addPathSegments("json/stations/search")
                 .addQueryParameter("name", query.normalizedText)
+                .addPopularityOrder()
+                .addFilters(filters.queryParameters())
         }
     }
 
     override suspend fun topStations(limit: Int): Result<List<Station>> =
-        get(limit) { base -> base.addPathSegments("json/stations/topclick") }
+        getStations(limit, StationSearchFilters.NONE) { base -> base.addPathSegments("json/stations/topclick") }
 
-    override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> {
+    override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
+        stationsByTag(tag, limit, StationSearchFilters.NONE)
+
+    override suspend fun stationsByTag(
+        tag: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ): Result<List<Station>> {
         val normalized = tag.trim()
         if (normalized.isEmpty()) return Result.success(emptyList())
-        return get(limit) { base ->
+        // radio-browser stores tags lowercase; the genre list capitalizes them for display.
+        val tagList = listOfNotNull(normalized, filters.tag)
+            .map { it.lowercase(Locale.ROOT) }
+            .distinct()
+            .joinToString(",")
+        return getStations(limit, filters) { base ->
             base.addPathSegments("json/stations/search")
-                .addQueryParameter("tag", normalized)
+                .addQueryParameter("tagList", tagList)
+                .addPopularityOrder()
+                .addFilters(filters.queryParameters(includeTag = false))
         }
     }
 
     override suspend fun getStation(id: String): Result<Station?> {
         if (id.isBlank()) return Result.success(null)
-        return get(1) { base ->
+        return getStations(1, StationSearchFilters.NONE) { base ->
             base.addPathSegments("json/stations/byuuid").addPathSegment(id)
         }.map { it.firstOrNull() }
     }
 
-    private suspend fun get(
+    override suspend fun topTags(limit: Int): Result<List<Tag>> {
+        val clamped = limit.coerceIn(1, MAX_TAG_LIMIT)
+        return request(
+            buildUrl = { base ->
+                base.addPathSegments("json/tags")
+                    .addQueryParameter("order", "stationcount")
+                    .addQueryParameter("reverse", "true")
+                    .addQueryParameter("hidebroken", "true")
+                    .addQueryParameter("limit", clamped.toString())
+            },
+            parse = { body ->
+                json.decodeFromString<List<WireTag>>(body).mapNotNull { wire ->
+                    wire.name.trim().takeIf { it.isNotEmpty() }?.let { Tag(it, wire.stationCount) }
+                }
+            }
+        )
+    }
+
+    override suspend fun reportClick(stationId: String): Result<Unit> {
+        if (!StationIds.isRadioBrowserUuid(stationId)) return Result.success(Unit)
+        return request(
+            buildUrl = { base -> base.addPathSegments("json/url").addPathSegment(stationId) },
+            // The body describes the station's stream; only the side effect matters.
+            parse = { }
+        )
+    }
+
+    private suspend fun getStations(
         limit: Int,
+        filters: StationSearchFilters,
         buildPath: (HttpUrl.Builder) -> HttpUrl.Builder
-    ): Result<List<Station>> = withContext(ioDispatcher) {
+    ): Result<List<Station>> {
         val clampedLimit = limit.coerceIn(1, StationQuery.MAX_LIMIT)
-        val deadline = nanoTime() + failoverBudgetMs * 1_000_000
+        return request(
+            buildUrl = { base ->
+                buildPath(base)
+                    .addQueryParameter("limit", clampedLimit.toString())
+                    .addQueryParameter("hidebroken", "true")
+            },
+            parse = { body ->
+                val stations = json.decodeFromString<List<Station>>(body)
+                    .filter { it.isPlayable }
+                    .map { it.normalizedFromDirectory() }
+                // Mirrors do not all honour every filter parameter, so re-apply locally.
+                filters.applyTo(stations).take(clampedLimit)
+            }
+        )
+    }
+
+    /**
+     * One logical request with bounded mirror failover.
+     *
+     * Only transport failures and retryable statuses move on to the next mirror. A
+     * decode error or a plain 4xx is a property of the request, so it would fail
+     * identically everywhere and retrying would only multiply the wait.
+     */
+    private suspend fun <T> request(
+        buildUrl: (HttpUrl.Builder) -> HttpUrl.Builder,
+        parse: (String) -> T
+    ): Result<T> = withContext(ioDispatcher) {
+        val deadline = nanoTime() + failoverBudgetMs * NANOS_PER_MILLI
+        val mirrors = mirrorProvider.mirrors()
+            .mapNotNull { it.toHttpUrlOrNull() }
+            .ifEmpty { return@withContext Result.failure(IOException("No usable radio-browser mirror")) }
+        val attempts = retryPolicy.maxAttempts
         var lastFailure: Throwable? = null
 
-        for (mirror in mirrorProvider.mirrors()) {
+        for (attempt in 0 until attempts) {
             // `execute()` blocks and never observes cancellation, so without this a
             // search kept issuing requests after the user left the screen.
             ensureActive()
 
-            val base = mirror.toHttpUrlOrNull()?.newBuilder() ?: continue
-            val url = buildPath(base)
-                .addQueryParameter("limit", clampedLimit.toString())
-                .addQueryParameter("hidebroken", "true")
-                .build()
+            val url = buildUrl(mirrors[attempt % mirrors.size].newBuilder()).build()
+            val result = runCatching { parse(fetch(url)) }
+            result.onSuccess { return@withContext Result.success(it) }
 
-            val attempt = runCatching { fetch(url) }
-            attempt.onSuccess { return@withContext Result.success(it) }
-
-            val failure = attempt.exceptionOrNull()
+            val failure = result.exceptionOrNull()
             lastFailure = failure
-
-            // Only transport failures are worth another mirror. A decode error or a 4xx
-            // is a property of the request, so it will fail identically everywhere —
-            // trying all four just multiplied the wait by four before showing the error.
-            if (failure !is IOException) break
+            if (!failure.isRetryable()) break
+            if (attempt == attempts - 1) break
 
             // Each attempt carries its own callTimeout, so a run of slow mirrors could
             // otherwise hold the search spinner for the sum of all of them.
-            if (nanoTime() >= deadline) break
+            val backoff = retryPolicy.delayAfter(attempt)
+            if (nanoTime() + backoff * NANOS_PER_MILLI >= deadline) break
+            delay(backoff)
         }
 
         Result.failure(lastFailure ?: IOException("No usable radio-browser mirror"))
     }
 
-    private fun fetch(url: HttpUrl): List<Station> {
+    private fun Throwable?.isRetryable(): Boolean = when (this) {
+        is HttpStatusException -> isRetryable
+        is IOException -> true
+        else -> false
+    }
+
+    private fun fetch(url: HttpUrl): String {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", userAgent)
@@ -106,18 +198,26 @@ class RadioBrowserDirectory(
             .build()
 
         httpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw IOException("radio-browser responded HTTP ${response.code}")
-            }
+            if (!response.isSuccessful) throw HttpStatusException(response.code)
             val body = response.body.string()
             // "No results" is `[]`, not an empty body. A blank body is a malfunctioning
             // mirror, so fail over rather than reporting — and caching — no results.
             if (body.isBlank()) throw IOException("radio-browser returned an empty body")
-            return json.decodeFromString<List<Station>>(body).filter { it.isPlayable }
+            return body
         }
     }
 
+    private fun HttpUrl.Builder.addPopularityOrder(): HttpUrl.Builder =
+        addQueryParameter("order", "clickcount").addQueryParameter("reverse", "true")
+
+    private fun HttpUrl.Builder.addFilters(params: List<Pair<String, String>>): HttpUrl.Builder =
+        apply { params.forEach { (name, value) -> addQueryParameter(name, value) } }
+
     companion object {
+        /**
+         * radio-browser asks for a speaking agent identifying the app; it also
+         * rate-limits by agent, so this must not be shared with other clients.
+         */
         const val DEFAULT_USER_AGENT: String = "SIR-Android/1.0 (+https://github.com/cascadiacollections/sir-android)"
 
         /**
@@ -126,5 +226,10 @@ class RadioBrowserDirectory(
          * never spins for the sum of every mirror's timeout.
          */
         const val DEFAULT_FAILOVER_BUDGET_MS: Long = 30_000
+
+        /** Upper bound for [topTags]; the genre list never needs more. */
+        const val MAX_TAG_LIMIT: Int = 500
+
+        private const val NANOS_PER_MILLI = 1_000_000L
     }
 }

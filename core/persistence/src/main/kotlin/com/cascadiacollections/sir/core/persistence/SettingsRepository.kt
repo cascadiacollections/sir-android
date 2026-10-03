@@ -19,7 +19,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 
@@ -89,6 +93,7 @@ class SettingsRepository(private val context: Context) {
     private val selectedStationKey = stringPreferencesKey("selected_station")
     private val stationPlayCountsKey = stringPreferencesKey("station_play_counts")
     private val connectionPrewarmingEnabledKey = booleanPreferencesKey("connection_prewarming_enabled")
+    private val reportPlaysToDirectoryKey = booleanPreferencesKey("report_plays_to_directory")
 
     val streamQuality: Flow<StreamQuality> = context.dataStore.data.map { prefs ->
         StreamQuality.fromOrdinal(prefs[streamQualityKey] ?: 0)
@@ -229,6 +234,21 @@ class SettingsRepository(private val context: Context) {
     }
 
     /**
+     * Whether an explicit play is reported to radio-browser (`/json/url/{uuid}`), which
+     * the directory uses to rank popular stations. On by default, matching ShoutKit;
+     * user-toggleable from the privacy section of settings.
+     */
+    val reportPlaysToDirectory: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[reportPlaysToDirectoryKey] ?: true
+    }
+
+    suspend fun setReportPlaysToDirectory(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[reportPlaysToDirectoryKey] = enabled
+        }
+    }
+
+    /**
      * Flow of recently played stations, newest first.
      */
     val recentStations: Flow<List<Station>> = context.dataStore.data.map { preferences ->
@@ -300,6 +320,8 @@ class SettingsRepository(private val context: Context) {
             )
             preferences[recentStationsKey] = StationCodec.encode(recents)
         }
+        // After the write commits, so an observer never acts on a selection that failed.
+        selections.tryEmit(station)
     }
 
     /**
@@ -343,5 +365,25 @@ class SettingsRepository(private val context: Context) {
     /** Removes the preference entirely once empty rather than persisting an empty "{}". */
     private fun MutablePreferences.putPlayCounts(counts: Map<String, Int>) {
         if (counts.isEmpty()) remove(stationPlayCountsKey) else this[stationPlayCountsKey] = Json.encodeToString(counts)
+    }
+
+    companion object {
+        private val selections = MutableSharedFlow<Station>(
+            extraBufferCapacity = 16,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+
+        /**
+         * Every station passed to [selectStation] in this process, emitted once the
+         * selection is persisted.
+         *
+         * `selectStation` is the single path by which a user starts a station — the phone
+         * UI, Android Auto, shortcuts, deep links and voice search all go through it, while
+         * resume, reconnect and retry never do — so this is the one place to observe
+         * "the user chose to play this". Process-wide rather than per instance because
+         * the activity, the service and the app each build their own repository. Not
+         * replayed: a late subscriber does not see earlier selections.
+         */
+        val stationSelections: SharedFlow<Station> = selections.asSharedFlow()
     }
 }

@@ -33,6 +33,12 @@ class SirApp : Application() {
                     .build()
             )
         }
+        // One central hook for "the user started a station", covering every entry point.
+        StationPlayReporter(
+            selections = SettingsRepository.stationSelections,
+            isEnabled = { SettingsRepository(applicationContext).reportPlaysToDirectory.first() },
+            directory = { AppDirectory.instance }
+        ).start(applicationScope)
         applicationScope.launch {
             val settings = SettingsRepository(applicationContext)
             if (settings.connectionPrewarmingEnabled.first()) {

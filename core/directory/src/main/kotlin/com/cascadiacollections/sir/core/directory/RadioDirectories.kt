@@ -20,8 +20,8 @@ object RadioDirectories {
      */
     fun create(
         httpClient: OkHttpClient = defaultHttpClient(),
-        mirrorProvider: MirrorProvider = RotatingMirrorProvider(),
-        userAgent: String = RadioBrowserDirectory.DEFAULT_USER_AGENT
+        userAgent: String = RadioBrowserDirectory.DEFAULT_USER_AGENT,
+        mirrorProvider: MirrorProvider = discoveringMirrorProvider(httpClient, userAgent)
     ): RadioDirectory = CuratedFallbackDirectory(
         CachingRadioDirectory(
             RadioBrowserDirectory(
@@ -31,6 +31,15 @@ object RadioDirectories {
             )
         )
     )
+
+    /**
+     * Mirrors discovered from `all.api.radio-browser.info/json/servers`, cached for the
+     * process and falling back to [RotatingMirrorProvider.DEFAULT_MIRRORS].
+     */
+    fun discoveringMirrorProvider(
+        httpClient: OkHttpClient,
+        userAgent: String = RadioBrowserDirectory.DEFAULT_USER_AGENT
+    ): MirrorProvider = DiscoveringMirrorProvider(RadioBrowserServerListSource(httpClient, userAgent))
 
     /**
      * Directory-sized HTTP client: short timeouts because these are small JSON calls

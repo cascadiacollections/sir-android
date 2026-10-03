@@ -49,6 +49,9 @@
     <string name="sleep_timer_countdown">%1$d 分钟后停止</string>
     <!-- Settings dialog -->
     <string name="privacy_policy">隐私政策</string>
+    <string name="privacy_heading">隐私</string>
+    <string name="report_plays">向 Radio Browser 报告播放</string>
+    <string name="report_plays_summary">当你开始播放 radio-browser.info 的电台时通知该目录，以便热门电台排名更靠前。不会发送账户或个人数据。</string>
     <string name="open_source_licenses">开源许可证</string>
     <string name="done">完成</string>
     <string name="save">保存</string>

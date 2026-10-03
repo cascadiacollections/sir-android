@@ -25,7 +25,11 @@ private class SpyDirectory : RadioDirectory {
         searchFilters += filters
         return stations
     }
-    override suspend fun topStations(limit: Int) = stations
+    var topCalls = 0
+    override suspend fun topStations(limit: Int): Result<List<Station>> {
+        topCalls++
+        return stations
+    }
     override suspend fun stationsByTag(tag: String, limit: Int) = error("unfiltered overload must not be used")
     override suspend fun stationsByTag(tag: String, limit: Int, filters: StationSearchFilters): Result<List<Station>> {
         tagFilters += filters
@@ -191,5 +195,83 @@ class DirectoryDecoratorsTest {
         assertEquals(listOf("hi"), plain.stationsByTag("x", 10, filters).getOrThrow().map { it.id })
         assertTrue(plain.reportClick(uuid).isSuccess)
         assertTrue(plain.topTags().getOrThrow().isEmpty())
+    }
+
+    @Test
+    fun `a forced refresh bypasses cached top stations and refreshes the entry`() = runTest {
+        val old = listOf(Station(id = "old", name = "Old", url = "https://old"))
+        val new = listOf(Station(id = "new", name = "New", url = "https://new"))
+        val spy = SpyDirectory().apply { stations = Result.success(old) }
+        val cache = CachingRadioDirectory(spy, clock = { 0L })
+
+        cache.topStations(24)
+        cache.topStations(24)
+        assertEquals(1, spy.topCalls)
+
+        spy.stations = Result.success(new)
+        assertEquals(new, cache.topStations(24, forceRefresh = true).getOrThrow())
+        assertEquals(2, spy.topCalls)
+
+        // The refreshed answer is what the next ordinary call is served from.
+        assertEquals(new, cache.topStations(24).getOrThrow())
+        assertEquals(2, spy.topCalls)
+    }
+
+    @Test
+    fun `a failed forced refresh keeps the cached top stations`() = runTest {
+        val old = listOf(Station(id = "old", name = "Old", url = "https://old"))
+        val spy = SpyDirectory().apply { stations = Result.success(old) }
+        val cache = CachingRadioDirectory(spy, clock = { 0L })
+        cache.topStations(24)
+
+        spy.stations = Result.failure(IOException("offline"))
+        assertTrue(cache.topStations(24, forceRefresh = true).isFailure)
+        assertEquals(old, cache.topStations(24).getOrThrow())
+    }
+
+    @Test
+    fun `a forced refresh bypasses cached tags`() = runTest {
+        val spy = SpyDirectory()
+        val cache = CachingRadioDirectory(spy, clock = { 0L })
+
+        cache.topTags(10)
+        cache.topTags(10)
+        cache.topTags(10, forceRefresh = true)
+
+        assertEquals(2, spy.tagCalls)
+    }
+
+    @Test
+    fun `the curated fallback does not mask a forced refresh failure`() = runTest {
+        val spy = SpyDirectory().apply {
+            stations = Result.failure(IOException("offline"))
+            tags = Result.failure(IOException("offline"))
+        }
+        val curated = listOf(Station(id = "c", name = "Curated", url = "https://c"))
+        val directory = CuratedFallbackDirectory(CachingRadioDirectory(spy), curated = curated)
+
+        assertEquals(curated, directory.topStations(24).getOrThrow())
+        assertEquals(curated, directory.topStations(24, forceRefresh = false).getOrThrow())
+        assertTrue(directory.topStations(24, forceRefresh = true).exceptionOrNull() is IOException)
+        assertTrue(directory.topTags(10).isSuccess)
+        assertTrue(directory.topTags(10, forceRefresh = true).exceptionOrNull() is IOException)
+    }
+
+    @Test
+    fun `the forced refresh overloads default to the plain calls`() = runTest {
+        val spy = SpyDirectory()
+        val plain = object : RadioDirectory {
+            override suspend fun search(query: StationQuery) = Result.success(emptyList<Station>())
+            override suspend fun topStations(limit: Int) = spy.topStations(limit)
+            override suspend fun stationsByTag(tag: String, limit: Int) = Result.success(emptyList<Station>())
+            override suspend fun getStation(id: String) = Result.success<Station?>(null)
+            override suspend fun topTags(limit: Int) = spy.topTags(limit)
+        }
+
+        plain.topStations(5, forceRefresh = true)
+        plain.topTags(5, forceRefresh = true)
+
+        assertEquals(1, spy.topCalls)
+        assertEquals(1, spy.tagCalls)
     }
 }

@@ -40,9 +40,15 @@ class CachingRadioDirectory(
             delegate.search(query, filters)
         }
 
-    override suspend fun topStations(limit: Int): Result<List<Station>> {
+    override suspend fun topStations(limit: Int): Result<List<Station>> = topStations(limit, forceRefresh = false)
+
+    /**
+     * A forced refresh skips the lookup but still stores a success, so the fresh answer is
+     * what the next ordinary call (rotation, tab switch) sees.
+     */
+    override suspend fun topStations(limit: Int, forceRefresh: Boolean): Result<List<Station>> {
         val clamped = clampLimit(limit)
-        return cached("top:$clamped") { delegate.topStations(clamped) }
+        return cached("top:$clamped", bypass = forceRefresh) { delegate.topStations(clamped, forceRefresh) }
     }
 
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
@@ -63,13 +69,17 @@ class CachingRadioDirectory(
      * Tags change slowly — station counts drift, the ranking barely moves — so they get
      * their own, much longer TTL instead of sharing the station entries' five minutes.
      */
-    override suspend fun topTags(limit: Int): Result<List<Tag>> {
+    override suspend fun topTags(limit: Int): Result<List<Tag>> = topTags(limit, forceRefresh = false)
+
+    override suspend fun topTags(limit: Int, forceRefresh: Boolean): Result<List<Tag>> {
         val key = limit.coerceIn(1, RadioBrowserDirectory.MAX_TAG_LIMIT)
-        mutex.withLock {
-            val entry = tagEntries[key]
-            if (entry != null && clock() - entry.storedAt <= tagTtlMillis) return Result.success(entry.tags)
+        if (!forceRefresh) {
+            mutex.withLock {
+                val entry = tagEntries[key]
+                if (entry != null && clock() - entry.storedAt <= tagTtlMillis) return Result.success(entry.tags)
+            }
         }
-        return delegate.topTags(key).onSuccess { tags ->
+        return delegate.topTags(key, forceRefresh).onSuccess { tags ->
             mutex.withLock { tagEntries[key] = TagEntry(tags, clock()) }
         }
     }
@@ -97,9 +107,10 @@ class CachingRadioDirectory(
 
     private suspend fun cached(
         key: String,
+        bypass: Boolean = false,
         load: suspend () -> Result<List<Station>>
     ): Result<List<Station>> {
-        read(key)?.let { return Result.success(it) }
+        if (!bypass) read(key)?.let { return Result.success(it) }
 
         return load().onSuccess { stations -> write(key, stations) }
     }

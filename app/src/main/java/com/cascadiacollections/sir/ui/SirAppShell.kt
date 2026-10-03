@@ -176,6 +176,7 @@ fun SirAppShell(
 
             SirTab.BROWSE -> BrowseScreen(
                 viewModel = browserViewModel,
+                shelfStore = settingsRepository,
                 modifier = contentModifier
             )
 

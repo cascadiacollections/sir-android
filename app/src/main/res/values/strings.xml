@@ -206,4 +206,15 @@
     <string name="back">Back</string>
     <!-- %1$d = play count, e.g. "3×" -->
     <string name="top_track_play_count" translatable="false">%1$d×</string>
+
+    <!-- Browse: Listen Now (Recently Played shelf, Popular grid) -->
+    <string name="hide_from_recently_played">Hide from Recently Played</string>
+    <string name="recently_played_removed">Removed</string>
+    <string name="undo">Undo</string>
+    <string name="add_to_my_stations">Add to My Stations</string>
+    <string name="remove_from_my_stations">Remove from My Stations</string>
+    <string name="tuning_in">Tuning in…</string>
+    <string name="directory_unavailable">Directory unavailable</string>
+    <string name="try_again">Try again</string>
+    <string name="showing_saved_stations">Showing saved stations</string>
 </resources>

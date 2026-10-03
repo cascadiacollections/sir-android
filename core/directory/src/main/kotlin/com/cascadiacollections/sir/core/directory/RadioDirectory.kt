@@ -29,6 +29,13 @@ interface RadioDirectory {
     /** Most popular stations, used to seed the browse surface. */
     suspend fun topStations(limit: Int = StationQuery.DEFAULT_LIMIT): Result<List<Station>>
 
+    /**
+     * [topStations] for a user-initiated refresh (pull-to-refresh). With [forceRefresh] a
+     * cache must not answer and a fallback must not mask a failure: the caller already has
+     * stations on screen and decides itself what to keep. The default has no cache to skip.
+     */
+    suspend fun topStations(limit: Int, forceRefresh: Boolean): Result<List<Station>> = topStations(limit)
+
     /** Stations carrying the given directory tag (genre, mood, ...), most-clicked first. */
     suspend fun stationsByTag(tag: String, limit: Int = StationQuery.DEFAULT_LIMIT): Result<List<Station>>
 
@@ -41,6 +48,9 @@ interface RadioDirectory {
 
     /** The most-used tags, by station count, for the genre list. */
     suspend fun topTags(limit: Int = DEFAULT_TAG_LIMIT): Result<List<Tag>> = Result.success(emptyList())
+
+    /** [topTags] with the same [forceRefresh] contract as the [topStations] overload. */
+    suspend fun topTags(limit: Int, forceRefresh: Boolean): Result<List<Tag>> = topTags(limit)
 
     /**
      * Tells radio-browser that the user started [stationId] (`GET /json/url/{uuid}`), as

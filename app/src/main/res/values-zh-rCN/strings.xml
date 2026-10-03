@@ -182,4 +182,15 @@
     <string name="recently_heard_empty_description">收听时听到的曲目会显示在这里。</string>
     <string name="clear">清除</string>
     <string name="back">返回</string>
+
+    <!-- 浏览：立即收听（最近播放、热门电台） -->
+    <string name="hide_from_recently_played">从“最近播放”中隐藏</string>
+    <string name="recently_played_removed">已移除</string>
+    <string name="undo">撤销</string>
+    <string name="add_to_my_stations">添加到我的电台</string>
+    <string name="remove_from_my_stations">从我的电台中移除</string>
+    <string name="tuning_in">正在调谐…</string>
+    <string name="directory_unavailable">电台目录不可用</string>
+    <string name="try_again">再试一次</string>
+    <string name="showing_saved_stations">正在显示已保存的电台</string>
 </resources>

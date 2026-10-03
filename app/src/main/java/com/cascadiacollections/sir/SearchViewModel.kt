@@ -8,7 +8,11 @@ import com.cascadiacollections.sir.core.directory.StationSearchFilters
 import com.cascadiacollections.sir.core.directory.Tag
 import com.cascadiacollections.sir.core.directory.search
 import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.core.persistence.RecentShelfStore
+import com.cascadiacollections.sir.core.persistence.StationCollections
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -16,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -51,10 +56,26 @@ data class SearchUiState(
     val filters: StationSearchFilters = StationSearchFilters.NONE,
     val phase: SearchPhase = SearchPhase.Idle,
     val popularStations: List<Station> = emptyList(),
-    val isLoadingPopular: Boolean = false
+    val isLoadingPopular: Boolean = false,
+    /** The last attempt to load popular stations failed (whatever is shown is older). */
+    val popularLoadFailed: Boolean = false,
+    /** A pull-to-refresh is in flight. */
+    val isRefreshing: Boolean = false,
+    /** The Recently Played shelf: newest recents, minus the ones the user hid. */
+    val recentShelf: List<Station> = emptyList()
 ) {
     /** Genre chips are offered when nothing is typed, and kept while browsing a genre. */
     val showsGenres: Boolean get() = query.isBlank() || selectedGenre != null
+
+    /** ShoutKit titles the popular grid only when there is a shelf above it to separate it from. */
+    val showsPopularHeader: Boolean get() = recentShelf.isNotEmpty()
+
+    /** Nothing to show and the directory failed: "Directory unavailable" with a retry. */
+    val showsDirectoryUnavailable: Boolean
+        get() = popularLoadFailed && popularStations.isEmpty() && !isLoadingPopular && !isRefreshing
+
+    /** A refresh failed over stations already on screen: keep them, say they are not live. */
+    val showsSavedStationsNotice: Boolean get() = popularLoadFailed && popularStations.isNotEmpty()
 }
 
 /**
@@ -69,7 +90,8 @@ data class SearchUiState(
  */
 @OptIn(FlowPreview::class)
 class SearchViewModel(
-    private val directory: RadioDirectory
+    private val directory: RadioDirectory,
+    private val shelfStore: RecentShelfStore? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -108,6 +130,56 @@ class SearchViewModel(
         }
         loadPopularStations()
         loadGenres()
+        shelfStore?.let(::observeShelf)
+    }
+
+    private fun observeShelf(store: RecentShelfStore) {
+        viewModelScope.launch {
+            combine(store.recentStations, store.hiddenRecentStationIds, StationCollections::recentShelf)
+                .collect { shelf -> _uiState.update { it.copy(recentShelf = shelf) } }
+        }
+    }
+
+    /**
+     * Removes [station] from the Recently Played shelf only — the Library's history keeps it.
+     * The tile goes at once rather than when the store echoes the write back.
+     */
+    fun hideFromRecentlyPlayed(station: Station) {
+        val store = shelfStore ?: return
+        _uiState.update { state -> state.copy(recentShelf = state.recentShelf.filterNot { it.id == station.id }) }
+        viewModelScope.launch { store.hideRecentStation(station.id) }
+    }
+
+    /** The snackbar's Undo for [hideFromRecentlyPlayed]. */
+    fun undoHideFromRecentlyPlayed(station: Station) {
+        val store = shelfStore ?: return
+        viewModelScope.launch { store.unhideRecentStation(station.id) }
+    }
+
+    /**
+     * Pull-to-refresh: reloads popular stations and genres past the directory's cache. A
+     * failure keeps whatever is on screen and flags it ([SearchUiState.showsSavedStationsNotice]).
+     */
+    fun refresh() {
+        if (_uiState.value.isRefreshing) return
+        popularJob?.cancel()
+        popularJob = viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            val tags = async { directory.topTags(RadioDirectory.DEFAULT_TAG_LIMIT, forceRefresh = true) }
+            val stations = directory.topStations(POPULAR_LIMIT, forceRefresh = true)
+            tags.await().onSuccess { genres ->
+                if (genres.isNotEmpty()) _uiState.update { it.copy(genres = genres) }
+            }
+            ensureActive()
+            // A superseded load's flags are cleared here, since its own final write never ran.
+            _uiState.update { it.withPopularResult(stations).copy(isRefreshing = false, isLoadingPopular = false) }
+        }
+    }
+
+    /** "Try again" on the directory-unavailable state. */
+    fun retryPopular() {
+        if (_uiState.value.isLoadingPopular || _uiState.value.isRefreshing) return
+        loadPopularStations()
     }
 
     /** The field changed. Clearing it resets to idle at once; typing searches by name. */
@@ -225,23 +297,28 @@ class SearchViewModel(
         _uiState.update { it.copy(phase = phase) }
     }
 
+    /** The in-flight popular-stations load or refresh; a newer one supersedes it. */
+    private var popularJob: Job? = null
+
     /**
-     * Seeds the idle screen with the directory's most-played stations. Silent on failure:
-     * the curated fallback already answers offline, and an error on a screen the user has
-     * not asked anything of yet is noise.
+     * Seeds the idle screen with the directory's most-played stations. The curated fallback
+     * answers offline, so a failure here means even that had nothing to give.
      */
     private fun loadPopularStations() {
-        viewModelScope.launch {
+        popularJob?.cancel()
+        popularJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoadingPopular = true) }
-            val result = directory.topStations()
-            _uiState.update { current ->
-                current.copy(
-                    popularStations = result.getOrDefault(current.popularStations),
-                    isLoadingPopular = false
-                )
-            }
+            val result = directory.topStations(POPULAR_LIMIT)
+            ensureActive()
+            _uiState.update { it.withPopularResult(result).copy(isLoadingPopular = false, isRefreshing = false) }
         }
     }
+
+    private fun SearchUiState.withPopularResult(result: Result<List<Station>>): SearchUiState =
+        result.fold(
+            onSuccess = { copy(popularStations = it, popularLoadFailed = false) },
+            onFailure = { copy(popularLoadFailed = true) }
+        )
 
     /** Replaces the curated genres with the live list; a failure keeps the curated ones. */
     private fun loadGenres() {
@@ -252,15 +329,21 @@ class SearchViewModel(
         }
     }
 
-    class Factory(private val directory: RadioDirectory) : ViewModelProvider.Factory {
+    class Factory(
+        private val directory: RadioDirectory,
+        private val shelfStore: RecentShelfStore? = null
+    ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
-            return SearchViewModel(directory) as T
+            return SearchViewModel(directory, shelfStore) as T
         }
     }
 
     companion object {
         const val DEBOUNCE_MILLIS: Long = 300L
         const val SEARCH_LIMIT: Int = 40
+
+        /** ShoutKit's Listen Now grid size. */
+        const val POPULAR_LIMIT: Int = 24
     }
 }

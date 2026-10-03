@@ -70,4 +70,71 @@ class StationTest {
             Locale.setDefault(previous)
         }
     }
+
+    @Test
+    fun `stream url prefers the resolved url`() {
+        val station = Station(url = "http://example.com/listen.pls", urlResolved = "http://example.com:8000/stream")
+
+        assertEquals("http://example.com:8000/stream", station.streamUrl)
+    }
+
+    @Test
+    fun `stream url falls back to url when resolved url is blank`() {
+        assertEquals("https://example.com/s", Station(url = "https://example.com/s").streamUrl)
+        assertEquals("https://example.com/s", Station(url = "https://example.com/s", urlResolved = "  ").streamUrl)
+    }
+
+    @Test
+    fun `station with only a resolved url is playable`() {
+        assertTrue(Station(urlResolved = "https://example.com/s").isPlayable)
+    }
+
+    @Test
+    fun `decodes url_resolved and hls from the radio-browser payload`() {
+        val payload = """
+            {"stationuuid":"abc","name":"HLS FM","url":"https://example.com/live",
+             "url_resolved":"https://cdn.example.com/live/master.m3u8","hls":1}
+        """.trimIndent()
+
+        val station = json.decodeFromString<Station>(payload)
+
+        assertEquals("https://cdn.example.com/live/master.m3u8", station.urlResolved)
+        assertEquals("https://cdn.example.com/live/master.m3u8", station.streamUrl)
+        assertTrue(station.isHls)
+    }
+
+    @Test
+    fun `decodes previously persisted json without url_resolved or hls`() {
+        // The shape saved_stations had before url_resolved and hls were modelled.
+        val persisted = """
+            [{"stationuuid":"abc","name":"Old FM","url":"http://example.com/stream",
+              "favicon":null,"bitrate":64,"codec":"MP3","countrycode":"US","tags":""}]
+        """.trimIndent()
+
+        val station = Json.decodeFromString<List<Station>>(persisted).single()
+
+        assertEquals("", station.urlResolved)
+        assertEquals(0, station.hls)
+        assertFalse(station.isHls)
+        assertEquals("http://example.com/stream", station.streamUrl)
+        assertTrue(station.isPlayable)
+    }
+
+    @Test
+    fun `round trips through json`() {
+        val station = Station(id = "a", name = "A", url = "u", urlResolved = "r", hls = 1)
+
+        assertEquals(station, Json.decodeFromString<Station>(Json.encodeToString(Station.serializer(), station)))
+    }
+
+    @Test
+    fun `changing the url drops the directory's resolved url and hls flag`() {
+        val station = Station(url = "https://a.example/s", urlResolved = "https://a.example/r.m3u8", hls = 1)
+
+        val edited = station.withUrl("http://b.example/stream")
+
+        assertEquals("http://b.example/stream", edited.streamUrl)
+        assertFalse(edited.isHls)
+        assertEquals(station, station.withUrl("https://a.example/s"))
+    }
 }

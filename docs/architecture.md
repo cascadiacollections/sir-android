@@ -98,6 +98,15 @@ setup, HTTP, wake locks, equalizer, sleep timer and media session in one class.
   mount today, so the selector was removed from settings and the service action with it;
   the enum and its persisted value remain because the resolver reads them for the default
   stream.
+- `StreamEndpoints` decides what the player opens for a station URL. Playback starts
+  from `Station.streamUrl` — radio-browser's `url_resolved` when present, else `url` —
+  and the endpoint is classified by path: `.m3u8` (or the directory's `hls` flag) is
+  opened as HLS, `.pls`/`.m3u` is fetched once by the service and `StreamPlaylistParser`
+  picks its first `http(s)` entry, and anything else plays directly. A failed or empty
+  playlist falls back to the original URL. The resolved endpoint lives as long as the
+  selection, so reconnects re-prepare it instead of re-fetching; a new selection
+  resolves again. In `:app`, `StreamMediaSourceFactory` keeps HLS off the time-shift
+  buffer, which models a single continuous connection.
 - `StreamMetadataResolver` interprets ICY metadata. Stations routinely emit a constant
   placeholder title instead of the current track, so the resolver knows which titles and
   artists are static and reports whether anything user-visible actually changed — the

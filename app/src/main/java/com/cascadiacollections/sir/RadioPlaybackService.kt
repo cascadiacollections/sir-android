@@ -24,6 +24,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -31,6 +32,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.PlaybackStatsListener
+import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.CommandButton
@@ -60,6 +62,9 @@ import com.cascadiacollections.sir.core.playback.RetryBackoff
 import com.cascadiacollections.sir.core.playback.SleepTimerRestore
 import com.cascadiacollections.sir.core.playback.StallCeiling
 import com.cascadiacollections.sir.core.playback.StreamConfig
+import com.cascadiacollections.sir.core.playback.StreamEndpoint
+import com.cascadiacollections.sir.core.playback.StreamEndpoints
+import com.cascadiacollections.sir.core.playback.StreamUrlKind
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import com.cascadiacollections.sir.core.playback.StreamMetadata
 import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
@@ -71,8 +76,10 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
@@ -127,8 +134,26 @@ class RadioPlaybackService : MediaLibraryService() {
     private val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    // Current stream URL (may be a directory station or a debug override)
+    // Current stream URL (may be a directory station or a debug override). This is the
+    // station's own URL, used to tell whether a selection actually changed; what the
+    // player opens is currentEndpoint, which differs when the URL is a .pls/.m3u playlist.
     private var currentStreamUrl: String = DEFAULT_STREAM_URL
+
+    // What the player is actually pointed at for currentStreamUrl. Kept for the life of
+    // the selection, so reconnects re-prepare the same item and never re-fetch the playlist.
+    private var currentEndpoint: StreamEndpoint = StreamEndpoint(DEFAULT_STREAM_URL)
+
+    // The most recent source anything asked to adopt. A playlist fetch suspends, so an
+    // older request can finish after a newer one; it must not win.
+    private var requestedStreamUrl: String = DEFAULT_STREAM_URL
+
+    // In-flight or finished playlist resolution, keyed by the URL it is for, so the
+    // selection collector and onAddMediaItems resolving the same station share one fetch.
+    private var endpointResolution: Pair<String, Deferred<StreamEndpoint>>? = null
+
+    private val playlistFetcher by lazy {
+        StationPlaylistFetcher(StreamingHttpClientProvider.client, USER_AGENT)
+    }
 
     // Display title for the current stream; null falls back to the bundled station name
     private var currentStationTitle: String? = null
@@ -259,7 +284,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .setDefaultRequestProperties(
                 buildMap {
                     put("Icy-MetaData", "1")  // Request ICY metadata
-                    put("User-Agent", "SIR Android/${Build.VERSION.SDK_INT}")
+                    put("User-Agent", USER_AGENT)
                 }
             )
 
@@ -271,10 +296,12 @@ class RadioPlaybackService : MediaLibraryService() {
         // Time-shift data source wraps OkHttp for DVR-style replay
         val timeShiftFactory = TimeShiftDataSource.Factory(httpDataSourceFactory, timeShift)
 
-        // Media source factory with time-shift data source
-        val mediaSourceFactory = DefaultMediaSourceFactory(context)
-            .setDataSourceFactory(timeShiftFactory)
-            .setLoadErrorHandlingPolicy(StreamLoadErrorHandlingPolicy())
+        // Progressive streams read through the time-shift buffer; HLS goes straight to
+        // OkHttp, because the buffer models one continuous connection and HLS is many.
+        val mediaSourceFactory = StreamMediaSourceFactory(
+            progressive = DefaultMediaSourceFactory(context).setDataSourceFactory(timeShiftFactory),
+            hls = HlsMediaSource.Factory(httpDataSourceFactory),
+        ).setLoadErrorHandlingPolicy(StreamLoadErrorHandlingPolicy())
 
         // Generate the audio session id ourselves so it's available immediately,
         // avoiding a race with renderer initialization (player.audioSessionId can
@@ -905,7 +932,8 @@ class RadioPlaybackService : MediaLibraryService() {
     }
 
     private fun buildMediaItem(): MediaItem = MediaItem.Builder()
-        .setUri(currentStreamUrl)
+        .setUri(currentEndpoint.url)
+        .setMimeType(if (currentEndpoint.isHls) MimeTypes.APPLICATION_M3U8 else null)
         .setMediaId(currentStreamUrl)
         .setLiveConfiguration(
             MediaItem.LiveConfiguration.Builder()
@@ -923,13 +951,29 @@ class RadioPlaybackService : MediaLibraryService() {
                 // mediaMetadata do. The :cast module needs the actual playable URL to
                 // start a Chromecast session from a MediaController of its own (it
                 // can't reach this service's private fields), so it rides along here.
-                .setExtras(Bundle().apply { putString(EXTRA_STREAM_URL, currentStreamUrl) })
+                // It is the resolved endpoint, not a .pls/.m3u wrapper, and carries the HLS
+                // MIME type when there is one, since a receiver can't follow either itself.
+                .setExtras(
+                    Bundle().apply {
+                        putString(EXTRA_STREAM_URL, currentEndpoint.url)
+                        if (currentEndpoint.isHls) putString(EXTRA_STREAM_MIME_TYPE, MimeTypes.APPLICATION_M3U8)
+                    }
+                )
                 .build()
         )
         .build()
 
+    // A browse item only has to identify the station: picking it goes through
+    // onAddMediaItems, which resolves the persisted selection (and any playlist) itself.
     private fun buildStationMediaItem(station: Station): MediaItem = MediaItem.Builder()
-        .setUri(station.url)
+        .setUri(station.streamUrl)
+        .setMimeType(
+            if (StreamEndpoints.classify(station.streamUrl, station.isHls) == StreamUrlKind.HLS) {
+                MimeTypes.APPLICATION_M3U8
+            } else {
+                null
+            }
+        )
         .setMediaId(station.id)
         .setMediaMetadata(
             MediaMetadata.Builder()
@@ -1084,7 +1128,7 @@ class RadioPlaybackService : MediaLibraryService() {
     private suspend fun resolveStreamSource(): StreamSource = StreamSourceResolver.resolve(
         debugOverrideUrl = if (BuildConfig.DEBUG) settingsRepository.customStreamUrl.first() else null,
         selectedStation = settingsRepository.selectedStation.first()
-            ?.let { StreamSource(url = it.url, title = it.name, stationId = it.id) },
+            ?.let { StreamSource(url = it.streamUrl, title = it.name, stationId = it.id, isHls = it.isHls) },
         qualityUrl = settingsRepository.streamQuality.first().url,
         defaultTitle = DEFAULT_STATION_NAME
     )
@@ -1098,14 +1142,37 @@ class RadioPlaybackService : MediaLibraryService() {
      * through here, so the bookkeeping happens exactly once and whichever runs second
      * sees an unchanged URL and no-ops. Previously they each built their own item — one
      * with the live configuration and one without — and whichever landed last won.
+     *
+     * A `.pls`/`.m3u` URL is resolved to the stream it names first, which suspends for a
+     * fetch; direct and HLS URLs don't. If a newer source was requested meanwhile, this
+     * one is dropped rather than overwriting it.
      */
-    private fun adoptStreamSource(source: StreamSource): MediaItem? {
+    private suspend fun adoptStreamSource(source: StreamSource): MediaItem? {
         currentStationTitle = source.title
+        requestedStreamUrl = source.url
         if (source.url == currentStreamUrl) return null
+        val endpoint = endpointFor(source)
+        if (source.url == currentStreamUrl || source.url != requestedStreamUrl) return null
         currentStreamUrl = source.url
+        currentEndpoint = endpoint
+        // Only the current station's resolution is worth keeping: picking another
+        // station and coming back is a new selection and fetches the playlist again.
+        if (endpointResolution?.first != source.url) endpointResolution = null
         timeShift.reset()
         playbackMode = PlaybackMode.Live
         return buildMediaItem()
+    }
+
+    /**
+     * The endpoint to open for [source], fetching its playlist when it is one. Concurrent
+     * callers for the same URL share one fetch; failures fall back to the URL itself.
+     */
+    private suspend fun endpointFor(source: StreamSource): StreamEndpoint {
+        StreamEndpoints.withoutFetch(source.url, source.isHls)?.let { return it }
+        val pending = endpointResolution?.takeIf { it.first == source.url }?.second
+            ?: serviceScope.async { playlistFetcher.resolve(source.url) }
+                .also { endpointResolution = source.url to it }
+        return pending.await()
     }
 
     /**
@@ -1117,9 +1184,11 @@ class RadioPlaybackService : MediaLibraryService() {
      * `playWhenReady = false`, so inferring intent from "were we already playing" meant
      * a tap selected the station and then sat silent.
      */
-    private fun applyStreamSource(source: StreamSource, startPlayback: Boolean = false) {
-        val wasPlaying = player?.isPlaying == true
+    private suspend fun applyStreamSource(source: StreamSource, startPlayback: Boolean = false) {
         val item = adoptStreamSource(source) ?: return
+        // Read after adopting: a playlist fetch may have suspended, and the old stream
+        // keeps playing meanwhile.
+        val wasPlaying = player?.isPlaying == true
         player?.stop()
         player?.setMediaItem(item)
         player?.prepare()
@@ -1199,5 +1268,13 @@ class RadioPlaybackService : MediaLibraryService() {
          * MediaController, can learn the real URL to hand to a Chromecast session.
          */
         const val EXTRA_STREAM_URL = "stream_url"
+
+        /**
+         * [MediaMetadata.extras] key for the MIME type of [EXTRA_STREAM_URL], present only
+         * when the player was told one explicitly (HLS). Absent means a progressive stream.
+         */
+        const val EXTRA_STREAM_MIME_TYPE = "stream_mime_type"
+
+        private val USER_AGENT = "SIR Android/${Build.VERSION.SDK_INT}"
     }
 }

@@ -56,6 +56,7 @@ class SirCastPlayer(context: Context) : SessionAvailabilityListener {
      */
     fun transferToCast(
         streamUrl: String,
+        mimeType: String,
         title: String,
         artist: String?,
         isPlaying: Boolean
@@ -72,7 +73,7 @@ class SirCastPlayer(context: Context) : SessionAvailabilityListener {
         val mediaItem = MediaItem.Builder()
             .setUri(streamUrl)
             .setMediaMetadata(metadata)
-            .setMimeType("audio/mpeg")
+            .setMimeType(mimeType)
             .build()
 
         castPlayer.setMediaItem(mediaItem)
@@ -103,5 +104,9 @@ class SirCastPlayer(context: Context) : SessionAvailabilityListener {
         castPlayer?.release()
         castPlayer = null
     }
-}
 
+    companion object {
+        /** MIME type for a progressive (Icecast/Shoutcast) stream with no explicit type. */
+        const val PROGRESSIVE_MIME_TYPE = "audio/mpeg"
+    }
+}

@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<network-security-config>
-    <!-- Explicitly block cleartext (HTTP) traffic for all domains -->
-    <base-config cleartextTrafficPermitted="false">
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        Cleartext (HTTP) is permitted on purpose. Station stream URLs are arbitrary
+        third-party hosts from radio-browser.info, imported playlists and user-added
+        stations, and a large share of them are only served over plain HTTP
+        (Icecast/Shoutcast servers on bare ports). Blocking cleartext made every one of
+        those fail with ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED, and there is no fixed set of
+        hosts a domain-config could allow-list. ShoutKit on iOS allows arbitrary loads for
+        the same reason.
+
+        Our own endpoints don't rely on this: the radio-browser directory API is always
+        requested over HTTPS, and artwork/stream requests that are HTTPS stay HTTPS.
+    -->
+    <base-config
+        cleartextTrafficPermitted="true"
+        tools:ignore="InsecureBaseConfiguration">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>

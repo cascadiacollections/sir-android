@@ -115,9 +115,8 @@ fun EditStationSheet(
                 TextButton(
                     onClick = {
                         onSave(
-                            station.copy(
+                            station.withUrl(url.trim()).copy(
                                 name = name.trim(),
-                                url = url.trim(),
                                 favicon = artworkUrl.trim().ifBlank { null }
                             )
                         )

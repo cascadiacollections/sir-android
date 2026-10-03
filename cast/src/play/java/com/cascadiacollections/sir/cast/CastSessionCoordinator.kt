@@ -82,6 +82,8 @@ class CastSessionCoordinator(private val context: Context) {
         wasPlayingBeforeCast = activeController.isPlaying
         castPlayer.transferToCast(
             streamUrl = streamUrl,
+            mimeType = metadata.extras?.getString(RadioPlaybackService.EXTRA_STREAM_MIME_TYPE)
+                ?: SirCastPlayer.PROGRESSIVE_MIME_TYPE,
             title = title,
             artist = metadata.artist?.toString(),
             isPlaying = wasPlayingBeforeCast

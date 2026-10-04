@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.androidx.wear.protolayout.material)
     implementation(libs.androidx.wear.protolayout.expression)
     debugImplementation(libs.androidx.wear.tiles.tooling.preview)
+    debugImplementation(libs.leakcanary.android)
 
     // Media3 for standalone streaming
     implementation(libs.media3.exoplayer)

@@ -1,10 +1,9 @@
 name: Qodana
 
+# Manual only for now: Qodana 2026.2's Android plugin supports AGP <= 9.1 and the project
+# sync fails on newer AGP ("incompatible version of the Android Gradle plugin"). Restore the
+# push/pull_request triggers once a qodana-jvm-android release supports the project's AGP.
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 concurrency:

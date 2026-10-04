@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir
 
 import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.core.persistence.StationCollections
 
 /**
  * Shape of the Android Auto browse tree, as pure list rules: which categories the root
@@ -24,7 +25,8 @@ internal object AutoBrowseTree {
     /** ShoutKit CarPlay's "Your Stations" cap: favourites, then recents. */
     const val YOUR_STATIONS_LIMIT: Int = 25
 
-    const val RECENTLY_PLAYED_LIMIT: Int = 20
+    /** Every retained recent — the list is already capped where it is stored. */
+    const val RECENTLY_PLAYED_LIMIT: Int = StationCollections.RECENTS_LIMIT
 
     /** ShoutKit CarPlay's "Top Stations" size. */
     const val TOP_STATIONS_LIMIT: Int = 12

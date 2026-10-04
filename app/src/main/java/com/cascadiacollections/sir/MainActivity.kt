@@ -58,8 +58,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private const val ACTION_SHORTCUT_PLAY = "com.cascadiacollections.sir.SHORTCUT_PLAY"
-private const val DEEP_LINK_SCHEME = "sir"
-private const val DEEP_LINK_HOST_STATION = "station"
 
 class MainActivity : ComponentActivity() {
 
@@ -91,8 +89,16 @@ class MainActivity : ComponentActivity() {
                 }
             )
         }
-        handleDeepLink(intent)
         handlePlayFromSearch(intent)
+        // On a TV the phone layout is the wrong screen for every entry point (voice search,
+        // station links): the search has already gone to the service above, so hand the
+        // rest to the TV home and get out of the way.
+        if (TvActivity.isTelevision(this)) {
+            startActivity(TvActivity.forward(this, intent))
+            finish()
+            return
+        }
+        handleDeepLink(intent)
 
         enableEdgeToEdge()
         setContent {
@@ -124,10 +130,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleDeepLink(intent: Intent?) {
-        val uri = intent?.takeIf { it.action == Intent.ACTION_VIEW }?.data ?: return
-        if (uri.scheme != DEEP_LINK_SCHEME || uri.host != DEEP_LINK_HOST_STATION) return
-        val stationId = uri.lastPathSegment?.takeIf { it.isNotBlank() } ?: return
-        pendingStationId.value = stationId
+        pendingStationId.value = StationDeepLink.stationId(intent) ?: return
     }
 
     /**
@@ -255,10 +258,7 @@ fun RadioScreen(
     val pendingId by pendingStationId.collectAsState()
     LaunchedEffect(pendingId) {
         val id = pendingId ?: return@LaunchedEffect
-        val station = AppDirectory.instance.getStation(id).getOrNull()
-            ?: repository.savedStations.first().firstOrNull { it.id == id }
-        if (station != null && station.isPlayable) {
-            repository.selectStation(station)
+        if (StationDeepLink.play(id, AppDirectory.instance, repository)) {
             selectedTab = SirTab.LISTEN
         }
         onDeepLinkConsumed()

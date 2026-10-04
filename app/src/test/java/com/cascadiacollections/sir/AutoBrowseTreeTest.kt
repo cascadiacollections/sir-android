@@ -80,9 +80,10 @@ class AutoBrowseTreeTest {
     // ---- Recently Played / Top Stations ----
 
     @Test
-    fun `recently played keeps recency order, drops hidden and caps at 20`() {
+    fun `recently played keeps recency order, drops hidden and caps at the stored 25`() {
         val recents = (1..30).map { station("r$it") }
         val result = AutoBrowseTree.recentlyPlayed(recents, hiddenRecentIds = setOf("r1"))
+        assertEquals(25, AutoBrowseTree.RECENTLY_PLAYED_LIMIT)
         assertEquals(AutoBrowseTree.RECENTLY_PLAYED_LIMIT, result.size)
         assertEquals("r2", result.first().id)
     }

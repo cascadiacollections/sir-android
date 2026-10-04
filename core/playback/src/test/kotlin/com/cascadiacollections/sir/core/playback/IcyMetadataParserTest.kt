@@ -1,7 +1,8 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import org.junit.Test
 
 class IcyMetadataParserTest {
@@ -10,16 +11,16 @@ class IcyMetadataParserTest {
     fun `plain artist and title are split`() {
         val track = IcyMetadataParser.parseTrack("Black Eyed Peas - Boom Boom Pow")
 
-        assertEquals("Boom Boom Pow", track.title)
-        assertEquals("Black Eyed Peas", track.artist)
+        assertThat(track.title).isEqualTo("Boom Boom Pow")
+        assertThat(track.artist).isEqualTo("Black Eyed Peas")
     }
 
     @Test
     fun `a title with no separator keeps the whole string`() {
         val track = IcyMetadataParser.parseTrack("  September  ")
 
-        assertEquals("September", track.title)
-        assertNull(track.artist)
+        assertThat(track.title).isEqualTo("September")
+        assertThat(track.artist).isNull()
     }
 
     @Test
@@ -28,32 +29,32 @@ class IcyMetadataParserTest {
             "StreamTitle='Fleetwood Mac - Dreams';StreamUrl='https://example.org';"
         )
 
-        assertEquals("Dreams", track.title)
-        assertEquals("Fleetwood Mac", track.artist)
+        assertThat(track.title).isEqualTo("Dreams")
+        assertThat(track.artist).isEqualTo("Fleetwood Mac")
     }
 
     @Test
     fun `an apostrophe inside a quoted value does not end it`() {
         val track = IcyMetadataParser.parseTrack("StreamTitle='Journey - Don't Stop Believin'';")
 
-        assertEquals("Don't Stop Believin'", track.title)
-        assertEquals("Journey", track.artist)
+        assertThat(track.title).isEqualTo("Don't Stop Believin'")
+        assertThat(track.artist).isEqualTo("Journey")
     }
 
     @Test
     fun `broadcaster HLS fields are read as already split`() {
         val track = IcyMetadataParser.parseTrack("title=\"Boom Boom Pow\",artist=Black Eyed Peas")
 
-        assertEquals("Boom Boom Pow", track.title)
-        assertEquals("Black Eyed Peas", track.artist)
+        assertThat(track.title).isEqualTo("Boom Boom Pow")
+        assertThat(track.artist).isEqualTo("Black Eyed Peas")
     }
 
     @Test
     fun `an unquoted value may contain a comma`() {
         val track = IcyMetadataParser.parseTrack("StreamTitle=Earth, Wind & Fire - September;")
 
-        assertEquals("September", track.title)
-        assertEquals("Earth, Wind & Fire", track.artist)
+        assertThat(track.title).isEqualTo("September")
+        assertThat(track.artist).isEqualTo("Earth, Wind & Fire")
     }
 
     @Test
@@ -62,8 +63,8 @@ class IcyMetadataParserTest {
             "text=\"Prince - Kiss\" amgTrackId=\"9876543\" length=\"00:03:46\""
         )
 
-        assertEquals("Kiss", track.title)
-        assertEquals("Prince", track.artist)
+        assertThat(track.title).isEqualTo("Kiss")
+        assertThat(track.artist).isEqualTo("Prince")
     }
 
     @Test
@@ -73,54 +74,54 @@ class IcyMetadataParserTest {
             "StreamTitle=' - text=\"Spot Block End\" amgTrackId=\"9876543\" length=\"00:00:00\"';"
         )
 
-        assertNull(track.title)
-        assertNull(track.artist)
+        assertThat(track.title).isNull()
+        assertThat(track.artist).isNull()
     }
 
     @Test
     fun `an ad cue marker is suppressed rather than shown as a title`() {
-        assertNull(IcyMetadataParser.parseTrack("Spot Block Start").title)
+        assertThat(IcyMetadataParser.parseTrack("Spot Block Start").title).isNull()
     }
 
     @Test
     fun `cue metadata with no title-bearing key is suppressed`() {
-        assertNull(IcyMetadataParser.parseTrack("TrackId=12345,length=00:03:12").title)
+        assertThat(IcyMetadataParser.parseTrack("TrackId=12345,length=00:03:12").title).isNull()
     }
 
     @Test
     fun `undecomposable key-value soup is never displayed`() {
         // Mismatched quoting keeps the tokenizer from decomposing this, so the last-resort
         // guard has to catch it.
-        assertNull(IcyMetadataParser.parseTrack("text=\"unterminated - amgTrackId=\"1\"x").title)
+        assertThat(IcyMetadataParser.parseTrack("text=\"unterminated - amgTrackId=\"1\"x").title).isNull()
     }
 
     @Test
     fun `an equals sign in a real title is left alone`() {
         val track = IcyMetadataParser.parseTrack("Mariah Carey - E=MC2")
 
-        assertEquals("E=MC2", track.title)
-        assertEquals("Mariah Carey", track.artist)
+        assertThat(track.title).isEqualTo("E=MC2")
+        assertThat(track.artist).isEqualTo("Mariah Carey")
     }
 
     @Test
     fun `an empty artist half yields a title only`() {
         val track = IcyMetadataParser.parseTrack(" - Orphan Title")
 
-        assertEquals("Orphan Title", track.title)
-        assertNull(track.artist)
+        assertThat(track.title).isEqualTo("Orphan Title")
+        assertThat(track.artist).isNull()
     }
 
     @Test
     fun `blank metadata yields nothing`() {
-        assertNull(IcyMetadataParser.parseTrack("   ").title)
-        assertNull(IcyMetadataParser.parseTrack("").title)
+        assertThat(IcyMetadataParser.parseTrack("   ").title).isNull()
+        assertThat(IcyMetadataParser.parseTrack("").title).isNull()
     }
 
     @Test
     fun `only the first separator splits the pair`() {
         val track = IcyMetadataParser.parseTrack("Simon - Garfunkel - Mrs. Robinson")
 
-        assertEquals("Garfunkel - Mrs. Robinson", track.title)
-        assertEquals("Simon", track.artist)
+        assertThat(track.title).isEqualTo("Garfunkel - Mrs. Robinson")
+        assertThat(track.artist).isEqualTo("Simon")
     }
 }

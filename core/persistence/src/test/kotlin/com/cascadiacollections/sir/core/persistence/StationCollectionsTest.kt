@@ -1,8 +1,14 @@
 package com.cascadiacollections.sir.core.persistence
 
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
 import com.cascadiacollections.sir.core.model.Station
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class StationCollectionsTest {
@@ -15,19 +21,19 @@ class StationCollectionsTest {
         val recents = (1..30).fold(
             emptyList<Station>()
         ) { acc, i -> StationCollections.recordRecent(acc, station("s$i")) }
-        assertEquals(25, recents.size)
-        assertEquals("s30", recents.first().id)
+        assertThat(recents).hasSize(25)
+        assertThat(recents.first().id).isEqualTo("s30")
 
         val removed = StationCollections.removeRecent(recents, "s29")
-        assertEquals(listOf("s30", "s28"), removed.take(2).map { it.id })
-        assertEquals(24, removed.size)
+        assertThat(removed.take(2).map { it.id }).containsExactly("s30", "s28")
+        assertThat(removed).hasSize(24)
     }
 
     @Test
     fun `adding a new favorite appends to the end`() {
         val result = StationCollections.addFavorite(listOf(station("a")), station("b"))
 
-        assertEquals(listOf("a", "b"), result.map { it.id })
+        assertThat(result.map { it.id }).containsExactly("a", "b")
     }
 
     @Test
@@ -37,63 +43,59 @@ class StationCollectionsTest {
 
         val result = StationCollections.addFavorite(current, refreshed)
 
-        assertEquals(listOf("a", "b", "c"), result.map { it.id })
-        assertEquals(320, result[1].bitrate)
+        assertThat(result.map { it.id }).containsExactly("a", "b", "c")
+        assertThat(result[1].bitrate).isEqualTo(320)
     }
 
     @Test
     fun `removing a favorite leaves the rest in order`() {
         val current = listOf(station("a"), station("b"), station("c"))
 
-        assertEquals(
-            listOf("a", "c"),
-            StationCollections.removeFavorite(current, "b").map {
-                it.id
-            }
-        )
+        assertThat(StationCollections.removeFavorite(current, "b").map { it.id })
+            .containsExactly("a", "c")
     }
 
     @Test
     fun `removing an unknown favorite is a no-op`() {
         val current = listOf(station("a"))
 
-        assertEquals(current, StationCollections.removeFavorite(current, "zzz"))
+        assertThat(StationCollections.removeFavorite(current, "zzz")).isEqualTo(current)
     }
 
     @Test
     fun `findByName prefers an exact case-insensitive match over a substring match`() {
         val current = listOf(station("a", name = "Classical NPR"), station("b", name = "NPR"))
 
-        assertEquals("b", StationCollections.findByName(current, "npr")?.id)
+        assertThat(StationCollections.findByName(current, "npr")?.id).isEqualTo("b")
     }
 
     @Test
     fun `findByName falls back to a substring match`() {
         val current = listOf(station("a", name = "NPR News"))
 
-        assertEquals("a", StationCollections.findByName(current, "npr")?.id)
+        assertThat(StationCollections.findByName(current, "npr")?.id).isEqualTo("a")
     }
 
     @Test
     fun `findByName returns null when nothing matches`() {
         val current = listOf(station("a", name = "Jazz FM"))
 
-        assertEquals(null, StationCollections.findByName(current, "rock"))
+        assertThat(StationCollections.findByName(current, "rock")).isNull()
     }
 
     @Test
     fun `findByName trims leading and trailing whitespace before matching`() {
         val current = listOf(station("a", name = "NPR"))
 
-        assertEquals("a", StationCollections.findByName(current, "  NPR  ")?.id)
+        assertThat(StationCollections.findByName(current, "  NPR  ")?.id).isEqualTo("a")
     }
 
     @Test
     fun `findByName returns null for a blank or whitespace-only query`() {
         val current = listOf(station("a", name = "NPR"))
 
-        assertEquals(null, StationCollections.findByName(current, ""))
-        assertEquals(null, StationCollections.findByName(current, "   "))
+        assertThat(StationCollections.findByName(current, "")).isNull()
+        assertThat(StationCollections.findByName(current, "   ")).isNull()
     }
 
     @Test
@@ -102,7 +104,7 @@ class StationCollectionsTest {
         recents = StationCollections.recordRecent(recents, station("a"))
         recents = StationCollections.recordRecent(recents, station("b"))
 
-        assertEquals(listOf("b", "a"), recents.map { it.id })
+        assertThat(recents.map { it.id }).containsExactly("b", "a")
     }
 
     @Test
@@ -111,7 +113,7 @@ class StationCollectionsTest {
 
         val result = StationCollections.recordRecent(current, station("c"))
 
-        assertEquals(listOf("c", "a", "b"), result.map { it.id })
+        assertThat(result.map { it.id }).containsExactly("c", "a", "b")
     }
 
     @Test
@@ -121,21 +123,21 @@ class StationCollectionsTest {
             recents = StationCollections.recordRecent(recents, station("s$index"), limit = 3)
         }
 
-        assertEquals(listOf("s4", "s3", "s2"), recents.map { it.id })
+        assertThat(recents.map { it.id }).containsExactly("s4", "s3", "s2")
     }
 
     @Test
     fun `unplayable stations are never recorded`() {
         val current = listOf(station("a"))
 
-        assertEquals(current, StationCollections.recordRecent(current, Station(id = "b", name = "No URL")))
+        assertThat(StationCollections.recordRecent(current, Station(id = "b", name = "No URL"))).isEqualTo(current)
     }
 
     @Test
     fun `non-positive recents limit is rejected`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailure {
             StationCollections.recordRecent(emptyList(), station("a"), limit = 0)
-        }
+        }.isInstanceOf<IllegalArgumentException>()
     }
 }
 
@@ -147,24 +149,24 @@ class StationCodecTest {
     fun `round trip preserves stations`() {
         val encoded = StationCodec.encode(listOf(station))
 
-        assertEquals(listOf(station), StationCodec.decode(encoded))
+        assertThat(StationCodec.decode(encoded)).containsExactly(station)
     }
 
     @Test
     fun `corrupt payload decodes to empty rather than throwing`() {
-        assertEquals(emptyList<Station>(), StationCodec.decode("{not json"))
+        assertThat(StationCodec.decode("{not json")).isEmpty()
     }
 
     @Test
     fun `null and blank payloads decode to empty`() {
-        assertEquals(emptyList<Station>(), StationCodec.decode(null))
-        assertEquals(emptyList<Station>(), StationCodec.decode("   "))
+        assertThat(StationCodec.decode(null)).isEmpty()
+        assertThat(StationCodec.decode("   ")).isEmpty()
     }
 
     @Test
     fun `legacy payloads with unknown fields still decode`() {
         val legacy = """[{"stationuuid":"a","name":"A","url":"https://example.com/a","clickcount":42}]"""
 
-        assertEquals(listOf(station), StationCodec.decode(legacy))
+        assertThat(StationCodec.decode(legacy)).containsExactly(station)
     }
 }

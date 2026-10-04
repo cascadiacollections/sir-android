@@ -1,31 +1,34 @@
 package com.cascadiacollections.android.media3.timeshift
 
-import org.junit.Assert.assertNotSame
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotEmpty
+import assertk.assertions.isNotSameInstanceAs
+import assertk.assertions.isSameInstanceAs
 import org.junit.Test
 
 class PlaybackModeTest {
 
     @Test
     fun `Live is a singleton`() {
-        assertSame(PlaybackMode.Live, PlaybackMode.Live)
+        assertThat(PlaybackMode.Live).isSameInstanceAs(PlaybackMode.Live)
     }
 
     @Test
     fun `TimeShifted is a singleton`() {
-        assertSame(PlaybackMode.TimeShifted, PlaybackMode.TimeShifted)
+        assertThat(PlaybackMode.TimeShifted).isSameInstanceAs(PlaybackMode.TimeShifted)
     }
 
     @Test
     fun `Live and TimeShifted are different types`() {
-        assertNotSame(PlaybackMode.Live, PlaybackMode.TimeShifted)
+        assertThat(PlaybackMode.TimeShifted).isNotSameInstanceAs(PlaybackMode.Live)
     }
 
     @Test
     fun `both implement PlaybackMode`() {
-        assertTrue(PlaybackMode.Live is PlaybackMode)
-        assertTrue(PlaybackMode.TimeShifted is PlaybackMode)
+        assertThat(PlaybackMode.Live).isInstanceOf<PlaybackMode>()
+        assertThat(PlaybackMode.TimeShifted).isInstanceOf<PlaybackMode>()
     }
 
     @Test
@@ -36,13 +39,13 @@ class PlaybackModeTest {
                 PlaybackMode.Live -> "live"
                 PlaybackMode.TimeShifted -> "shifted"
             }
-            assertTrue(label.isNotEmpty())
+            assertThat(label).isNotEmpty()
         }
     }
 
     @Test
     fun `toString produces meaningful names`() {
-        assertTrue(PlaybackMode.Live.toString().contains("Live"))
-        assertTrue(PlaybackMode.TimeShifted.toString().contains("TimeShifted"))
+        assertThat(PlaybackMode.Live.toString()).contains("Live")
+        assertThat(PlaybackMode.TimeShifted.toString()).contains("TimeShifted")
     }
 }

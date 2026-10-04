@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertEquals
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import org.junit.Test
 
 class StreamPlaylistParserTest {
@@ -18,21 +19,22 @@ class StreamPlaylistParserTest {
             Version=2
         """.trimIndent()
 
-        assertEquals(PlaylistContent.Entry("http://primary.example.com:8000/stream"), StreamPlaylistParser.parse(pls))
+        assertThat(StreamPlaylistParser.parse(pls))
+            .isEqualTo(PlaylistContent.Entry("http://primary.example.com:8000/stream"))
     }
 
     @Test
     fun `pls keys and spacing are matched leniently`() {
         val pls = "[Playlist]\r\nfile1 = https://example.com/live\r\n"
 
-        assertEquals(PlaylistContent.Entry("https://example.com/live"), StreamPlaylistParser.parse(pls))
+        assertThat(StreamPlaylistParser.parse(pls)).isEqualTo(PlaylistContent.Entry("https://example.com/live"))
     }
 
     @Test
     fun `pls skips entries that are not http urls`() {
         val pls = "[playlist]\nFile1=rtsp://example.com/live\nFile2=http://example.com/live\n"
 
-        assertEquals(PlaylistContent.Entry("http://example.com/live"), StreamPlaylistParser.parse(pls))
+        assertThat(StreamPlaylistParser.parse(pls)).isEqualTo(PlaylistContent.Entry("http://example.com/live"))
     }
 
     @Test
@@ -45,22 +47,21 @@ class StreamPlaylistParserTest {
             http://example.com:8000/second.mp3
         """.trimIndent()
 
-        assertEquals(PlaylistContent.Entry("http://example.com:8000/stream.mp3"), StreamPlaylistParser.parse(m3u))
+        assertThat(StreamPlaylistParser.parse(m3u))
+            .isEqualTo(PlaylistContent.Entry("http://example.com:8000/stream.mp3"))
     }
 
     @Test
     fun `bare m3u with a byte order mark is parsed`() {
-        assertEquals(
-            PlaylistContent.Entry("https://example.com/live"),
-            StreamPlaylistParser.parse("﻿https://example.com/live\n")
-        )
+        assertThat(StreamPlaylistParser.parse("﻿https://example.com/live\n"))
+            .isEqualTo(PlaylistContent.Entry("https://example.com/live"))
     }
 
     @Test
     fun `m3u skips relative and non-http entries`() {
         val m3u = "#EXTM3U\nstream.mp3\nfile:///sdcard/x.mp3\nhttps://example.com/live\n"
 
-        assertEquals(PlaylistContent.Entry("https://example.com/live"), StreamPlaylistParser.parse(m3u))
+        assertThat(StreamPlaylistParser.parse(m3u)).isEqualTo(PlaylistContent.Entry("https://example.com/live"))
     }
 
     @Test
@@ -71,13 +72,13 @@ class StreamPlaylistParserTest {
             https://cdn.example.com/live/128k.m3u8
         """.trimIndent()
 
-        assertEquals(PlaylistContent.Hls, StreamPlaylistParser.parse(hls))
+        assertThat(StreamPlaylistParser.parse(hls)).isEqualTo(PlaylistContent.Hls)
     }
 
     @Test
     fun `empty and non-playlist bodies yield nothing`() {
-        assertEquals(PlaylistContent.Empty, StreamPlaylistParser.parse(""))
-        assertEquals(PlaylistContent.Empty, StreamPlaylistParser.parse("#EXTM3U\n#EXTINF:-1,Nothing\n"))
-        assertEquals(PlaylistContent.Empty, StreamPlaylistParser.parse("<html><body>404</body></html>"))
+        assertThat(StreamPlaylistParser.parse("")).isEqualTo(PlaylistContent.Empty)
+        assertThat(StreamPlaylistParser.parse("#EXTM3U\n#EXTINF:-1,Nothing\n")).isEqualTo(PlaylistContent.Empty)
+        assertThat(StreamPlaylistParser.parse("<html><body>404</body></html>")).isEqualTo(PlaylistContent.Empty)
     }
 }

@@ -1,11 +1,14 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFailure
+import assertk.assertions.isSuccess
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
 import java.io.IOException
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 private class RecordingDirectory(private var result: Result<List<Station>> = Result.success(emptyList())) :
@@ -55,7 +58,7 @@ class CachingRadioDirectoryTest {
 
         repeat(3) { cache.search(StationQuery("jazz")) }
 
-        assertEquals(1, delegate.searchCalls)
+        assertThat(delegate.searchCalls).isEqualTo(1)
     }
 
     @Test
@@ -66,7 +69,7 @@ class CachingRadioDirectoryTest {
         cache.search(StationQuery("Jazz"))
         cache.search(StationQuery("jAZZ"))
 
-        assertEquals(1, delegate.searchCalls)
+        assertThat(delegate.searchCalls).isEqualTo(1)
     }
 
     @Test
@@ -79,7 +82,7 @@ class CachingRadioDirectoryTest {
         now = 500
         cache.search(StationQuery("jazz"))
 
-        assertEquals(2, delegate.searchCalls)
+        assertThat(delegate.searchCalls).isEqualTo(2)
     }
 
     @Test
@@ -87,11 +90,11 @@ class CachingRadioDirectoryTest {
         val delegate = RecordingDirectory(Result.failure(IOException("boom")))
         val cache = CachingRadioDirectory(delegate, clock = { 0L })
 
-        assertTrue(cache.topStations(10).isFailure)
+        assertThat(cache.topStations(10)).isFailure()
         delegate.respondWith(Result.success(listOf(station)))
 
-        assertEquals(listOf(station), cache.topStations(10).getOrNull())
-        assertEquals(2, delegate.topCalls)
+        assertThat(cache.topStations(10)).isSuccess().containsExactly(station)
+        assertThat(delegate.topCalls).isEqualTo(2)
     }
 
     @Test
@@ -103,7 +106,7 @@ class CachingRadioDirectoryTest {
         cache.invalidate()
         cache.search(StationQuery("jazz"))
 
-        assertEquals(2, delegate.searchCalls)
+        assertThat(delegate.searchCalls).isEqualTo(2)
     }
 
     @Test
@@ -115,14 +118,14 @@ class CachingRadioDirectoryTest {
         cache.search(StationQuery("b"))
         cache.search(StationQuery("a"))
         cache.search(StationQuery("c"))
-        assertEquals(3, delegate.searchCalls)
+        assertThat(delegate.searchCalls).isEqualTo(3)
 
         // "b" was evicted, "a" was refreshed by the third call and must still be cached.
         cache.search(StationQuery("a"))
-        assertEquals(3, delegate.searchCalls)
+        assertThat(delegate.searchCalls).isEqualTo(3)
 
         cache.search(StationQuery("b"))
-        assertEquals(4, delegate.searchCalls)
+        assertThat(delegate.searchCalls).isEqualTo(4)
     }
 
     @Test
@@ -135,7 +138,7 @@ class CachingRadioDirectoryTest {
         cache.topStations(1_000)
         cache.topStations(StationQuery.MAX_LIMIT)
 
-        assertEquals(1, delegate.topCalls)
-        assertEquals(StationQuery.MAX_LIMIT, delegate.lastTopLimit)
+        assertThat(delegate.topCalls).isEqualTo(1)
+        assertThat(delegate.lastTopLimit).isEqualTo(StationQuery.MAX_LIMIT)
     }
 }

@@ -1,7 +1,16 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.each
+import assertk.assertions.hasSize
+import assertk.assertions.isBetween
+import assertk.assertions.isCloseTo
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
+import assertk.assertions.isLessThanOrEqualTo
+import assertk.assertions.isTrue
 import org.junit.Test
 
 class EqualizerCurvesTest {
@@ -14,7 +23,7 @@ class EqualizerCurvesTest {
 
     @Test
     fun `normal preset is flat at zero millibels`() {
-        assertEquals(List(5) { 0.toShort() }, levels(EqualizerPreset.NORMAL))
+        assertThat(levels(EqualizerPreset.NORMAL)).isEqualTo(List(5) { 0.toShort() })
     }
 
     @Test
@@ -26,39 +35,39 @@ class EqualizerCurvesTest {
             maxLevel = 400.toShort()
         )
 
-        assertEquals(List(5) { 0.toShort() }, asymmetric)
+        assertThat(asymmetric).isEqualTo(List(5) { 0.toShort() })
     }
 
     @Test
     fun `bass boost is non-increasing across bands`() {
         val result = levels(EqualizerPreset.BASS_BOOST)
 
-        assertTrue(result.zipWithNext().all { (a, b) -> b <= a })
-        assertTrue(result.first() > result.last())
+        assertThat(result.zipWithNext().all { (a, b) -> b <= a }).isTrue()
+        assertThat(result.first()).isGreaterThan(result.last())
     }
 
     @Test
     fun `treble boost is non-decreasing across bands`() {
         val result = levels(EqualizerPreset.TREBLE)
 
-        assertTrue(result.zipWithNext().all { (a, b) -> b >= a })
-        assertTrue(result.last() > result.first())
+        assertThat(result.zipWithNext().all { (a, b) -> b >= a }).isTrue()
+        assertThat(result.last()).isGreaterThan(result.first())
     }
 
     @Test
     fun `vocal preset peaks in the mid bands`() {
         val result = levels(EqualizerPreset.VOCAL)
 
-        assertEquals(600.toShort(), result[2])
-        assertTrue(result[2] > result[0])
-        assertTrue(result[2] > result[4])
+        assertThat(result[2]).isEqualTo(600.toShort())
+        assertThat(result[2]).isGreaterThan(result[0])
+        assertThat(result[2]).isGreaterThan(result[4])
     }
 
     @Test
     fun `levels never escape the supported range`() {
         EqualizerPreset.entries.forEach { preset ->
             levels(preset, bands = 10).forEach { level ->
-                assertTrue("$preset produced $level", level in minLevel..maxLevel)
+                assertThat(level, name = "$preset produced $level").isBetween(minLevel, maxLevel)
             }
         }
     }
@@ -67,14 +76,14 @@ class EqualizerCurvesTest {
     fun `single band uses position zero`() {
         val result = calculateEqualizerLevels(1, minLevel, maxLevel, 3000) { pos -> 1f - pos }
 
-        assertEquals(listOf(1500.toShort()), result)
+        assertThat(result).containsExactly(1500.toShort())
     }
 
     @Test
     fun `curve output above one is clamped to max level`() {
         val result = calculateEqualizerLevels(5, minLevel, maxLevel, 3000) { 2f }
 
-        assertTrue(result.all { it == maxLevel })
+        assertThat(result).each { it.isEqualTo(maxLevel) }
     }
 
     @Test
@@ -89,7 +98,7 @@ class EqualizerCurvesTest {
             curve = { 40f }
         )
 
-        assertEquals(listOf(1_000.toShort()), high)
+        assertThat(high).containsExactly(1_000.toShort())
     }
 
     @Test
@@ -102,7 +111,7 @@ class EqualizerCurvesTest {
             curve = { -40f }
         )
 
-        assertEquals(listOf(0.toShort()), low)
+        assertThat(low).containsExactly(0.toShort())
     }
 
     // ---- levelsForCustomBands ----
@@ -116,7 +125,7 @@ class EqualizerCurvesTest {
             maxLevel = maxLevel
         )
 
-        assertEquals(List(5) { 0.toShort() }, result)
+        assertThat(result).isEqualTo(List(5) { 0.toShort() })
     }
 
     @Test
@@ -128,7 +137,7 @@ class EqualizerCurvesTest {
             maxLevel = 300.toShort()
         )
 
-        assertEquals(List(3) { 300.toShort() }, result)
+        assertThat(result).isEqualTo(List(3) { 300.toShort() })
     }
 
     @Test
@@ -140,7 +149,7 @@ class EqualizerCurvesTest {
             maxLevel = 300.toShort()
         )
 
-        assertEquals(List(3) { (-3000).toShort() }, result)
+        assertThat(result).isEqualTo(List(3) { (-3000).toShort() })
     }
 
     @Test
@@ -153,7 +162,7 @@ class EqualizerCurvesTest {
         )
 
         // position 0 -> gain 0, position 0.5 -> gain 0.5, position 1 -> gain 1
-        assertEquals(listOf(0.toShort(), 750.toShort(), 1500.toShort()), result)
+        assertThat(result).containsExactly(0.toShort(), 750.toShort(), 1500.toShort())
     }
 
     @Test
@@ -165,7 +174,7 @@ class EqualizerCurvesTest {
             maxLevel = maxLevel
         )
 
-        result.forEach { level -> assertTrue(level in minLevel..maxLevel) }
+        result.forEach { level -> assertThat(level).isBetween(minLevel, maxLevel) }
     }
 
     @Test
@@ -177,80 +186,72 @@ class EqualizerCurvesTest {
             maxLevel = maxLevel
         )
 
-        assertEquals(List(5) { 0.toShort() }, result)
+        assertThat(result).isEqualTo(List(5) { 0.toShort() })
     }
 
     // ---- normalizeCustomBands ----
 
     @Test
     fun `normalizing an empty list produces flat gains at the requested count`() {
-        assertEquals(
-            List(5) {
-                0f
-            },
-            EqualizerCurves.normalizeCustomBands(emptyList(), bandCount = 5)
-        )
+        assertThat(EqualizerCurves.normalizeCustomBands(emptyList(), bandCount = 5))
+            .isEqualTo(List(5) { 0f })
     }
 
     @Test
     fun `normalizing a correctly-sized in-range list is a no-op`() {
         val gains = listOf(-1f, -0.5f, 0f, 0.5f, 1f)
-        assertEquals(gains, EqualizerCurves.normalizeCustomBands(gains, bandCount = 5))
+        assertThat(EqualizerCurves.normalizeCustomBands(gains, bandCount = 5)).isEqualTo(gains)
     }
 
     @Test
     fun `normalizing a shorter list stretches it to the requested count`() {
         val result = EqualizerCurves.normalizeCustomBands(listOf(0f, 1f), bandCount = 5)
-        assertEquals(5, result.size)
-        assertEquals(0f, result.first())
-        assertEquals(1f, result.last())
+        assertThat(result).hasSize(5)
+        assertThat(result.first()).isEqualTo(0f)
+        assertThat(result.last()).isEqualTo(1f)
     }
 
     @Test
     fun `normalizing a longer list still produces exactly the requested count`() {
         val result = EqualizerCurves.normalizeCustomBands(List(9) { 1f }, bandCount = 5)
-        assertEquals(5, result.size)
+        assertThat(result).hasSize(5)
     }
 
     @Test
     fun `normalizing clamps out-of-range gains to -1f to 1f`() {
         val result = EqualizerCurves.normalizeCustomBands(listOf(-5f, 5f), bandCount = 3)
-        result.forEach { gain -> assertTrue(gain in -1f..1f) }
+        result.forEach { gain -> assertThat(gain).isBetween(-1f, 1f) }
     }
 
     // ---- displayGainsFor ----
 
     @Test
     fun `normal preset displays as all-flat gains`() {
-        assertEquals(
-            List(5) {
-                0f
-            },
-            EqualizerCurves.displayGainsFor(EqualizerPreset.NORMAL, bandCount = 5)
-        )
+        assertThat(EqualizerCurves.displayGainsFor(EqualizerPreset.NORMAL, bandCount = 5))
+            .isEqualTo(List(5) { 0f })
     }
 
     @Test
     fun `bass boost displays as a descending gain curve`() {
         val result = EqualizerCurves.displayGainsFor(EqualizerPreset.BASS_BOOST, bandCount = 5)
 
-        assertTrue(result.zipWithNext().all { (a, b) -> b <= a })
-        assertTrue(result.first() > result.last())
+        assertThat(result.zipWithNext().all { (a, b) -> b <= a }).isTrue()
+        assertThat(result.first()).isGreaterThan(result.last())
     }
 
     @Test
     fun `display gains stay within -1f to 1f`() {
         EqualizerPreset.entries.forEach { preset ->
             EqualizerCurves.displayGainsFor(preset, bandCount = 8).forEach { gain ->
-                assertTrue("$preset produced $gain", gain in -1f..1f)
+                assertThat(gain, name = "$preset produced $gain").isBetween(-1f, 1f)
             }
         }
     }
 
     @Test
     fun `a non-positive band count produces empty display gains rather than crashing`() {
-        assertEquals(emptyList<Float>(), EqualizerCurves.displayGainsFor(EqualizerPreset.BASS_BOOST, bandCount = 0))
-        assertEquals(emptyList<Float>(), EqualizerCurves.displayGainsFor(EqualizerPreset.BASS_BOOST, bandCount = -1))
+        assertThat(EqualizerCurves.displayGainsFor(EqualizerPreset.BASS_BOOST, bandCount = 0)).isEmpty()
+        assertThat(EqualizerCurves.displayGainsFor(EqualizerPreset.BASS_BOOST, bandCount = -1)).isEmpty()
     }
 
     @Test
@@ -265,7 +266,7 @@ class EqualizerCurvesTest {
             minLevel = (-1200).toShort(),
             maxLevel = 400.toShort()
         )
-        assertEquals(-0.2f, result.single(), 0.001f)
+        assertThat(result.single()).isCloseTo(-0.2f, 0.001f)
     }
 
     @Test
@@ -288,10 +289,10 @@ class EqualizerCurvesTest {
             )
             // Small rounding slop from the two independent Short-narrowing paths.
             appliedLevels.zip(gainAsLevels).forEach { (applied, fromGain) ->
-                assertTrue(
-                    "$preset: applied=$applied fromDisplayGain=$fromGain",
-                    kotlin.math.abs(applied - fromGain) <= 1
-                )
+                assertThat(
+                    kotlin.math.abs(applied - fromGain),
+                    name = "$preset: applied=$applied fromDisplayGain=$fromGain"
+                ).isLessThanOrEqualTo(1)
             }
         }
     }

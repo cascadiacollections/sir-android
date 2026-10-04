@@ -1,10 +1,11 @@
 package com.cascadiacollections.android.media3.timeshift
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNotSameInstanceAs
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 class TimeShiftDataSourceFactoryTest {
@@ -17,7 +18,7 @@ class TimeShiftDataSourceFactoryTest {
         val mockUpstreamFactory =
             mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
         val factory = TimeShiftDataSource.Factory(mockUpstreamFactory, controller())
-        assertNotNull(factory.createDataSource())
+        assertThat(factory.createDataSource()).isNotNull()
     }
 
     @Test
@@ -29,7 +30,7 @@ class TimeShiftDataSourceFactoryTest {
 
         val ds1 = factory.createDataSource()
         val ds2 = factory.createDataSource()
-        assertFalse(ds1 === ds2)
+        assertThat(ds1).isNotSameInstanceAs(ds2)
     }
 
     @Test
@@ -47,7 +48,7 @@ class TimeShiftDataSourceFactoryTest {
         // which is what lets the controller outlive individual sources.
         controller.buffer.write(byteArrayOf(1, 2, 3), 0, 3)
         val dst = ByteArray(3)
-        assertEquals(3, second.read(dst, 0, 3))
+        assertThat(second.read(dst, 0, 3)).isEqualTo(3)
     }
 
     @Test
@@ -61,7 +62,7 @@ class TimeShiftDataSourceFactoryTest {
             threadName = "MyApp-TimeShift",
             chunkSize = 4096
         )
-        assertNotNull(factory.createDataSource())
+        assertThat(factory.createDataSource()).isNotNull()
     }
 
     @Test
@@ -73,11 +74,11 @@ class TimeShiftDataSourceFactoryTest {
         }
         val source = TimeShiftDataSource(upstream, controller())
 
-        assertEquals(headers, source.responseHeaders)
+        assertThat(source.responseHeaders).isEqualTo(headers)
     }
 
     @Test
     fun `DEFAULT_CHUNK_SIZE is 8192`() {
-        assertEquals(8192, TimeShiftDataSource.DEFAULT_CHUNK_SIZE)
+        assertThat(TimeShiftDataSource.DEFAULT_CHUNK_SIZE).isEqualTo(8192)
     }
 }

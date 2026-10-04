@@ -1,8 +1,11 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.each
+import assertk.assertions.isEqualTo
+import assertk.assertions.startsWith
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RotatingMirrorProviderTest {
@@ -11,27 +14,24 @@ class RotatingMirrorProviderTest {
     fun `returns every configured mirror`() = runTest {
         val provider = RotatingMirrorProvider(shuffle = { it })
 
-        assertEquals(RotatingMirrorProvider.DEFAULT_MIRRORS, provider.mirrors())
+        assertThat(provider.mirrors()).isEqualTo(RotatingMirrorProvider.DEFAULT_MIRRORS)
     }
 
     @Test
     fun `rotation preserves the full mirror set`() = runTest {
         val provider = RotatingMirrorProvider(shuffle = { it.reversed() })
 
-        assertEquals(
-            RotatingMirrorProvider.DEFAULT_MIRRORS.toSet(),
-            provider.mirrors().toSet()
-        )
+        assertThat(provider.mirrors().toSet()).isEqualTo(RotatingMirrorProvider.DEFAULT_MIRRORS.toSet())
     }
 
     @Test
     fun `all default mirrors are https`() {
-        assertTrue(RotatingMirrorProvider.DEFAULT_MIRRORS.all { it.startsWith("https://") })
+        assertThat(RotatingMirrorProvider.DEFAULT_MIRRORS).each { it.startsWith("https://") }
     }
 
     @Test
     fun `the DNS round-robin host stays on the fallback list`() {
-        assertTrue(RotatingMirrorProvider.ALL_MIRRORS_HOST in RotatingMirrorProvider.DEFAULT_MIRRORS)
+        assertThat(RotatingMirrorProvider.DEFAULT_MIRRORS).contains(RotatingMirrorProvider.ALL_MIRRORS_HOST)
     }
 
     @Test(expected = IllegalArgumentException::class)

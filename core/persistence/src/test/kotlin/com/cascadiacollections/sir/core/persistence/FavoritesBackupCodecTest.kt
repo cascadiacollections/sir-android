@@ -1,5 +1,16 @@
 package com.cascadiacollections.sir.core.persistence
 
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.doesNotContain
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import com.cascadiacollections.sir.core.model.Station
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -7,10 +18,6 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FavoritesBackupCodecTest {
@@ -49,17 +56,18 @@ class FavoritesBackupCodecTest {
     fun `decodes a ShoutKit export in sortIndex order with the field mapping`() {
         val stations = FavoritesBackupCodec.decode(shoutKitExport)
 
-        assertEquals(
-            listOf("961a2c6c-0601-11e8-ae97-52543be04c81", "9617a958-0601-11e8-ae97-52543be04c81", "no-stream"),
-            stations.map { it.id }
+        assertThat(stations.map { it.id }).containsExactly(
+            "961a2c6c-0601-11e8-ae97-52543be04c81",
+            "9617a958-0601-11e8-ae97-52543be04c81",
+            "no-stream"
         )
-        assertFalse("kept for the importer to re-resolve", stations[2].isPlayable)
+        assertThat(stations[2].isPlayable, name = "kept for the importer to re-resolve").isFalse()
         val kexp = stations[1]
-        assertEquals("KEXP 90.3", kexp.name)
-        assertEquals("https://kexp.streamguys1.com/kexp160.aac", kexp.url)
-        assertEquals("https://cdn.example/kexp.png", kexp.favicon)
-        assertEquals("Indie", kexp.tags)
-        assertEquals(null, stations[0].favicon)
+        assertThat(kexp.name).isEqualTo("KEXP 90.3")
+        assertThat(kexp.url).isEqualTo("https://kexp.streamguys1.com/kexp160.aac")
+        assertThat(kexp.favicon).isEqualTo("https://cdn.example/kexp.png")
+        assertThat(kexp.tags).isEqualTo("Indie")
+        assertThat(stations[0].favicon).isNull()
     }
 
     @Test
@@ -77,15 +85,16 @@ class FavoritesBackupCodecTest {
             )
         )
         val root = Json.parseToJsonElement(text).jsonObject
-        assertEquals(1, root.getValue("schemaVersion").jsonPrimitive.int)
+        assertThat(root.getValue("schemaVersion").jsonPrimitive.int).isEqualTo(1)
         val favorites = root.getValue("favorites").jsonArray.map { it.jsonObject }
-        assertEquals("a", favorites[0].getValue("id").jsonPrimitive.content)
-        assertEquals("https://a/stream", favorites[0].getValue("streamURL").jsonPrimitive.content)
-        assertEquals("https://a/icon.png", favorites[0].getValue("artworkURL").jsonPrimitive.content)
-        assertEquals("rock", favorites[0].getValue("genre").jsonPrimitive.content)
-        assertEquals(listOf(0, 1), favorites.map { it.getValue("sortIndex").jsonPrimitive.int })
-        assertFalse("absent artwork is omitted, as ShoutKit does", "artworkURL" in favorites[1])
-        assertEquals("", favorites[1].getValue("genre").jsonPrimitive.content)
+        assertThat(favorites[0].getValue("id").jsonPrimitive.content).isEqualTo("a")
+        assertThat(favorites[0].getValue("streamURL").jsonPrimitive.content).isEqualTo("https://a/stream")
+        assertThat(favorites[0].getValue("artworkURL").jsonPrimitive.content).isEqualTo("https://a/icon.png")
+        assertThat(favorites[0].getValue("genre").jsonPrimitive.content).isEqualTo("rock")
+        assertThat(favorites.map { it.getValue("sortIndex").jsonPrimitive.int })
+            .containsExactly(0, 1)
+        assertThat(favorites[1].keys, name = "absent artwork is omitted, as ShoutKit does").doesNotContain("artworkURL")
+        assertThat(favorites[1].getValue("genre").jsonPrimitive.content).isEmpty()
     }
 
     @Test
@@ -94,7 +103,7 @@ class FavoritesBackupCodecTest {
             listOf(Station(id = "a", name = "A", url = "https://a/listen.pls", urlResolved = "https://a/stream.mp3"))
         )
         val favorite = Json.parseToJsonElement(text).jsonObject.getValue("favorites").jsonArray[0].jsonObject
-        assertEquals("https://a/stream.mp3", favorite.getValue("streamURL").jsonPrimitive.content)
+        assertThat(favorite.getValue("streamURL").jsonPrimitive.content).isEqualTo("https://a/stream.mp3")
     }
 
     @Test
@@ -102,15 +111,15 @@ class FavoritesBackupCodecTest {
         val text = """{"schemaVersion":1,"favorites":[
             {"id":"96062a7b-0601-11e8-ae97-52543be04c81","name":"Jazz","genre":"","sortIndex":0}]}"""
         val station = FavoritesBackupCodec.decode(text).single()
-        assertEquals("96062a7b-0601-11e8-ae97-52543be04c81", station.id)
-        assertEquals("", station.url)
-        assertFalse(station.isPlayable)
+        assertThat(station.id).isEqualTo("96062a7b-0601-11e8-ae97-52543be04c81")
+        assertThat(station.url).isEmpty()
+        assertThat(station.isPlayable).isFalse()
     }
 
     @Test
     fun `a nameless entry with a blank stream url falls back to its id`() {
         val text = """{"schemaVersion":1,"favorites":[{"id":"abc","name":"","streamURL":"","genre":"","sortIndex":0}]}"""
-        assertEquals("abc", FavoritesBackupCodec.decode(text).single().name)
+        assertThat(FavoritesBackupCodec.decode(text).single().name).isEqualTo("abc")
     }
 
     @Test
@@ -119,13 +128,13 @@ class FavoritesBackupCodecTest {
             Station(id = "x", name = "X", url = "https://x/s", favicon = "https://x/f", tags = "jazz"),
             Station(id = "y", name = "Y", url = "https://y/s")
         )
-        assertEquals(stations, FavoritesBackupCodec.decode(FavoritesBackupCodec.encode(stations)))
+        assertThat(FavoritesBackupCodec.decode(FavoritesBackupCodec.encode(stations))).isEqualTo(stations)
     }
 
     @Test
     fun `round trip of a ShoutKit export is stable`() {
         val once = FavoritesBackupCodec.decode(shoutKitExport)
-        assertEquals(once, FavoritesBackupCodec.decode(FavoritesBackupCodec.encode(once)))
+        assertThat(FavoritesBackupCodec.decode(FavoritesBackupCodec.encode(once))).isEqualTo(once)
     }
 
     @Test
@@ -134,30 +143,33 @@ class FavoritesBackupCodecTest {
             {"id":"a","name":"first","streamURL":"https://a/1","genre":"","sortIndex":0},
             {"id":"a","name":"second","streamURL":"https://a/2","genre":"","sortIndex":1},
             {"id":"","name":"blank","streamURL":"https://b","genre":"","sortIndex":2}]}"""
-        assertEquals(listOf("first"), FavoritesBackupCodec.decode(text).map { it.name })
+        assertThat(FavoritesBackupCodec.decode(text).map { it.name }).containsExactly("first")
     }
 
     @Test
     fun `an unknown schema version is rejected`() {
-        val error = assertThrows(FavoritesBackupCodec.UnsupportedSchemaException::class.java) {
+        assertFailure {
             FavoritesBackupCodec.decode("""{"schemaVersion":2,"favorites":[]}""")
-        }
-        assertEquals(2, error.schemaVersion)
+        }.isInstanceOf<FavoritesBackupCodec.UnsupportedSchemaException>()
+            .prop(FavoritesBackupCodec.UnsupportedSchemaException::schemaVersion)
+            .isEqualTo(2)
     }
 
     @Test
     fun `non-backup text fails to decode`() {
-        assertThrows(SerializationException::class.java) {
+        assertFailure {
             FavoritesBackupCodec.decode("#EXTM3U\nhttps://a")
-        }
+        }.isInstanceOf<SerializationException>()
     }
 
     @Test
     fun `detects backups by content before extension`() {
-        assertTrue(FavoritesBackupCodec.looksLikeBackup("﻿  {\"schemaVersion\":1}", "favorites.txt"))
-        assertFalse(FavoritesBackupCodec.looksLikeBackup("#EXTM3U", "list.json"))
-        assertFalse(FavoritesBackupCodec.looksLikeBackup("[playlist]\nFile1=x", null))
-        assertTrue(FavoritesBackupCodec.looksLikeBackup("", "shoutkit-favorites.json"))
-        assertFalse(FavoritesBackupCodec.looksLikeBackup("https://a/stream", "list.m3u"))
+        assertThat(
+            FavoritesBackupCodec.looksLikeBackup("﻿  {\"schemaVersion\":1}", "favorites.txt")
+        ).isTrue()
+        assertThat(FavoritesBackupCodec.looksLikeBackup("#EXTM3U", "list.json")).isFalse()
+        assertThat(FavoritesBackupCodec.looksLikeBackup("[playlist]\nFile1=x", null)).isFalse()
+        assertThat(FavoritesBackupCodec.looksLikeBackup("", "shoutkit-favorites.json")).isTrue()
+        assertThat(FavoritesBackupCodec.looksLikeBackup("https://a/stream", "list.m3u")).isFalse()
     }
 }

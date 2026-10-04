@@ -1,11 +1,14 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isFailure
+import assertk.assertions.isInstanceOf
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
 import java.io.IOException
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 private class FixedDirectory(private val result: Result<List<Station>>) : RadioDirectory {
@@ -25,7 +28,7 @@ class CuratedFallbackDirectoryTest {
 
         val stations = directory.topStations(limit = 2).getOrThrow()
 
-        assertEquals(listOf(CuratedStations.SIR, CuratedStations.ALL[1]), stations)
+        assertThat(stations).containsExactly(CuratedStations.SIR, CuratedStations.ALL[1])
     }
 
     @Test
@@ -34,7 +37,7 @@ class CuratedFallbackDirectoryTest {
 
         val stations = directory.search(StationQuery("worldwide")).getOrThrow()
 
-        assertEquals(listOf("Worldwide FM"), stations.map { it.name })
+        assertThat(stations.map { it.name }).containsExactly("Worldwide FM")
     }
 
     @Test
@@ -43,8 +46,8 @@ class CuratedFallbackDirectoryTest {
 
         val result = directory.search(StationQuery("zzzz-no-such-station"))
 
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IOException)
+        assertThat(result).isFailure()
+        assertThat(result).isFailure().isInstanceOf<IOException>()
     }
 
     @Test
@@ -55,8 +58,8 @@ class CuratedFallbackDirectoryTest {
         // Previously search filtered CuratedStations.ALL regardless of what was injected,
         // so a caller configuring the seam got its list for topStations and the built-in
         // one for search.
-        assertEquals(listOf(custom), directory.search(StationQuery("jazz")).getOrThrow())
-        assertEquals(listOf(custom), directory.topStations(limit = 5).getOrThrow())
+        assertThat(directory.search(StationQuery("jazz")).getOrThrow()).containsExactly(custom)
+        assertThat(directory.topStations(limit = 5).getOrThrow()).containsExactly(custom)
     }
 
     @Test
@@ -68,14 +71,14 @@ class CuratedFallbackDirectoryTest {
         // original failure has to survive rather than being answered from ALL.
         val result = directory.search(StationQuery("worldwide"))
 
-        assertTrue(result.isFailure)
+        assertThat(result).isFailure()
     }
 
     @Test
     fun `empty successful response is not masked by curated stations`() = runTest {
         val directory = CuratedFallbackDirectory(FixedDirectory(Result.success(emptyList())))
 
-        assertEquals(emptyList<Station>(), directory.search(StationQuery("anything")).getOrThrow())
+        assertThat(directory.search(StationQuery("anything")).getOrThrow()).isEmpty()
     }
 
     @Test
@@ -83,6 +86,6 @@ class CuratedFallbackDirectoryTest {
         val live = Station(id = "live", name = "Live", url = "https://example.com/live")
         val directory = CuratedFallbackDirectory(FixedDirectory(Result.success(listOf(live))))
 
-        assertEquals(listOf(live), directory.topStations(5).getOrThrow())
+        assertThat(directory.topStations(5).getOrThrow()).containsExactly(live)
     }
 }

@@ -1,10 +1,12 @@
 package com.cascadiacollections.sir.okhttp.streaming
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
-import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class StationConnectionPrewarmerTest {
@@ -26,7 +28,7 @@ class StationConnectionPrewarmerTest {
                 )
             )
 
-        assertEquals(listOf("HEAD first.example", "HEAD second.example"), requests)
+        assertThat(requests).containsExactly("HEAD first.example", "HEAD second.example")
     }
 
     @Test
@@ -37,7 +39,7 @@ class StationConnectionPrewarmerTest {
         StationConnectionPrewarmer(client, isPowerSaveMode = { true }, execute = { it() })
             .prewarm(listOf("https://first.example/live"))
 
-        assertEquals(emptyList<String>(), requests)
+        assertThat(requests).isEmpty()
     }
 
     private fun testClient(onRequest: (okhttp3.Request) -> Unit): OkHttpClient = OkHttpClient.Builder()

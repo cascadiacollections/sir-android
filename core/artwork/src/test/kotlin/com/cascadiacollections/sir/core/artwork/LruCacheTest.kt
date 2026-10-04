@@ -1,9 +1,11 @@
 package com.cascadiacollections.sir.core.artwork
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import org.junit.Test
 
 class LruCacheTest {
@@ -16,18 +18,18 @@ class LruCacheTest {
         cache["a"] // touch a, so b is now eldest
         cache["c"] = 3
 
-        assertEquals(1, cache["a"])
-        assertNull(cache["b"])
-        assertEquals(3, cache["c"])
-        assertEquals(2, cache.size())
+        assertThat(cache["a"]).isEqualTo(1)
+        assertThat(cache["b"]).isNull()
+        assertThat(cache["c"]).isEqualTo(3)
+        assertThat(cache.size()).isEqualTo(2)
     }
 
     @Test
     fun `contains distinguishes a cached null from a missing key`() {
         val cache = LruCache<String, Int?>(2)
         cache["miss"] = null
-        assertTrue(cache.contains("miss"))
-        assertFalse(cache.contains("other"))
+        assertThat(cache.contains("miss")).isTrue()
+        assertThat(cache.contains("other")).isFalse()
     }
 
     @Test(expected = IllegalArgumentException::class)

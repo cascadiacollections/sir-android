@@ -1,12 +1,12 @@
 package com.cascadiacollections.android.media3.timeshift
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CircularByteBufferTest {
@@ -18,30 +18,30 @@ class CircularByteBufferTest {
         buf.write(src, 0, 5)
         val dst = ByteArray(5)
         val read = buf.read(dst, 0, 5)
-        assertEquals(5, read)
-        assertArrayEquals(src, dst)
+        assertThat(read).isEqualTo(5)
+        assertThat(dst).isEqualTo(src)
     }
 
     @Test
     fun `available tracks unread bytes`() {
         val buf = CircularByteBuffer(100)
-        assertEquals(0, buf.available())
+        assertThat(buf.available()).isEqualTo(0)
         buf.write(byteArrayOf(1, 2, 3), 0, 3)
-        assertEquals(3, buf.available())
+        assertThat(buf.available()).isEqualTo(3)
         buf.read(ByteArray(2), 0, 2)
-        assertEquals(1, buf.available())
+        assertThat(buf.available()).isEqualTo(1)
     }
 
     @Test
     fun `available tracks exact full buffer`() {
         val buf = CircularByteBuffer(4)
         buf.write(byteArrayOf(1, 2, 3, 4), 0, 4)
-        assertEquals(4, buf.available())
+        assertThat(buf.available()).isEqualTo(4)
 
         val dst = ByteArray(4)
-        assertEquals(4, buf.read(dst, 0, 4))
-        assertArrayEquals(byteArrayOf(1, 2, 3, 4), dst)
-        assertEquals(0, buf.available())
+        assertThat(buf.read(dst, 0, 4)).isEqualTo(4)
+        assertThat(dst).isEqualTo(byteArrayOf(1, 2, 3, 4))
+        assertThat(buf.available()).isEqualTo(0)
     }
 
     @Test
@@ -50,8 +50,8 @@ class CircularByteBufferTest {
         buf.write(byteArrayOf(1, 2, 3, 4, 5, 6), 0, 6)
 
         val dst = ByteArray(4)
-        assertEquals(4, buf.read(dst, 0, 4))
-        assertArrayEquals(byteArrayOf(3, 4, 5, 6), dst)
+        assertThat(buf.read(dst, 0, 4)).isEqualTo(4)
+        assertThat(dst).isEqualTo(byteArrayOf(3, 4, 5, 6))
     }
 
     @Test
@@ -62,7 +62,7 @@ class CircularByteBufferTest {
         buf.seekBack(5)
         val replayed = ByteArray(5)
         buf.read(replayed, 0, 5)
-        assertArrayEquals(byteArrayOf(5, 6, 7, 8, 9), replayed)
+        assertThat(replayed).isEqualTo(byteArrayOf(5, 6, 7, 8, 9))
     }
 
     @Test
@@ -71,28 +71,28 @@ class CircularByteBufferTest {
         buf.write(ByteArray(20) { it.toByte() }, 0, 20)
         buf.read(ByteArray(10), 0, 10)
         buf.seekBack(5)
-        assertFalse(buf.isLive())
+        assertThat(buf.isLive()).isFalse()
         buf.goLive()
-        assertTrue(buf.isLive())
-        assertEquals(0, buf.available())
+        assertThat(buf.isLive()).isTrue()
+        assertThat(buf.available()).isEqualTo(0)
     }
 
     @Test
     fun `isLive state transitions`() {
         val buf = CircularByteBuffer(1024)
-        assertTrue(buf.isLive())
+        assertThat(buf.isLive()).isTrue()
         buf.write(ByteArray(10), 0, 10)
         buf.read(ByteArray(10), 0, 10)
-        assertTrue(buf.isLive())
+        assertThat(buf.isLive()).isTrue()
         buf.seekBack(5)
-        assertFalse(buf.isLive())
+        assertThat(buf.isLive()).isFalse()
         buf.goLive()
-        assertTrue(buf.isLive())
+        assertThat(buf.isLive()).isTrue()
     }
 
     @Test
     fun `canSeekBack returns false on empty buffer`() {
-        assertFalse(CircularByteBuffer(10).canSeekBack(1))
+        assertThat(CircularByteBuffer(10).canSeekBack(1)).isFalse()
     }
 
     @Test
@@ -100,9 +100,9 @@ class CircularByteBufferTest {
         val buf = CircularByteBuffer(100)
         buf.write(ByteArray(10) { it.toByte() }, 0, 10)
         buf.read(ByteArray(10), 0, 10)
-        assertTrue(buf.canSeekBack(5))
-        assertTrue(buf.canSeekBack(10))
-        assertFalse(buf.canSeekBack(11))
+        assertThat(buf.canSeekBack(5)).isTrue()
+        assertThat(buf.canSeekBack(10)).isTrue()
+        assertThat(buf.canSeekBack(11)).isFalse()
     }
 
     @Test
@@ -110,9 +110,9 @@ class CircularByteBufferTest {
         val buf = CircularByteBuffer(100)
         buf.write(byteArrayOf(1, 2, 3, 4, 5), 0, 5)
         buf.clear()
-        assertEquals(0, buf.available())
-        assertTrue(buf.isLive())
-        assertFalse(buf.canSeekBack(1))
+        assertThat(buf.available()).isEqualTo(0)
+        assertThat(buf.isLive()).isTrue()
+        assertThat(buf.canSeekBack(1)).isFalse()
     }
 
     @Test
@@ -129,9 +129,9 @@ class CircularByteBufferTest {
 
         Thread.sleep(20)
         buf.write(byteArrayOf(1, 2, 3, 4, 5), 0, 5)
-        assertTrue(latch.await(2, TimeUnit.SECONDS))
-        assertEquals(5, bytesRead)
-        assertArrayEquals(byteArrayOf(1, 2, 3, 4, 5), dst)
+        assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue()
+        assertThat(bytesRead).isEqualTo(5)
+        assertThat(dst).isEqualTo(byteArrayOf(1, 2, 3, 4, 5))
     }
 
     @Test
@@ -139,29 +139,29 @@ class CircularByteBufferTest {
         val buf = CircularByteBuffer(8)
         buf.write(byteArrayOf(1, 2, 3, 4, 5, 6), 0, 6)
         buf.read(ByteArray(4), 0, 4)
-        assertEquals(2, buf.available())
+        assertThat(buf.available()).isEqualTo(2)
         buf.write(byteArrayOf(7, 8, 9, 10), 0, 4)
-        assertEquals(6, buf.available())
+        assertThat(buf.available()).isEqualTo(6)
     }
 
     @Test
     fun `write with length 0 is a no-op`() {
         val buf = CircularByteBuffer(10)
         buf.write(byteArrayOf(1, 2, 3), 0, 0)
-        assertEquals(0, buf.available())
+        assertThat(buf.available()).isEqualTo(0)
     }
 
     @Test
     fun `read with length 0 is a no-op`() {
         val buf = CircularByteBuffer(10)
         buf.write(byteArrayOf(1, 2, 3), 0, 3)
-        assertEquals(0, buf.read(ByteArray(0), 0, 0))
-        assertEquals(3, buf.available())
+        assertThat(buf.read(ByteArray(0), 0, 0)).isEqualTo(0)
+        assertThat(buf.available()).isEqualTo(3)
     }
 
     @Test
     fun `seekBackAvailable returns 0 on empty buffer`() {
-        assertEquals(0, CircularByteBuffer(10).seekBackAvailable())
+        assertThat(CircularByteBuffer(10).seekBackAvailable()).isEqualTo(0)
     }
 
     @Test
@@ -169,12 +169,12 @@ class CircularByteBufferTest {
         val buf = CircularByteBuffer(100)
         buf.write(ByteArray(10) { it.toByte() }, 0, 10)
         buf.read(ByteArray(4), 0, 4)
-        assertEquals(4, buf.seekBackAvailable())
+        assertThat(buf.seekBackAvailable()).isEqualTo(4)
     }
 
     @Test
     fun `capacity property is accessible`() {
-        assertEquals(256, CircularByteBuffer(256).capacity)
+        assertThat(CircularByteBuffer(256).capacity).isEqualTo(256)
     }
 
     @Test
@@ -185,9 +185,9 @@ class CircularByteBufferTest {
         buf.seekBack(3)
         val replayed = ByteArray(3)
         buf.read(replayed, 0, 3)
-        assertEquals(30.toByte(), replayed[0])
-        assertEquals(40.toByte(), replayed[1])
-        assertEquals(50.toByte(), replayed[2])
+        assertThat(replayed[0]).isEqualTo(30.toByte())
+        assertThat(replayed[1]).isEqualTo(40.toByte())
+        assertThat(replayed[2]).isEqualTo(50.toByte())
     }
 
     @Test
@@ -197,8 +197,8 @@ class CircularByteBufferTest {
         buf.signalEndOfStream()
 
         val dst = ByteArray(3)
-        assertEquals(3, buf.read(dst, 0, 3))
-        assertEquals(CircularByteBuffer.END_OF_STREAM, buf.read(dst, 0, 3))
+        assertThat(buf.read(dst, 0, 3)).isEqualTo(3)
+        assertThat(buf.read(dst, 0, 3)).isEqualTo(CircularByteBuffer.END_OF_STREAM)
     }
 
     @Test
@@ -214,11 +214,11 @@ class CircularByteBufferTest {
             finished.countDown()
         }
 
-        assertTrue(started.await(2, TimeUnit.SECONDS))
+        assertThat(started.await(2, TimeUnit.SECONDS)).isTrue()
         buf.signalEndOfStream()
 
-        assertTrue("reader stayed blocked after end of stream", finished.await(2, TimeUnit.SECONDS))
-        assertEquals(CircularByteBuffer.END_OF_STREAM, result.get())
+        assertThat(finished.await(2, TimeUnit.SECONDS), name = "reader stayed blocked after end of stream").isTrue()
+        assertThat(result.get()).isEqualTo(CircularByteBuffer.END_OF_STREAM)
         reader.join()
     }
 
@@ -232,21 +232,21 @@ class CircularByteBufferTest {
 
         buf.seekBack(10)
         val dst = ByteArray(10)
-        assertEquals(10, buf.read(dst, 0, 10))
-        assertArrayEquals(src.copyOfRange(10, 20), dst)
+        assertThat(buf.read(dst, 0, 10)).isEqualTo(10)
+        assertThat(dst).isEqualTo(src.copyOfRange(10, 20))
     }
 
     @Test
     fun `resumeStream makes reads block for new data again`() {
         val buf = CircularByteBuffer(100)
         buf.signalEndOfStream()
-        assertTrue(buf.isEndOfStream())
+        assertThat(buf.isEndOfStream()).isTrue()
 
         buf.resumeStream()
 
-        assertFalse(buf.isEndOfStream())
+        assertThat(buf.isEndOfStream()).isFalse()
         buf.write(byteArrayOf(7), 0, 1)
-        assertEquals(1, buf.read(ByteArray(1), 0, 1))
+        assertThat(buf.read(ByteArray(1), 0, 1)).isEqualTo(1)
     }
 
     @Test
@@ -256,6 +256,6 @@ class CircularByteBufferTest {
 
         buf.clear()
 
-        assertFalse(buf.isEndOfStream())
+        assertThat(buf.isEndOfStream()).isFalse()
     }
 }

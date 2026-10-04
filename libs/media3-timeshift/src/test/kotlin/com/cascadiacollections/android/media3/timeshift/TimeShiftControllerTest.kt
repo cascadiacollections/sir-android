@@ -1,10 +1,13 @@
 package com.cascadiacollections.android.media3.timeshift
 
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isTrue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TimeShiftControllerTest {
@@ -22,39 +25,40 @@ class TimeShiftControllerTest {
     @Test
     fun `rejects non-positive byte rate`() {
         listOf(0, -1).forEach { rate ->
-            val error = runCatching { TimeShiftController(1024, rate) }.exceptionOrNull()
-            assertTrue(error is IllegalArgumentException)
+            assertFailure {
+                TimeShiftController(1024, rate)
+            }.isInstanceOf<IllegalArgumentException>()
         }
     }
 
     @Test
     fun `maxSeekBack reflects capacity at the stream byte rate`() {
-        assertEquals(10.seconds, controller(capacityBytes = 80).maxSeekBack)
+        assertThat(controller(capacityBytes = 80).maxSeekBack).isEqualTo(10.seconds)
     }
 
     @Test
     fun `availableSeekBack grows as audio plays`() {
         val controller = controller()
-        assertEquals(Duration.ZERO, controller.availableSeekBack)
+        assertThat(controller.availableSeekBack).isEqualTo(Duration.ZERO)
 
         controller.playSeconds(4)
-        assertEquals(4.seconds, controller.availableSeekBack)
+        assertThat(controller.availableSeekBack).isEqualTo(4.seconds)
     }
 
     @Test
     fun `availableSeekBack is capped by buffer capacity`() {
         val controller = controller(capacityBytes = 80)
         controller.playSeconds(30)
-        assertEquals(controller.maxSeekBack, controller.availableSeekBack)
+        assertThat(controller.availableSeekBack).isEqualTo(controller.maxSeekBack)
     }
 
     @Test
     fun `canSeekBack is false until enough audio is buffered`() {
         val controller = controller()
-        assertFalse(controller.canSeekBack(5.seconds))
+        assertThat(controller.canSeekBack(5.seconds)).isFalse()
 
         controller.playSeconds(5)
-        assertTrue(controller.canSeekBack(5.seconds))
+        assertThat(controller.canSeekBack(5.seconds)).isTrue()
     }
 
     @Test
@@ -62,23 +66,23 @@ class TimeShiftControllerTest {
         val controller = controller()
         controller.playSeconds(2)
 
-        assertFalse(controller.seekBack(5.seconds))
-        assertTrue(controller.isLive)
-        assertEquals(2.seconds, controller.availableSeekBack)
+        assertThat(controller.seekBack(5.seconds)).isFalse()
+        assertThat(controller.isLive).isTrue()
+        assertThat(controller.availableSeekBack).isEqualTo(2.seconds)
     }
 
     @Test
     fun `seekBack replays the requested duration`() {
         val controller = controller()
         controller.playSeconds(6)
-        assertTrue(controller.isLive)
+        assertThat(controller.isLive).isTrue()
 
-        assertTrue(controller.seekBack(4.seconds))
+        assertThat(controller.seekBack(4.seconds)).isTrue()
 
-        assertFalse(controller.isLive)
+        assertThat(controller.isLive).isFalse()
         // 4s of audio is queued up to be played a second time.
-        assertEquals(4 * 8, controller.buffer.available())
-        assertEquals(2.seconds, controller.availableSeekBack)
+        assertThat(controller.buffer.available()).isEqualTo(4 * 8)
+        assertThat(controller.availableSeekBack).isEqualTo(2.seconds)
     }
 
     @Test
@@ -89,8 +93,8 @@ class TimeShiftControllerTest {
 
         controller.goLive()
 
-        assertTrue(controller.isLive)
-        assertEquals(0, controller.buffer.available())
+        assertThat(controller.isLive).isTrue()
+        assertThat(controller.buffer.available()).isEqualTo(0)
     }
 
     @Test
@@ -98,9 +102,9 @@ class TimeShiftControllerTest {
         val controller = controller()
         controller.playSeconds(3)
 
-        assertTrue(controller.seekBack(Duration.ZERO))
-        assertTrue(controller.seekBack((-5).seconds))
-        assertTrue(controller.isLive)
+        assertThat(controller.seekBack(Duration.ZERO)).isTrue()
+        assertThat(controller.seekBack((-5).seconds)).isTrue()
+        assertThat(controller.isLive).isTrue()
     }
 
     @Test
@@ -110,9 +114,9 @@ class TimeShiftControllerTest {
 
         controller.reset()
 
-        assertEquals(Duration.ZERO, controller.availableSeekBack)
-        assertFalse(controller.canSeekBack(1.seconds))
-        assertTrue(controller.isLive)
+        assertThat(controller.availableSeekBack).isEqualTo(Duration.ZERO)
+        assertThat(controller.canSeekBack(1.seconds)).isFalse()
+        assertThat(controller.isLive).isTrue()
     }
 
     @Test
@@ -122,6 +126,6 @@ class TimeShiftControllerTest {
 
         controller.reset()
 
-        assertFalse(controller.buffer.isEndOfStream())
+        assertThat(controller.buffer.isEndOfStream()).isFalse()
     }
 }

@@ -1,5 +1,6 @@
 package com.cascadiacollections.android.media3.timeshift
 
+import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -57,6 +58,18 @@ class TimeShiftDataSourceFactoryTest {
             chunkSize = 4096
         )
         assertNotNull(factory.createDataSource())
+    }
+
+    @Test
+    @androidx.media3.common.util.UnstableApi
+    fun `response headers pass through so ExoPlayer can strip ICY metadata`() {
+        val headers = mapOf("icy-metaint" to listOf("16000"), "icy-br" to listOf("256"))
+        val upstream = mockk<androidx.media3.datasource.DataSource>(relaxed = true) {
+            every { responseHeaders } returns headers
+        }
+        val source = TimeShiftDataSource(upstream, controller())
+
+        assertEquals(headers, source.responseHeaders)
     }
 
     @Test

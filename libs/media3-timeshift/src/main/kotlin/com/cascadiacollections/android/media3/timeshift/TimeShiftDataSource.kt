@@ -81,6 +81,13 @@ class TimeShiftDataSource(
 
     override fun getUri(): Uri? = upstream.uri
 
+    /**
+     * The upstream's headers. ExoPlayer reads `icy-metaint` from here to decide whether to
+     * strip the ICY metadata blocks Icecast/SHOUTcast servers interleave into the audio;
+     * hiding the headers sends those blocks to the decoder as audio (audible noise bursts).
+     */
+    override fun getResponseHeaders(): Map<String, List<String>> = upstream.responseHeaders
+
     override fun close() {
         readerThread?.interrupt()
         readerThread = null

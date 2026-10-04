@@ -264,6 +264,10 @@ class RadioBrowserViewModel(
     /**
      * Merges a JSON favourites backup by station id — already-saved stations are skipped,
      * new ones appended in the backup's order — in a single transaction.
+     *
+     * A ShoutKit favourite can carry no stream URL; like ShoutKit, those are looked up by
+     * id in the directory. Any that cannot be resolved (offline, or gone from the
+     * directory) count as skipped rather than being saved as unplayable rows.
      */
     fun importFavoritesBackup(text: String, onResult: (PlaylistImportResult) -> Unit) {
         viewModelScope.launch {
@@ -278,8 +282,31 @@ class RadioBrowserViewModel(
                 onResult(PlaylistImportResult.Empty)
                 return@launch
             }
-            val result = settingsRepository.importSavedStations(stations)
-            onResult(PlaylistImportResult.Imported(added = result.added, skipped = result.skipped))
+            val playable = resolveUnplayable(stations)
+            val unresolved = stations.size - playable.size
+            val result = settingsRepository.importSavedStations(playable)
+            onResult(PlaylistImportResult.Imported(added = result.added, skipped = result.skipped + unresolved))
+        }
+    }
+
+    /**
+     * [stations] with each entry that has no stream URL replaced by its directory record,
+     * keeping the backup's name and artwork when it has them; entries the directory
+     * cannot supply are dropped.
+     */
+    private suspend fun resolveUnplayable(stations: List<Station>): List<Station> {
+        val missing = stations.filterNot { it.isPlayable }.map { it.id }
+        if (missing.isEmpty()) return stations
+        val found = directory.getStations(missing).getOrNull().orEmpty().associateBy { it.id }
+        return stations.mapNotNull { station ->
+            if (station.isPlayable) return@mapNotNull station
+            found[station.id]?.takeIf { it.isPlayable }?.let { fetched ->
+                fetched.copy(
+                    name = station.name.takeUnless { it.isBlank() || it == station.id } ?: fetched.name,
+                    favicon = station.favicon ?: fetched.favicon,
+                    tags = station.tags.ifBlank { fetched.tags }
+                )
+            }
         }
     }
 

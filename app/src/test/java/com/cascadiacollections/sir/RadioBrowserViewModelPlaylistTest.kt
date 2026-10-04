@@ -170,6 +170,34 @@ class RadioBrowserViewModelPlaylistTest {
     }
 
     @Test
+    fun `backup favourites without a stream url are resolved by id, unknown ones skipped`() {
+        val repo = repo()
+        val known = "96062a7b-0601-11e8-ae97-52543be04c81"
+        val gone = "00000000-0000-0000-0000-000000000000"
+        val directory = object : RadioDirectory by NoopDirectory {
+            override suspend fun getStations(ids: List<String>) = Result.success(
+                ids.filter { it == known }.map {
+                    Station(id = it, name = "Directory Name", url = "https://x/listen.pls", urlResolved = "https://x/stream")
+                }
+            )
+        }
+        val vm = RadioBrowserViewModel(directory, repo).also(coroutineRule::registerViewModel)
+
+        val result = vm.importStationsAndAwait(
+            """{"schemaVersion":1,"favorites":[
+                {"id":"$known","name":"Jazz","genre":"","sortIndex":0},
+                {"id":"$gone","name":"Gone","genre":"","sortIndex":1}]}""",
+            "shoutkit-favorites.json"
+        )
+
+        assertEquals(PlaylistImportResult.Imported(added = 1, skipped = 1), result)
+        vm.awaitSavedStationsSize(1)
+        val saved = vm.uiState.value.savedStations.single()
+        assertEquals("Jazz", saved.name)
+        assertEquals("https://x/stream", saved.streamUrl)
+    }
+
+    @Test
     fun `a backup with an unknown schema is reported unreadable`() {
         val vm = viewModel(repo())
 

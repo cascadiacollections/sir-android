@@ -13,7 +13,9 @@ import kotlinx.serialization.json.Json
  * ```
  *
  * Both apps key stations by radio-browser's `stationuuid`, so the mapping is direct:
- * `id`↔[Station.id], `streamURL`↔[Station.url], `artworkURL`↔[Station.favicon] and
+ * `id`↔[Station.id], `streamURL`↔[Station.streamUrl] (written resolved, since ShoutKit
+ * stores radio-browser's `url_resolved` and does not unwrap `.pls`/`.m3u` playlists;
+ * read back into [Station.url]), `artworkURL`↔[Station.favicon] and
  * `genre`↔[Station.tags]. ShoutKit models a single genre, so an export writes the first
  * tag and an import stores the genre as the only tag.
  *
@@ -68,7 +70,7 @@ object FavoritesBackupCodec {
                     id = station.id,
                     name = station.name,
                     sortIndex = index,
-                    streamURL = station.url.takeIf { it.isNotBlank() },
+                    streamURL = station.streamUrl.takeIf { it.isNotBlank() },
                 )
             },
             schemaVersion = SCHEMA_VERSION,
@@ -80,9 +82,9 @@ object FavoritesBackupCodec {
      *
      * As in ShoutKit's importer, entries are ordered by `sortIndex` (stable, so equal
      * indices keep file order), entries without an id are dropped, and only the first of
-     * any duplicated id is kept. Entries with no stream URL are dropped too: ShoutKit can
-     * hold such a favourite, but this app can neither play nor re-resolve one, so it
-     * would only be a dead row.
+     * any duplicated id is kept. Entries with no stream URL are kept with a blank
+     * [Station.url], as ShoutKit keeps them: the importer re-resolves those by id from
+     * the directory, and drops any it cannot.
      *
      * @throws UnsupportedSchemaException for a schema version this build doesn't know.
      * @throws kotlinx.serialization.SerializationException when [text] isn't a backup document.
@@ -95,11 +97,11 @@ object FavoritesBackupCodec {
         val seen = mutableSetOf<String>()
         return document.favorites
             .sortedBy { it.sortIndex }
-            .filter { it.id.isNotBlank() && !it.streamURL.isNullOrBlank() && seen.add(it.id) }
+            .filter { it.id.isNotBlank() && seen.add(it.id) }
             .map { favorite ->
                 Station(
                     id = favorite.id,
-                    name = favorite.name.ifBlank { favorite.streamURL.orEmpty() },
+                    name = favorite.name.ifBlank { favorite.streamURL ?: favorite.id },
                     url = favorite.streamURL.orEmpty(),
                     favicon = favorite.artworkURL?.takeIf { it.isNotBlank() },
                     tags = favorite.genre.trim(),

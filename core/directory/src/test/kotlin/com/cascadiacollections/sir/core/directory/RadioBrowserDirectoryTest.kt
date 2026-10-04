@@ -11,6 +11,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
 
 class RadioBrowserDirectoryTest {
 
@@ -240,13 +242,39 @@ class RadioBrowserDirectoryTest {
     }
 
     @Test
-    fun `click reporting fails over like any other request`() = runTest {
-        val transport = FakeTransport { url ->
-            if (url.host == "m1.example") Reply.Http(code = 502) else Reply.Http(body = "{}")
-        }
+    fun `click reporting fails over when no server handled the request`() = runTest {
+        listOf<Reply>(Reply.Fail(ConnectException("refused")), Reply.Http(code = 503)).forEach { failure ->
+            val transport = FakeTransport { url ->
+                if (url.host == "m1.example") failure else Reply.Http(body = "{}")
+            }
 
-        assertTrue(directory(transport).reportClick(uuid).isSuccess)
-        assertEquals(listOf("m1.example", "m2.example"), transport.urls.map { it.host })
+            assertTrue(directory(transport).reportClick(uuid).isSuccess)
+            assertEquals(listOf("m1.example", "m2.example"), transport.urls.map { it.host })
+        }
+    }
+
+    @Test
+    fun `click reporting does not retry a request a server may have counted`() = runTest {
+        listOf<Reply>(Reply.Fail(SocketTimeoutException("read")), Reply.Http(code = 502)).forEach { failure ->
+            val transport = FakeTransport { url ->
+                if (url.host == "m1.example") failure else Reply.Http(body = "{}")
+            }
+
+            assertTrue(directory(transport).reportClick(uuid).isFailure)
+            assertEquals(listOf("m1.example"), transport.urls.map { it.host })
+        }
+    }
+
+    @Test
+    fun `uuid lookups include stations that are currently failing checks`() = runTest {
+        val transport = FakeTransport { Reply.Http(body = "[" + stationJson() + "]") }
+        val directory = directory(transport)
+
+        directory.getStation(uuid).getOrThrow()
+        directory.getStations(listOf(uuid)).getOrThrow()
+
+        assertEquals(2, transport.urls.size)
+        transport.urls.forEach { assertNull(it.queryParameter("hidebroken")) }
     }
 
     // endregion

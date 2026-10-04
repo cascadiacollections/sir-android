@@ -15,6 +15,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.UnknownHostException
 import java.util.Locale
 
 /**
@@ -88,7 +91,7 @@ class RadioBrowserDirectory(
 
     override suspend fun getStation(id: String): Result<Station?> {
         if (id.isBlank()) return Result.success(null)
-        return fetchStations(1, StationSearchFilters.NONE) { base ->
+        return fetchStations(1, StationSearchFilters.NONE, hideBroken = false) { base ->
             base.addPathSegments("json/stations/byuuid").addPathSegment(id)
         }.map { it.firstOrNull() }
     }
@@ -104,7 +107,7 @@ class RadioBrowserDirectory(
         if (uuids.isEmpty()) return Result.success(emptyList())
         val stations = mutableListOf<Station>()
         for (batch in uuids.chunked(RadioDirectory.MAX_BATCH_IDS)) {
-            fetchStations(batch.size, StationSearchFilters.NONE) { base ->
+            fetchStations(batch.size, StationSearchFilters.NONE, hideBroken = false) { base ->
                 base.addPathSegments("json/stations/byuuid")
                     .addQueryParameter("uuids", batch.joinToString(","))
             }.fold(onSuccess = { stations += it }, onFailure = { return Result.failure(it) })
@@ -135,13 +138,23 @@ class RadioBrowserDirectory(
         return request(
             buildUrl = { base -> base.addPathSegments("json/url").addPathSegment(stationId) },
             // The body describes the station's stream; only the side effect matters.
-            parse = { }
+            parse = { },
+            // A timeout or most error statuses may arrive after the mirror already counted
+            // the click, and mirrors share counts, so only a request no server handled — no
+            // connection, or a 503/429 refusal — is retried, or one tap could count twice.
+            isRetryable = { it.isUnhandledRequest() }
         )
     }
 
+    /**
+     * [hideBroken] is for listings only: a lookup by UUID is for a station the user already
+     * saved or chose, and a station that is failing radio-browser's checks right now must
+     * still be found rather than look deleted.
+     */
     private suspend fun fetchStations(
         limit: Int,
         filters: StationSearchFilters,
+        hideBroken: Boolean = true,
         buildPath: (HttpUrl.Builder) -> HttpUrl.Builder
     ): Result<List<Station>> {
         val clampedLimit = limit.coerceIn(1, StationQuery.MAX_LIMIT)
@@ -149,7 +162,7 @@ class RadioBrowserDirectory(
             buildUrl = { base ->
                 buildPath(base)
                     .addQueryParameter("limit", clampedLimit.toString())
-                    .addQueryParameter("hidebroken", "true")
+                    .apply { if (hideBroken) addQueryParameter("hidebroken", "true") }
             },
             parse = { body ->
                 val stations = json.decodeFromString<List<Station>>(body)
@@ -170,7 +183,8 @@ class RadioBrowserDirectory(
      */
     private suspend fun <T> request(
         buildUrl: (HttpUrl.Builder) -> HttpUrl.Builder,
-        parse: (String) -> T
+        parse: (String) -> T,
+        isRetryable: (Throwable?) -> Boolean = { it.isRetryable() }
     ): Result<T> = withContext(ioDispatcher) {
         val deadline = nanoTime() + failoverBudgetMs * NANOS_PER_MILLI
         val mirrors = mirrorProvider.mirrors()
@@ -190,7 +204,7 @@ class RadioBrowserDirectory(
 
             val failure = result.exceptionOrNull()
             lastFailure = failure
-            if (!failure.isRetryable()) break
+            if (!isRetryable(failure)) break
             if (attempt == attempts - 1) break
 
             // Each attempt carries its own callTimeout, so a run of slow mirrors could
@@ -206,6 +220,13 @@ class RadioBrowserDirectory(
     private fun Throwable?.isRetryable(): Boolean = when (this) {
         is HttpStatusException -> isRetryable
         is IOException -> true
+        else -> false
+    }
+
+    /** No server processed the request: it never connected, or was refused outright. */
+    private fun Throwable?.isUnhandledRequest(): Boolean = when (this) {
+        is ConnectException, is UnknownHostException, is NoRouteToHostException -> true
+        is HttpStatusException -> code == 503 || code == 429
         else -> false
     }
 

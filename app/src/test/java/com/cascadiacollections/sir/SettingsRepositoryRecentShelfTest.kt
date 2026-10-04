@@ -41,6 +41,28 @@ class SettingsRepositoryRecentShelfTest {
     }
 
     @Test
+    fun `removing a recent drops it and its hidden flag, keeping the rest in order`() = runBlocking {
+        val repo = repo()
+        listOf("a", "b", "c").forEach { repo.selectStation(station(it)) }
+        repo.hideRecentStation("b")
+
+        repo.removeRecentStation("b")
+
+        assertEquals(listOf("c", "a"), repo.recentStations.first().map { it.id })
+        assertEquals(emptySet<String>(), repo.hiddenRecentStationIds.first())
+    }
+
+    @Test
+    fun `removing an unknown recent changes nothing`() = runBlocking {
+        val repo = repo()
+        repo.selectStation(station("a"))
+
+        repo.removeRecentStation("nope")
+
+        assertEquals(listOf("a"), repo.recentStations.first().map { it.id })
+    }
+
+    @Test
     fun `a station that was never played cannot be hidden`() = runBlocking {
         val repo = repo()
         repo.hideRecentStation("nope")

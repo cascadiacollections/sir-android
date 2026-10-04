@@ -71,6 +71,7 @@ fun TvHomeScreen(
     onStationSelected: (Station) -> Unit,
     onTogglePlayback: () -> Unit,
     onStop: () -> Unit,
+    onRetryPopular: () -> Unit = {},
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
@@ -89,7 +90,13 @@ fun TvHomeScreen(
                 val title = stringResource(R.string.popular_stations)
                 when (popular) {
                     TvPopular.Loading -> ShelfMessage(title, stringResource(R.string.tv_loading_stations))
-                    TvPopular.Failed -> ShelfMessage(title, stringResource(R.string.tv_stations_unavailable))
+                    TvPopular.Failed -> ShelfMessage(title, stringResource(R.string.tv_stations_unavailable)) {
+                        OutlinedButton(onClick = onRetryPopular, modifier = Modifier.focusScale()) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.retry))
+                        }
+                    }
                     is TvPopular.Loaded ->
                         if (popular.stations.isEmpty()) {
                             ShelfMessage(title, stringResource(R.string.tv_no_stations))
@@ -206,10 +213,11 @@ private fun StationCard(station: Station, isCurrent: Boolean, onClick: () -> Uni
 }
 
 @Composable
-private fun ShelfMessage(title: String, message: String) {
+private fun ShelfMessage(title: String, message: String, action: (@Composable () -> Unit)? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text(message, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        action?.invoke()
     }
 }
 

@@ -79,7 +79,6 @@ import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
 import com.cascadiacollections.sir.core.playback.StreamRecovery
 import com.cascadiacollections.sir.core.playback.StreamSource
 import com.cascadiacollections.sir.core.playback.StreamSourceResolver
-import com.cascadiacollections.sir.core.playback.VolumeRamp
 import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -88,11 +87,9 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -199,8 +196,8 @@ class RadioPlaybackService : MediaLibraryService() {
     // Display title for the current stream; null falls back to the bundled station name
     private var currentStationTitle: String? = null
 
-    // The running fade-in, cancelled when playback stops or a newer start begins
-    private var volumeRampJob: Job? = null
+    // ShoutKit's rejoin fade: silent while stopped, ramped up on every start
+    private val volumeFader by lazy { VolumeFader(serviceScope) { player?.volume = it } }
 
     // Directory id of the current stream (null for the app's own stream), for track history
     private var currentStationId: String? = null
@@ -438,7 +435,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .apply {
                 repeatMode = Player.REPEAT_MODE_OFF  // Live stream doesn't repeat
                 playWhenReady = false  // Don't auto-play on creation
-                volume = 0f  // The first start fades in like every later one (VolumeRamp)
+                volume = 0f  // The first start fades in like every later one (VolumeFader)
             }
         player = exoPlayer
 
@@ -755,11 +752,11 @@ class RadioPlaybackService : MediaLibraryService() {
                     // Bluetooth — so this is the one place that sees all resumes.
                     audioRoutePolicy.onPlaybackStarted()
                     playbackLocks?.acquire()
-                    fadeIn()
+                    volumeFader.fadeIn()
                     if (SEEKBACK_ENABLED) scheduleSeekBackReveal()
                 } else {
                     playbackLocks?.release()
-                    silenceUntilNextStart()
+                    volumeFader.silence()
                 }
             }
 
@@ -915,25 +912,6 @@ class RadioPlaybackService : MediaLibraryService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
         return mediaSession
-    }
-
-    /**
-     * Zeroes the player while it is not playing, so the next start — whatever route it
-     * comes from — begins silent and [fadeIn] ramps it up (ShoutKit's rejoin fade).
-     */
-    private fun silenceUntilNextStart() {
-        volumeRampJob?.cancel()
-        player?.volume = 0f
-    }
-
-    private fun fadeIn() {
-        volumeRampJob?.cancel()
-        volumeRampJob = serviceScope.launch {
-            for (step in 1..VolumeRamp.STEPS) {
-                delay(VolumeRamp.stepDelayMs)
-                player?.volume = VolumeRamp.levelAt(step)
-            }
-        }
     }
 
     override fun onDestroy() {

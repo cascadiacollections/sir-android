@@ -38,4 +38,20 @@ build-full:
 
 # Refactor safety baseline (matches CI's core local checks)
 verify:
-    ./gradlew assembleFossDebug testPlayDebugUnitTest testFossDebugUnitTest :wear:testDebugUnitTest :core:model:testDebugUnitTest :core:directory:testDebugUnitTest :core:playback:testDebugUnitTest :core:persistence:testDebugUnitTest :core:artwork:testDebugUnitTest lintPlayDebug --no-daemon --parallel --build-cache
+    ./gradlew assembleFossDebug testPlayDebugUnitTest testFossDebugUnitTest :wear:testDebugUnitTest :core:model:testDebugUnitTest :core:directory:testDebugUnitTest :core:playback:testDebugUnitTest :core:persistence:testDebugUnitTest :core:artwork:testDebugUnitTest detekt lintPlayDebug :wear:lintDebug --no-daemon --parallel --build-cache
+
+# Static analysis: detekt (+ ktlint, Compose rules) and Android Lint across all modules
+lint:
+    ./gradlew detekt lintPlayDebug :wear:lintDebug --no-daemon --continue
+
+# Apply ktlint formatting fixes
+format:
+    ./gradlew detekt --auto-correct --no-daemon --continue
+
+# Regenerate detekt and Android Lint baselines (only after triaging the findings!)
+baseline:
+    ./gradlew detektBaseline updateLintBaseline --no-daemon --continue
+
+# Qodana (JetBrains IDE inspections) in a container; report at http://localhost:8080
+qodana:
+    podman run --rm -it -p 8080:8080 -v "$PWD":/data/project:z jetbrains/qodana-jvm-android:2026.2 --show-report

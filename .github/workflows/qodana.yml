@@ -1,0 +1,47 @@
+name: Qodana
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  qodana:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Qodana's PR mode diffs against the base commit.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Qodana scan
+        uses: JetBrains/qodana-action@v2026.2.2
+        with:
+          # Lets Gradle reuse a dependency cache between runs.
+          use-caches: true
+          upload-result: false
+        env:
+          # Optional: set to publish reports to Qodana Cloud. The Community linter runs without it.
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+
+      - name: Upload to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4.38.2
+        with:
+          sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json
+          category: qodana

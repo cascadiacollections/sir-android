@@ -21,6 +21,7 @@ jobs:
       actions: write
       contents: read
       checks: write
+      security-events: write
 
     steps:
       - name: Checkout code
@@ -52,13 +53,38 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
+      - name: Static analysis (detekt + ktlint + Compose rules)
+        run: ./gradlew detekt --no-daemon --continue
+
       - name: Build, Lint, and Test
-        run: ./gradlew assemblePlayRelease assembleFossRelease assemblePlayDebug bundlePlayRelease lintPlayDebug testPlayDebugUnitTest testFossDebugUnitTest :wear:testDebugUnitTest :core:model:testDebugUnitTest :core:directory:testDebugUnitTest :core:playback:testDebugUnitTest :core:persistence:testDebugUnitTest :core:artwork:testDebugUnitTest jacocoTestReport --no-daemon --parallel --build-cache
+        run: ./gradlew assemblePlayRelease assembleFossRelease assemblePlayDebug bundlePlayRelease lintPlayDebug :wear:lintDebug testPlayDebugUnitTest testFossDebugUnitTest :wear:testDebugUnitTest :core:model:testDebugUnitTest :core:directory:testDebugUnitTest :core:playback:testDebugUnitTest :core:persistence:testDebugUnitTest :core:artwork:testDebugUnitTest jacocoTestReport --no-daemon --parallel --build-cache
         env:
           KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      # Findings show up as PR annotations and under Security > Code scanning.
+      - name: Upload detekt SARIF
+        if: ${{ !cancelled() && hashFiles('build/reports/detekt/detekt.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4.38.2
+        with:
+          sarif_file: build/reports/detekt/detekt.sarif
+          category: detekt
+
+      - name: Upload Android Lint SARIF (app + core/libs)
+        if: ${{ !cancelled() && hashFiles('app/build/reports/lint-results-playDebug.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4.38.2
+        with:
+          sarif_file: app/build/reports/lint-results-playDebug.sarif
+          category: lint-app
+
+      - name: Upload Android Lint SARIF (wear)
+        if: ${{ !cancelled() && hashFiles('wear/build/reports/lint-results-debug.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4.38.2
+        with:
+          sarif_file: wear/build/reports/lint-results-debug.sarif
+          category: lint-wear
 
       - name: Test Report
         if: always()
@@ -106,7 +132,12 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: lint-${{ github.sha }}
-          path: app/build/reports/lint-results-playDebug*.html
+          path: |
+            app/build/reports/lint-results-playDebug*.html
+            wear/build/reports/lint-results-debug*.html
+            build/reports/detekt/
+            */build/reports/detekt/
+            */*/build/reports/detekt/
           retention-days: 7
 
       # Upload APK artifacts (legacy sideload support)

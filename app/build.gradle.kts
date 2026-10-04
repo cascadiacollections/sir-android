@@ -120,13 +120,6 @@ android {
         }
     }
 
-    lint {
-        baseline = file("lint-baseline.xml")
-        abortOnError = true
-        warningsAsErrors = true
-        disable += setOf("OldTargetApi", "NewerVersionAvailable", "ObsoleteSdkInt", "GradleDependency")
-    }
-
     // Dynamic feature modules
     dynamicFeatures += setOf(":cast")
 

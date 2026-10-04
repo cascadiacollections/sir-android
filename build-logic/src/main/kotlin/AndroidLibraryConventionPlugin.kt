@@ -26,6 +26,8 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     sourceCompatibility = JavaVersion.VERSION_21
                     targetCompatibility = JavaVersion.VERSION_21
                 }
+
+                configureLint(lint, libs)
             }
         }
     }

@@ -100,6 +100,11 @@
     <string name="library_empty">Stations you save or play will show up here.</string>
     <string name="browse_genres_header">Browse by Genre</string>
     <string name="popular_stations">Popular stations</string>
+    <string name="tv_stop">Stop</string>
+    <string name="tv_pick_a_station">Pick a station to start listening.</string>
+    <string name="tv_loading_stations">Loading stations…</string>
+    <string name="tv_stations_unavailable">Couldn\'t load stations. Check the connection.</string>
+    <string name="tv_no_stations">No stations found.</string>
     <string name="search_no_results">No matching stations</string>
     <string name="search_unavailable">Search unavailable</string>
     <string name="retry">Retry</string>

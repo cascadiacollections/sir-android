@@ -26,6 +26,10 @@
     <uses-feature
         android:name="android.hardware.touchscreen"
         android:required="false" />
+    <!-- Android TV (TvActivity) is supported but not required -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
 
     <application
         android:name=".SirApp"
@@ -71,6 +75,17 @@
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
+        </activity>
+        <!-- Android TV home (ShoutKit's tvOS app): only the TV launcher lists it. -->
+        <activity
+            android:name=".TvActivity"
+            android:exported="true"
+            android:banner="@drawable/tv_banner"
+            android:theme="@style/Theme.Sir">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
         </activity>
         <!-- Headless voice/shortcut actions (static shortcuts + App Actions capabilities in
              res/xml/shortcuts.xml). Exported with an explicit action each, so Assistant and

@@ -240,6 +240,16 @@ class RadioViewModel(
         }
     }
 
+    /**
+     * Stops playback and drops the connection (the TV's Stop button). Paused first, like
+     * a cancel, so the service treats it as the listener's choice and skips any reconnect.
+     */
+    fun stop() {
+        val activeController = controller ?: return
+        activeController.pause()
+        activeController.stop()
+    }
+
     /** Saves or unsaves the current station. A no-op for the app's own stream. */
     fun toggleFavorite() {
         val state = _uiState.value

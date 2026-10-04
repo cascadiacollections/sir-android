@@ -14,5 +14,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
+    testImplementation(libs.assertk)
     testImplementation(libs.kotlinx.coroutines.test)
 }

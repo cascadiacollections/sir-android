@@ -270,6 +270,9 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.guava)
 
+    // Periodic background refresh of the discovery snapshot and saved stations
+    implementation(libs.androidx.work.runtime.ktx)
+
     testImplementation(libs.junit)
     // FakeImageLoaderEngine, to deterministically test StationRow's onError fallback
     testImplementation(libs.coil.test)
@@ -277,6 +280,7 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    testImplementation(libs.androidx.work.testing)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.compose.ui.test.manifest)

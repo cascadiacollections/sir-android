@@ -1,5 +1,6 @@
 package com.cascadiacollections.sir.core.directory
 
+import kotlinx.serialization.Serializable
 import java.util.Locale
 
 /**
@@ -8,6 +9,7 @@ import java.util.Locale
  * [name] is the lowercase value radio-browser stores and expects back in `tagList`;
  * [displayName] is the capitalized form for UI.
  */
+@Serializable
 data class Tag(
     val name: String,
     val stationCount: Int = 0

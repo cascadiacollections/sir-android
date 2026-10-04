@@ -52,7 +52,7 @@ class RadioBrowserDirectory(
 
     override suspend fun search(query: StationQuery, filters: StationSearchFilters): Result<List<Station>> {
         if (query.isBlank) return Result.success(emptyList())
-        return getStations(query.effectiveLimit, filters) { base ->
+        return fetchStations(query.effectiveLimit, filters) { base ->
             base.addPathSegments("json/stations/search")
                 .addQueryParameter("name", query.normalizedText)
                 .addPopularityOrder()
@@ -61,7 +61,7 @@ class RadioBrowserDirectory(
     }
 
     override suspend fun topStations(limit: Int): Result<List<Station>> =
-        getStations(limit, StationSearchFilters.NONE) { base -> base.addPathSegments("json/stations/topclick") }
+        fetchStations(limit, StationSearchFilters.NONE) { base -> base.addPathSegments("json/stations/topclick") }
 
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
         stationsByTag(tag, limit, StationSearchFilters.NONE)
@@ -78,7 +78,7 @@ class RadioBrowserDirectory(
             .map { it.lowercase(Locale.ROOT) }
             .distinct()
             .joinToString(",")
-        return getStations(limit, filters) { base ->
+        return fetchStations(limit, filters) { base ->
             base.addPathSegments("json/stations/search")
                 .addQueryParameter("tagList", tagList)
                 .addPopularityOrder()
@@ -88,9 +88,28 @@ class RadioBrowserDirectory(
 
     override suspend fun getStation(id: String): Result<Station?> {
         if (id.isBlank()) return Result.success(null)
-        return getStations(1, StationSearchFilters.NONE) { base ->
+        return fetchStations(1, StationSearchFilters.NONE) { base ->
             base.addPathSegments("json/stations/byuuid").addPathSegment(id)
         }.map { it.firstOrNull() }
+    }
+
+    /**
+     * `GET /json/stations/byuuid?uuids=a,b,c`, one request per [RadioDirectory.MAX_BATCH_IDS]
+     * ids. Only radio-browser UUIDs are sent; bundled and imported ids are skipped without a
+     * request. All batches must succeed, so a caller never mistakes a partial answer for
+     * "these stations no longer exist".
+     */
+    override suspend fun getStations(ids: List<String>): Result<List<Station>> {
+        val uuids = ids.filter(StationIds::isRadioBrowserUuid).distinct()
+        if (uuids.isEmpty()) return Result.success(emptyList())
+        val stations = mutableListOf<Station>()
+        for (batch in uuids.chunked(RadioDirectory.MAX_BATCH_IDS)) {
+            fetchStations(batch.size, StationSearchFilters.NONE) { base ->
+                base.addPathSegments("json/stations/byuuid")
+                    .addQueryParameter("uuids", batch.joinToString(","))
+            }.fold(onSuccess = { stations += it }, onFailure = { return Result.failure(it) })
+        }
+        return Result.success(stations)
     }
 
     override suspend fun topTags(limit: Int): Result<List<Tag>> {
@@ -120,7 +139,7 @@ class RadioBrowserDirectory(
         )
     }
 
-    private suspend fun getStations(
+    private suspend fun fetchStations(
         limit: Int,
         filters: StationSearchFilters,
         buildPath: (HttpUrl.Builder) -> HttpUrl.Builder

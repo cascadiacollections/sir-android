@@ -2,6 +2,8 @@ package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * Boundary between the app and whatever station catalogue backs it.
@@ -46,6 +48,27 @@ interface RadioDirectory {
     /** A single station by its radio-browser `stationuuid`, or null if unknown. */
     suspend fun getStation(id: String): Result<Station?>
 
+    /**
+     * Several stations by radio-browser `stationuuid`, in one request per
+     * [MAX_BATCH_IDS] ids where the backend supports it. Unknown ids, and ids that are
+     * not radio-browser UUIDs, are simply absent from the result; order is not
+     * guaranteed. Used to refresh saved stations' stream metadata in the background, so
+     * it is never cached and never answered from fallback data.
+     *
+     * The default looks each id up with [getStation] and fails if any lookup fails.
+     */
+    suspend fun getStations(ids: List<String>): Result<List<Station>> = runCatching {
+        ids.distinct().mapNotNull { id -> getStation(id).getOrThrow() }
+    }
+
+    /**
+     * Discovery results ([topStations]/[topTags]) that arrived *after* the caller was
+     * answered — a stale-while-revalidate refresh or the background worker — so a screen
+     * already showing the older answer can replace it. Empty unless a layer of the chain
+     * persists discovery (see `SnapshotRadioDirectory`).
+     */
+    val discoveryUpdates: Flow<DiscoveryUpdate> get() = emptyFlow()
+
     /** The most-used tags, by station count, for the genre list. */
     suspend fun topTags(limit: Int = DEFAULT_TAG_LIMIT): Result<List<Tag>> = Result.success(emptyList())
 
@@ -65,6 +88,9 @@ interface RadioDirectory {
     companion object {
         /** ShoutKit's genre list size. */
         const val DEFAULT_TAG_LIMIT: Int = 48
+
+        /** Ids per `byuuid` request in [getStations]; keeps the URL comfortably short. */
+        const val MAX_BATCH_IDS: Int = 100
     }
 }
 

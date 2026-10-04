@@ -79,7 +79,7 @@ private val Context.dataStore: DataStore<Preferences> get() = SettingsDataStore[
 /**
  * Settings repository using DataStore for persistence.
  */
-class SettingsRepository(private val context: Context) : RecentShelfStore {
+class SettingsRepository(private val context: Context) : RecentShelfStore, SavedStationRefreshStore {
 
     private val streamQualityKey = intPreferencesKey("stream_quality")
     private val chromecastEnabledKey = booleanPreferencesKey("chromecast_enabled")
@@ -215,7 +215,7 @@ class SettingsRepository(private val context: Context) : RecentShelfStore {
     /**
      * Flow of the user's saved (favourite) stations.
      */
-    val savedStations: Flow<List<Station>> = context.dataStore.data.map { preferences ->
+    override val savedStations: Flow<List<Station>> = context.dataStore.data.map { preferences ->
         StationCodec.decode(preferences[savedStationsKey])
     }
 
@@ -422,6 +422,21 @@ class SettingsRepository(private val context: Context) : RecentShelfStore {
             preferences[savedStationsKey] = StationCodec.encode(result.stations)
         }
         return result
+    }
+
+    /**
+     * Background refresh of saved stations from the directory ([SavedStationRefresh] decides
+     * what may change). The current selection is deliberately not touched: re-pointing it
+     * would make the playback service switch streams mid-listen.
+     */
+    override suspend fun refreshSavedStations(fetched: List<Station>): Int {
+        var updated = 0
+        context.dataStore.edit { preferences ->
+            val result = SavedStationRefresh.merge(StationCodec.decode(preferences[savedStationsKey]), fetched)
+            updated = result.updated
+            if (result.updated > 0) preferences[savedStationsKey] = StationCodec.encode(result.stations)
+        }
+        return updated
     }
 
     /**

@@ -2,6 +2,7 @@ package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Degrades gracefully to [CuratedStations] when the wrapped directory fails.
@@ -60,6 +61,14 @@ class CuratedFallbackDirectory(
 
     override suspend fun getStation(id: String): Result<Station?> =
         delegate.getStation(id).recoverCatching { curated.firstOrNull { it.id == id } }
+
+    /**
+     * No fallback: bundled data says nothing about a saved station's current stream, and a
+     * failure must reach the background refresh so it leaves the saved stations alone.
+     */
+    override suspend fun getStations(ids: List<String>): Result<List<Station>> = delegate.getStations(ids)
+
+    override val discoveryUpdates: Flow<DiscoveryUpdate> get() = delegate.discoveryUpdates
 
     /**
      * Only failures fall back. An empty *successful* response is a real answer ("no

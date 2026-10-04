@@ -30,6 +30,8 @@ data class TopTrack(
     val artist: String,
     val playCount: Int,
     val lastHeardMillis: Long,
+    /** Cover art from the most recent hearing that had some. */
+    val artworkUrl: String? = null,
 )
 
 /**
@@ -40,8 +42,8 @@ object TopTracks {
 
     const val LIMIT: Int = 20
 
-    /** A track heard once isn't a favourite yet; the section lists repeats only. */
-    const val MIN_PLAYS: Int = 2
+    /** As in ShoutKit, every counted track is ranked, including ones heard once. */
+    const val MIN_PLAYS: Int = 1
 
     /**
      * Ranks [history] (any order) by play count, ties broken by most recently heard.
@@ -72,7 +74,7 @@ object TopTracks {
             val key = title.lowercase() + '\u001F' + artist.lowercase()
             val existing = buckets[key]
             buckets[key] = if (existing == null) {
-                TopTrack(title, artist, playCount = 1, lastHeardMillis = track.timestampMillis)
+                TopTrack(title, artist, playCount = 1, lastHeardMillis = track.timestampMillis, artworkUrl = track.artworkUrl)
             } else {
                 val isNewer = track.timestampMillis > existing.lastHeardMillis
                 TopTrack(
@@ -80,6 +82,8 @@ object TopTracks {
                     artist = if (isNewer) artist else existing.artist,
                     playCount = existing.playCount + 1,
                     lastHeardMillis = maxOf(existing.lastHeardMillis, track.timestampMillis),
+                    artworkUrl = if (isNewer) track.artworkUrl ?: existing.artworkUrl
+                    else existing.artworkUrl ?: track.artworkUrl,
                 )
             }
         }

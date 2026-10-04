@@ -20,10 +20,20 @@ class TopTracksTest {
         TopTracks.rank(history, timeframe, nowMillis = now, timeZone = utc)
 
     @Test
-    fun `ranks by play count and drops single plays`() {
+    fun `ranks by play count, including tracks heard once as ShoutKit does`() {
         val history = listOf(heard("A"), heard("B"), heard("A"), heard("C"), heard("B"), heard("A"))
         val top = rank(history)
-        assertEquals(listOf("A" to 3, "B" to 2), top.map { it.title to it.playCount })
+        assertEquals(listOf("A" to 3, "B" to 2, "C" to 1), top.map { it.title to it.playCount })
+    }
+
+    @Test
+    fun `artwork comes from the newest hearing that has some`() {
+        val history = listOf(
+            heard("A", at = now - 3).copy(artworkUrl = "https://art/old"),
+            heard("A", at = now - 2).copy(artworkUrl = "https://art/new"),
+            heard("A", at = now - 1),
+        )
+        assertEquals("https://art/new", rank(history).single().artworkUrl)
     }
 
     @Test
@@ -59,7 +69,7 @@ class TopTracksTest {
         val feb28Noon = now - 31 * day
         val history = listOf(heard("A", at = feb28Noon), heard("A", at = now), heard("B", at = feb28Noon - 60_000), heard("B", at = now))
         val top = rank(history, TopTracksTimeframe.MONTH)
-        assertEquals(listOf("A"), top.map { it.title })
+        assertEquals(listOf("A" to 2, "B" to 1), top.map { it.title to it.playCount })
     }
 
     @Test

@@ -197,6 +197,12 @@ class RadioBrowserViewModel(
         return _uiState.value.savedStations.any { it.id == station.id }
     }
 
+    fun removeRecentStation(stationId: String) {
+        viewModelScope.launch {
+            settingsRepository.removeRecentStation(stationId)
+        }
+    }
+
     fun clearRecentStations() {
         viewModelScope.launch {
             settingsRepository.clearRecentStations()

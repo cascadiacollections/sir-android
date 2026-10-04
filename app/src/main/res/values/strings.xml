@@ -92,6 +92,8 @@
     <string name="play_station">Play station</string>
     <string name="play_default_stream">Back to SIR stream</string>
     <string name="clear_recent_stations">Clear history</string>
+    <string name="remove_from_recents">Remove from Recently Played</string>
+    <string name="unknown_track">Unknown Track</string>
     <string name="clear_search">Clear search</string>
     <string name="save_station">Save station</string>
     <string name="remove_station">Remove station</string>

@@ -11,6 +11,17 @@ class StationCollectionsTest {
         Station(id = id, name = name, url = url)
 
     @Test
+    fun `recents keep ShoutKit's twenty-five and remove one by id`() {
+        val recents = (1..30).fold(emptyList<Station>()) { acc, i -> StationCollections.recordRecent(acc, station("s$i")) }
+        assertEquals(25, recents.size)
+        assertEquals("s30", recents.first().id)
+
+        val removed = StationCollections.removeRecent(recents, "s29")
+        assertEquals(listOf("s30", "s28"), removed.take(2).map { it.id })
+        assertEquals(24, removed.size)
+    }
+
+    @Test
     fun `adding a new favorite appends to the end`() {
         val result = StationCollections.addFavorite(listOf(station("a")), station("b"))
 

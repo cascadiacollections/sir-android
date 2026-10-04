@@ -77,7 +77,8 @@ fun TrackHistorySheet(
                             DateFormat.getTimeFormat(context).format(Date(entry.timestampMillis))
                         }
                         ListItem(
-                            headlineContent = { Text(entry.title) },
+                            leadingContent = { TrackArtwork(entry.artworkUrl) },
+                            headlineContent = { Text(entry.title.ifBlank { stringResource(R.string.unknown_track) }) },
                             supportingContent = {
                                 Text(listOfNotNull(entry.artist, timeLabel).joinToString(" • "))
                             },

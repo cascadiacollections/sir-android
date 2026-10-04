@@ -40,6 +40,7 @@ import com.cascadiacollections.sir.PlaylistImportResult
 import com.cascadiacollections.sir.R
 import com.cascadiacollections.sir.RadioBrowserViewModel
 import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.core.persistence.StationCollections
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -290,11 +291,22 @@ fun LibraryScreen(
                 HorizontalDivider()
                 SectionHeader(stringResource(R.string.recent_stations))
             }
-            items(uiState.recentStations, key = { "recent-${it.id}" }) { station ->
+            items(
+                uiState.recentStations.take(StationCollections.RECENT_LIBRARY_LIMIT),
+                key = { "recent-${it.id}" }
+            ) { station ->
                 StationRow(
                     station = station,
                     isPlaying = station.id == uiState.selectedStationId,
-                    onPlay = { viewModel.playStation(station) }
+                    onPlay = { viewModel.playStation(station) },
+                    trailing = {
+                        IconButton(onClick = { viewModel.removeRecentStation(station.id) }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(R.string.remove_from_recents)
+                            )
+                        }
+                    }
                 )
             }
             item(key = "recent-clear") {
@@ -328,6 +340,7 @@ fun LibraryScreen(
             } else {
                 items(topTracks, key = { "top-${it.title.lowercase()}\u001F${it.artist.lowercase()}" }) { track ->
                     ListItem(
+                        leadingContent = { TrackArtwork(track.artworkUrl) },
                         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         supportingContent = { Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         trailingContent = {

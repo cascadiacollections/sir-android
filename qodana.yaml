@@ -2,15 +2,19 @@
 # Workflow: .github/workflows/qodana.yml. Findings land in GitHub code scanning.
 # Local run: `just qodana` (needs podman/docker).
 version: "1.0"
-linter: jetbrains/qodana-jvm-android:2026.2
+image: jetbrains/qodana-jvm-android:2026.2
 profile:
   name: qodana.recommended
 projectJDK: "21"
+# The image's SDK may predate compileSdk 37; fetch the platform when an sdkmanager exists
+# (otherwise AGP downloads missing platforms itself).
 bootstrap: |
-  set -e
-  if [ -n "$ANDROID_HOME" ] && [ ! -d "$ANDROID_HOME/platforms/android-37.0" ]; then
-    yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null
+  SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/opt/android-sdk}}"
+  SDKMANAGER="$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)"
+  if [ -n "$SDKMANAGER" ] && [ ! -d "$SDK/platforms/android-37.0" ]; then
+    yes | "$SDKMANAGER" "platforms;android-37.0" > /dev/null || true
   fi
+  exit 0
 exclude:
   - name: All
     paths:

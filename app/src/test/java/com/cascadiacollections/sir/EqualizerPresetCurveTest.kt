@@ -1,9 +1,9 @@
 package com.cascadiacollections.sir
 
+import com.cascadiacollections.sir.core.playback.calculateEqualizerLevels
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import com.cascadiacollections.sir.core.playback.calculateEqualizerLevels
 
 /**
  * Tests for the equalizer preset curve functions used by [RadioPlaybackService].
@@ -145,7 +145,9 @@ class EqualizerPresetCurveTest {
 
     @Test
     fun `bass boost curve with 10 bands produces correct count and descending shape`() {
-        val levels = calculateEqualizerLevels(10, minLevel, maxLevel, range) { pos -> (1 - pos) * 0.6f }
+        val levels = calculateEqualizerLevels(10, minLevel, maxLevel, range) { pos ->
+            (1 - pos) * 0.6f
+        }
         assertEquals(10, levels.size)
         assertTrue("First band should be higher than last band", levels.first() > levels.last())
     }

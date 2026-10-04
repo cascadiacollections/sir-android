@@ -6,10 +6,7 @@ package com.cascadiacollections.sir.core.artwork
  * [artworkUrl] is already upscaled to [ITunesSearch.ARTWORK_SIZE]; [trackViewUrl] is the
  * Apple Music page for the song, when the search returned one.
  */
-data class AlbumArt(
-    val artworkUrl: String,
-    val trackViewUrl: String? = null,
-)
+data class AlbumArt(val artworkUrl: String, val trackViewUrl: String? = null)
 
 /**
  * The identity of a track for lookup and caching purposes.

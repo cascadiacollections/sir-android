@@ -5,6 +5,7 @@ import com.cascadiacollections.sir.AutoBrowseTree.Category
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,7 +17,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -49,9 +49,18 @@ class AutoLibraryTest {
     private val uuidElsewhere = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
     private fun station(id: String, name: String = id, favicon: String? = null, tags: String = "", bitrate: Int = 0) =
-        Station(id = id, name = name, url = "https://example.com/$id", favicon = favicon, tags = tags, bitrate = bitrate)
+        Station(
+            id = id,
+            name = name,
+            url = "https://example.com/$id",
+            favicon = favicon,
+            tags = tags,
+            bitrate = bitrate
+        )
 
-    private var saved = listOf(station("saved-1", favicon = "https://example.com/a.png", tags = "jazz,smooth", bitrate = 128))
+    private var saved = listOf(
+        station("saved-1", favicon = "https://example.com/a.png", tags = "jazz,smooth", bitrate = 128)
+    )
     private var recents = listOf(station("recent-1"), station("saved-1"))
     private val directory = FakeDirectory()
 
@@ -60,7 +69,7 @@ class AutoLibraryTest {
         savedStations = { saved },
         recentStations = { recents },
         hiddenRecentIds = { emptySet() },
-        directory = { directory },
+        directory = { directory }
     )
 
     @Test
@@ -81,11 +90,11 @@ class AutoLibraryTest {
         val extras = library.rootExtras()
         assertEquals(
             MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
-            extras.getInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE),
+            extras.getInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE)
         )
         assertEquals(
             MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_LIST_ITEM,
-            extras.getInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE),
+            extras.getInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE)
         )
         assertTrue(extras.getBoolean(AutoLibrary.EXTRAS_KEY_SEARCH_SUPPORTED))
     }
@@ -93,12 +102,19 @@ class AutoLibraryTest {
     @Test
     fun `your stations starts with the SIR stream then saved then unsaved recents`() = runTest {
         val children = library.children(Category.YOUR_STATIONS.id, null)!!
-        assertEquals(listOf(AutoBrowseTree.SIR_STREAM_ID, "saved-1", "recent-1"), children.map { it.mediaId })
+        assertEquals(
+            listOf(AutoBrowseTree.SIR_STREAM_ID, "saved-1", "recent-1"),
+            children.map {
+                it.mediaId
+            }
+        )
     }
 
     @Test
     fun `station items carry artwork and a genre-bitrate subtitle`() = runTest {
-        val item = library.children(Category.YOUR_STATIONS.id, null)!!.first { it.mediaId == "saved-1" }
+        val item = library.children(Category.YOUR_STATIONS.id, null)!!.first {
+            it.mediaId == "saved-1"
+        }
         assertEquals("https://example.com/a.png", item.mediaMetadata.artworkUri.toString())
         assertEquals("Jazz · 128 kbps", item.mediaMetadata.subtitle.toString())
         assertEquals(true, item.mediaMetadata.isPlayable)
@@ -107,7 +123,12 @@ class AutoLibraryTest {
     @Test
     fun `top stations come from the directory and a failure is an empty tab`() = runTest {
         directory.top = Result.success(listOf(station(uuidTop)))
-        assertEquals(listOf(uuidTop), library.children(Category.TOP_STATIONS.id, null)!!.map { it.mediaId })
+        assertEquals(
+            listOf(uuidTop),
+            library.children(Category.TOP_STATIONS.id, null)!!.map {
+                it.mediaId
+            }
+        )
 
         directory.top = Result.failure(IOException("offline"))
         assertTrue(library.children(Category.TOP_STATIONS.id, null)!!.isEmpty())

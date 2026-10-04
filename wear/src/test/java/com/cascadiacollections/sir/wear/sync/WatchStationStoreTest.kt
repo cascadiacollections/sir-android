@@ -4,10 +4,10 @@ import android.content.Context
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.WatchStationPayload
 import com.cascadiacollections.sir.core.model.WatchStationSync
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
@@ -42,7 +42,8 @@ class WatchStationStoreTest {
 
     @Test
     fun `saved payload loads back`() {
-        val payload = WatchStationPayload(last = station("a"), recents = listOf(station("a"), station("b")))
+        val payload =
+            WatchStationPayload(last = station("a"), recents = listOf(station("a"), station("b")))
 
         store.save(WatchStationSync.encode(payload))
 

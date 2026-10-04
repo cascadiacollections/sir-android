@@ -3,12 +3,12 @@ package com.cascadiacollections.sir
 import com.cascadiacollections.sir.core.artwork.AlbumArt
 import com.cascadiacollections.sir.core.artwork.AlbumArtLookup
 import com.cascadiacollections.sir.core.artwork.TrackKey
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 /**
  * Keeps [current] in step with the track that is playing, for [RadioPlaybackService].
@@ -25,7 +25,7 @@ internal class AlbumArtResolver(
     private val scope: CoroutineScope,
     private val enabled: Flow<Boolean>,
     private val lookup: suspend (artist: String, title: String) -> AlbumArt?,
-    private val onChanged: () -> Unit,
+    private val onChanged: () -> Unit
 ) {
     /** Artwork for the current track, or null when there is none (yet). */
     var current: AlbumArt? = null
@@ -57,7 +57,9 @@ internal class AlbumArtResolver(
      * cleared artwork belonging to the previous track.
      */
     fun onTrackChanged(artist: String?, title: String?): Boolean {
-        val next = TrackKey.of(artist, title)?.let { artist.orEmpty().trim() to title.orEmpty().trim() }
+        val next = TrackKey.of(artist, title)?.let {
+            artist.orEmpty().trim() to title.orEmpty().trim()
+        }
         if (next == track) return false
         track = next
         job?.cancel()

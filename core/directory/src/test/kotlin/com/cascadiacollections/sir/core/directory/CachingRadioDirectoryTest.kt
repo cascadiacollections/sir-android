@@ -2,15 +2,14 @@ package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.IOException
 
-private class RecordingDirectory(
-    private var result: Result<List<Station>> = Result.success(emptyList())
-) : RadioDirectory {
+private class RecordingDirectory(private var result: Result<List<Station>> = Result.success(emptyList())) :
+    RadioDirectory {
     var searchCalls = 0
         private set
     var topCalls = 0

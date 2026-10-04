@@ -2,6 +2,8 @@ package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -16,8 +18,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
-import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SnapshotRadioDirectoryTest {
@@ -60,7 +60,11 @@ class SnapshotRadioDirectoryTest {
             return top
         }
         override suspend fun stationsByTag(tag: String, limit: Int) = error("unfiltered overload must not be used")
-        override suspend fun stationsByTag(tag: String, limit: Int, filters: StationSearchFilters): Result<List<Station>> {
+        override suspend fun stationsByTag(
+            tag: String,
+            limit: Int,
+            filters: StationSearchFilters
+        ): Result<List<Station>> {
             genreBrowses++
             return Result.success(listOf(station("genre")))
         }
@@ -105,7 +109,9 @@ class SnapshotRadioDirectoryTest {
         val store = InMemoryStore(snapshotAt(now - 7 * hour))
         val dir = directory(store)
         val updates = mutableListOf<DiscoveryUpdate>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { dir.discoveryUpdates.toList(updates) }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            dir.discoveryUpdates.toList(updates)
+        }
 
         assertEquals(listOf(station("saved")), dir.topStations(24).getOrThrow())
         assertEquals(listOf(Tag("saved", 1)), dir.topTags(48).getOrThrow())
@@ -264,7 +270,8 @@ class SnapshotRadioDirectoryTest {
     @Test
     fun `a corrupt snapshot file is ignored`() = runTest {
         val file = temp.newFile("snapshot.json").apply { writeText("{not json") }
-        val dir = directory(FileDiscoverySnapshotStore(file, ioDispatcher = UnconfinedTestDispatcher(testScheduler)))
+        val dir =
+            directory(FileDiscoverySnapshotStore(file, ioDispatcher = UnconfinedTestDispatcher(testScheduler)))
 
         assertEquals(listOf(station("live")), dir.topStations(24).getOrThrow())
 

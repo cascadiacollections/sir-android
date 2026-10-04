@@ -115,7 +115,7 @@ class NowPlayingAnnounceActivity : ComponentActivity() {
             audioManager.requestAudioFocus(
                 focusListener,
                 AudioManager.STREAM_MUSIC,
-                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
             )
             holdsLegacyFocus = true
         }

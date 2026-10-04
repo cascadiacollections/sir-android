@@ -5,6 +5,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.StreamFailure
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -13,7 +14,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.util.Locale
 
 /**
  * How the session's failure extras and metadata become [RadioUiState], and how that state
@@ -34,7 +34,7 @@ class NowPlayingStateTest {
             StreamFailure.StationUnavailable(),
             StreamFailure.Unplayable,
             StreamFailure.Transient,
-            StreamFailure.Stalled,
+            StreamFailure.Stalled
         ).forEach { failure ->
             val state = connected.withSessionExtras(PlaybackFailureExtras.bundle(failure, retrying = false))
             assertEquals(failure, state.failure)
@@ -161,7 +161,13 @@ class NowPlayingStateTest {
     @Test
     fun `a playing stream reads as live and its error clears once ready`() {
         val playing = connected.withPlayerError(playWhenReady = true)
-            .withPlayer(PlayerTestHelper.createMockPlayer(isPlaying = true, playWhenReady = true, playbackState = Player.STATE_READY))
+            .withPlayer(
+                PlayerTestHelper.createMockPlayer(
+                    isPlaying = true,
+                    playWhenReady = true,
+                    playbackState = Player.STATE_READY
+                )
+            )
 
         assertFalse(playing.isError)
         assertEquals(PlaybackStatus.LIVE, playing.status)
@@ -205,7 +211,8 @@ class NowPlayingStateTest {
 
     @Test
     fun `track line prefers title and artist, then genre`() {
-        val station = Station(id = "s", name = "Station", url = "https://s", tags = "jazz, smooth jazz")
+        val station =
+            Station(id = "s", name = "Station", url = "https://s", tags = "jazz, smooth jazz")
         assertEquals("Title — Artist", connected.copy(trackTitle = "Title", artist = "Artist").trackLine())
         assertEquals("Title", connected.copy(trackTitle = "Title", artist = " ").trackLine())
         assertEquals("Jazz", connected.copy(station = station).trackLine(Locale.US))

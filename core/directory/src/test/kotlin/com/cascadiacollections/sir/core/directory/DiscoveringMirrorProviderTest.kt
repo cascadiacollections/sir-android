@@ -1,11 +1,11 @@
 package com.cascadiacollections.sir.core.directory
 
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.IOException
 
 class DiscoveringMirrorProviderTest {
 
@@ -21,7 +21,9 @@ class DiscoveringMirrorProviderTest {
 
     @Test
     fun `discovered servers become https mirrors with the round-robin host last`() = runTest {
-        val source = CountingSource { listOf("de1.api.radio-browser.info", "fi1.api.radio-browser.info") }
+        val source = CountingSource {
+            listOf("de1.api.radio-browser.info", "fi1.api.radio-browser.info")
+        }
         val provider = DiscoveringMirrorProvider(source, shuffle = { it })
 
         assertEquals(
@@ -59,7 +61,9 @@ class DiscoveringMirrorProviderTest {
     fun `discovery is cached for the ttl and refreshed after it`() = runTest {
         var now = 0L
         val source = CountingSource { listOf("a.example") }
-        val provider = DiscoveringMirrorProvider(source, ttlMillis = 1_000, clock = { now }, shuffle = { it })
+        val provider = DiscoveringMirrorProvider(source, ttlMillis = 1_000, clock = {
+            now
+        }, shuffle = { it })
 
         provider.mirrors()
         now = 999
@@ -90,7 +94,11 @@ class DiscoveringMirrorProviderTest {
 
     @Test
     fun `an empty discovery result falls back too`() = runTest {
-        val provider = DiscoveringMirrorProvider(CountingSource { emptyList() }, fallback = listOf("https://x.example"), shuffle = { it })
+        val provider = DiscoveringMirrorProvider(
+            CountingSource { emptyList() },
+            fallback = listOf("https://x.example"),
+            shuffle = { it }
+        )
 
         assertEquals(listOf("https://x.example", all), provider.mirrors())
     }
@@ -118,7 +126,10 @@ class DiscoveringMirrorProviderTest {
 
     @Test
     fun `base url conversion`() {
-        assertEquals("https://nl1.api.radio-browser.info", DiscoveringMirrorProvider.toBaseUrl(" nl1.api.radio-browser.info "))
+        assertEquals(
+            "https://nl1.api.radio-browser.info",
+            DiscoveringMirrorProvider.toBaseUrl(" nl1.api.radio-browser.info ")
+        )
         assertNull(DiscoveringMirrorProvider.toBaseUrl("https://nl1.api.radio-browser.info"))
         assertNull(DiscoveringMirrorProvider.toBaseUrl("host:8080"))
     }
@@ -147,7 +158,11 @@ class DiscoveringMirrorProviderTest {
         val failing = RadioBrowserServerListSource(FakeTransport { Reply.Http(code = 500) }.client)
         assertTrue(runCatching { failing.serverNames() }.exceptionOrNull() is HttpStatusException)
 
-        val garbage = RadioBrowserServerListSource(FakeTransport { Reply.Http(body = "<html>") }.client)
+        val garbage = RadioBrowserServerListSource(
+            FakeTransport {
+                Reply.Http(body = "<html>")
+            }.client
+        )
         assertTrue(runCatching { garbage.serverNames() }.exceptionOrNull() is IOException)
     }
 

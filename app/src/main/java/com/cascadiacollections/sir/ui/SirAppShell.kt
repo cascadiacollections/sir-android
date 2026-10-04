@@ -64,7 +64,7 @@ fun SirAppShell(
     onOpenLicenses: () -> Unit,
     windowSizeClass: WindowSizeClass,
     modifier: Modifier = Modifier,
-    onToggleFavorite: () -> Unit = {},
+    onToggleFavorite: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -81,133 +81,133 @@ fun SirAppShell(
 
     // A Box so the Recently Heard overlay stacks over the whole shell, nav chrome included.
     Box(modifier = modifier) {
-    NavigationSuiteScaffold(
-        modifier = Modifier.fillMaxSize(),
-        navigationSuiteItems = {
-            SirTab.entries.forEach { tab ->
-                item(
-                    selected = tab == selectedTab,
-                    onClick = { onSelectTab(tab) },
-                    icon = {
-                        Icon(
-                            imageVector = tab.icon,
-                            contentDescription = stringResource(tab.labelRes)
-                        )
-                    },
-                    label = { Text(stringResource(tab.labelRes)) }
-                )
-            }
-        },
-        layoutType = layoutType,
-    ) {
-        Scaffold(
-            topBar = {
-            TopAppBar(
-                title = { Text(stringResource(selectedTab.labelRes)) },
-                actions = {
-                    if (uiState.isPlaying && uiState.trackTitle != null) {
-                        IconButton(onClick = {
-                            val shareText = listOfNotNull(uiState.trackTitle, uiState.artist)
-                                .joinToString(" — ")
-                            context.startActivity(
-                                Intent.createChooser(
-                                    Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(
-                                            Intent.EXTRA_TEXT,
-                                            resources.getString(R.string.share_now_playing, shareText)
+        NavigationSuiteScaffold(
+            modifier = Modifier.fillMaxSize(),
+            navigationSuiteItems = {
+                SirTab.entries.forEach { tab ->
+                    item(
+                        selected = tab == selectedTab,
+                        onClick = { onSelectTab(tab) },
+                        icon = {
+                            Icon(
+                                imageVector = tab.icon,
+                                contentDescription = stringResource(tab.labelRes)
+                            )
+                        },
+                        label = { Text(stringResource(tab.labelRes)) }
+                    )
+                }
+            },
+            layoutType = layoutType
+        ) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(stringResource(selectedTab.labelRes)) },
+                        actions = {
+                            if (uiState.isPlaying && uiState.trackTitle != null) {
+                                IconButton(onClick = {
+                                    val shareText = listOfNotNull(uiState.trackTitle, uiState.artist)
+                                        .joinToString(" — ")
+                                    context.startActivity(
+                                        Intent.createChooser(
+                                            Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(
+                                                    Intent.EXTRA_TEXT,
+                                                    resources.getString(R.string.share_now_playing, shareText)
+                                                )
+                                            },
+                                            null
                                         )
-                                    },
-                                    null
-                                )
-                            )
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = stringResource(R.string.share),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    if (uiState.trackHistory.isNotEmpty()) {
-                        IconButton(onClick = { showTrackHistory = true }) {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = stringResource(R.string.track_history_title),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    if (chromecastEnabled && castModuleState !is CastModuleState.Unavailable) {
-                        CastButton()
+                                    )
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = stringResource(R.string.share),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            if (uiState.trackHistory.isNotEmpty()) {
+                                IconButton(onClick = { showTrackHistory = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.History,
+                                        contentDescription = stringResource(R.string.track_history_title),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            if (chromecastEnabled && castModuleState !is CastModuleState.Unavailable) {
+                                CastButton()
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background
+                        )
+                    )
+                },
+                bottomBar = {
+                    // Always mounted (outside Listen, which already shows full transport controls
+                    // inline) so the bar's height never changes as playback starts/stops — only its
+                    // content swaps between the idle placeholder and the live now-playing row.
+                    if (selectedTab != SirTab.LISTEN) {
+                        MiniPlayer(
+                            state = uiState,
+                            onToggle = onToggle,
+                            onClick = { onSelectTab(SirTab.LISTEN) }
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        bottomBar = {
-            // Always mounted (outside Listen, which already shows full transport controls
-            // inline) so the bar's height never changes as playback starts/stops — only its
-            // content swaps between the idle placeholder and the live now-playing row.
-            if (selectedTab != SirTab.LISTEN) {
-                MiniPlayer(
-                    state = uiState,
-                    onToggle = onToggle,
-                    onClick = { onSelectTab(SirTab.LISTEN) }
-                )
+                containerColor = MaterialTheme.colorScheme.background
+            ) { paddingValues ->
+                val contentModifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+
+                when (selectedTab) {
+                    SirTab.LISTEN -> ListenScreen(
+                        state = uiState,
+                        modifier = contentModifier,
+                        isWideLayout = isWideLayout,
+                        onToggleFavorite = onToggleFavorite,
+                        onToggle = onToggle
+                    )
+
+                    SirTab.BROWSE -> BrowseScreen(
+                        viewModel = browserViewModel,
+                        shelfStore = settingsRepository,
+                        modifier = contentModifier
+                    )
+
+                    SirTab.LIBRARY -> LibraryScreen(
+                        viewModel = browserViewModel,
+                        onOpenRecentlyHeard = { showRecentlyHeard = true },
+                        modifier = contentModifier
+                    )
+
+                    SirTab.SETTINGS -> SettingsContent(
+                        settingsRepository = settingsRepository,
+                        castFeatureManager = castFeatureManager,
+                        modifier = contentModifier,
+                        onOpenLicenses = onOpenLicenses
+                    )
+                }
             }
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        val contentModifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
+        }
 
-        when (selectedTab) {
-            SirTab.LISTEN -> ListenScreen(
-                state = uiState,
-                modifier = contentModifier,
-                isWideLayout = isWideLayout,
-                onToggleFavorite = onToggleFavorite,
-                onToggle = onToggle
-            )
-
-            SirTab.BROWSE -> BrowseScreen(
-                viewModel = browserViewModel,
-                shelfStore = settingsRepository,
-                modifier = contentModifier
-            )
-
-            SirTab.LIBRARY -> LibraryScreen(
-                viewModel = browserViewModel,
-                onOpenRecentlyHeard = { showRecentlyHeard = true },
-                modifier = contentModifier
-            )
-
-            SirTab.SETTINGS -> SettingsContent(
-                settingsRepository = settingsRepository,
-                castFeatureManager = castFeatureManager,
-                modifier = contentModifier,
-                onOpenLicenses = onOpenLicenses
+        // Full-screen drill-in from the Library tab. Composed after the scaffold so it draws on
+        // top, and its BackHandler is registered last so back closes it before any tab reset.
+        if (showRecentlyHeard) {
+            val browserState by browserViewModel.uiState.collectAsState()
+            BackHandler { showRecentlyHeard = false }
+            RecentlyHeardScreen(
+                tracks = browserState.heardTracks,
+                onBack = { showRecentlyHeard = false },
+                onClear = { browserViewModel.clearHeardTracks() },
+                modifier = Modifier.fillMaxSize()
             )
         }
-    }
-    }
-
-    // Full-screen drill-in from the Library tab. Composed after the scaffold so it draws on
-    // top, and its BackHandler is registered last so back closes it before any tab reset.
-    if (showRecentlyHeard) {
-        val browserState by browserViewModel.uiState.collectAsState()
-        BackHandler { showRecentlyHeard = false }
-        RecentlyHeardScreen(
-            tracks = browserState.heardTracks,
-            onBack = { showRecentlyHeard = false },
-            onClear = { browserViewModel.clearHeardTracks() },
-            modifier = Modifier.fillMaxSize()
-        )
-    }
     }
 
     if (showTrackHistory) {

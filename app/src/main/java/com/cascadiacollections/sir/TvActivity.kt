@@ -72,7 +72,13 @@ class TvActivity : ComponentActivity() {
                     popular = popular,
                     onStationSelected = { station: Station ->
                         // As on tvOS, choosing the station already playing toggles it.
-                        if (station.id == radioState.station?.id) radio.togglePlayback() else browser.playStation(station)
+                        if (station.id == radioState.station?.id) {
+                            radio.togglePlayback()
+                        } else {
+                            browser.playStation(
+                                station
+                            )
+                        }
                     },
                     onTogglePlayback = radio::togglePlayback,
                     onStop = radio::stop,
@@ -90,7 +96,9 @@ class TvActivity : ComponentActivity() {
 
     private fun playLinkedStation(intent: Intent?) {
         val id = StationDeepLink.stationId(intent) ?: return
-        lifecycleScope.launch { StationDeepLink.play(id, AppDirectory.instance, settingsRepository) }
+        lifecycleScope.launch {
+            StationDeepLink.play(id, AppDirectory.instance, settingsRepository)
+        }
     }
 
     companion object {
@@ -104,10 +112,9 @@ class TvActivity : ComponentActivity() {
                 Configuration.UI_MODE_TYPE_TELEVISION
 
         /** [original]'s link (if any) re-addressed to the TV home. */
-        fun forward(context: Context, original: Intent?): Intent =
-            Intent(context, TvActivity::class.java).apply {
-                action = original?.action
-                data = original?.data
-            }
+        fun forward(context: Context, original: Intent?): Intent = Intent(context, TvActivity::class.java).apply {
+            action = original?.action
+            data = original?.data
+        }
     }
 }

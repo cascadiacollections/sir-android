@@ -14,7 +14,8 @@ class TimeShiftDataSourceFactoryTest {
     @Test
     @androidx.media3.common.util.UnstableApi
     fun `factory creates TimeShiftDataSource instances`() {
-        val mockUpstreamFactory = mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
+        val mockUpstreamFactory =
+            mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
         val factory = TimeShiftDataSource.Factory(mockUpstreamFactory, controller())
         assertNotNull(factory.createDataSource())
     }
@@ -22,7 +23,8 @@ class TimeShiftDataSourceFactoryTest {
     @Test
     @androidx.media3.common.util.UnstableApi
     fun `each call creates a distinct data source`() {
-        val mockUpstreamFactory = mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
+        val mockUpstreamFactory =
+            mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
         val factory = TimeShiftDataSource.Factory(mockUpstreamFactory, controller())
 
         val ds1 = factory.createDataSource()
@@ -33,7 +35,8 @@ class TimeShiftDataSourceFactoryTest {
     @Test
     @androidx.media3.common.util.UnstableApi
     fun `data sources created by one factory share the controller buffer`() {
-        val mockUpstreamFactory = mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
+        val mockUpstreamFactory =
+            mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
         val controller = controller()
         val factory = TimeShiftDataSource.Factory(mockUpstreamFactory, controller)
 
@@ -50,7 +53,8 @@ class TimeShiftDataSourceFactoryTest {
     @Test
     @androidx.media3.common.util.UnstableApi
     fun `factory uses custom thread name and chunk size`() {
-        val mockUpstreamFactory = mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
+        val mockUpstreamFactory =
+            mockk<androidx.media3.datasource.DataSource.Factory>(relaxed = true)
         val factory = TimeShiftDataSource.Factory(
             mockUpstreamFactory,
             controller(),

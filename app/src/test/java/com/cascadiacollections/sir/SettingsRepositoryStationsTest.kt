@@ -42,8 +42,7 @@ class SettingsRepositoryStationsTest {
         repo.clearSelectedStation()
     }
 
-    private fun station(id: String) =
-        Station(id = id, name = "Station $id", url = "https://example.com/$id")
+    private fun station(id: String) = Station(id = id, name = "Station $id", url = "https://example.com/$id")
 
     @Test
     fun `saved stations start empty and persist additions`() = runBlocking {
@@ -157,9 +156,7 @@ class SettingsRepositoryStationsTest {
     }
 }
 
-private class FakeDirectory(
-    private val result: Result<List<Station>>
-) : RadioDirectory {
+private class FakeDirectory(private val result: Result<List<Station>>) : RadioDirectory {
     override suspend fun search(query: StationQuery) = result
     override suspend fun topStations(limit: Int) = result
     override suspend fun stationsByTag(tag: String, limit: Int) = result

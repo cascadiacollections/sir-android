@@ -35,7 +35,7 @@ class TvHomeScreenTest {
     private fun setContent(
         radio: RadioUiState = RadioUiState(isConnected = true),
         recents: List<Station> = emptyList(),
-        popular: TvPopular = TvPopular.Loaded(emptyList()),
+        popular: TvPopular = TvPopular.Loaded(emptyList())
     ) {
         composeRule.setContent {
             SirTheme(darkTheme = true) {
@@ -73,7 +73,10 @@ class TvHomeScreenTest {
 
     @Test
     fun `choosing a card selects that station`() {
-        setContent(recents = listOf(station("r", "Recent One")), popular = TvPopular.Loaded(listOf(station("p", "Pop One"))))
+        setContent(
+            recents = listOf(station("r", "Recent One")),
+            popular = TvPopular.Loaded(listOf(station("p", "Pop One")))
+        )
 
         composeRule.onNodeWithText("Recent One").performClick()
         composeRule.onNodeWithText("Pop One").performClick()

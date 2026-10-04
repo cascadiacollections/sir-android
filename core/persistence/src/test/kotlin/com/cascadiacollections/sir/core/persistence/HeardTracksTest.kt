@@ -12,7 +12,7 @@ class HeardTracksTest {
         artist: String? = "Artist",
         stationId: String? = "s1",
         stationName: String = "Station One",
-        at: Long = 0L,
+        at: Long = 0L
     ) = HeardTrack(title, artist, stationId, stationName, at)
 
     @Test
@@ -49,7 +49,13 @@ class HeardTracksTest {
     @Test
     fun `a non-consecutive repeat is a second play`() {
         var history = emptyList<HeardTrack>()
-        listOf("A", "B", "A").forEachIndexed { i, t -> history = HeardTracks.record(history, track(t, at = i.toLong())) }
+        listOf(
+            "A",
+            "B",
+            "A"
+        ).forEachIndexed { i, t ->
+            history = HeardTracks.record(history, track(t, at = i.toLong()))
+        }
         assertEquals(listOf("A", "B", "A"), history.map { it.title })
     }
 
@@ -101,7 +107,10 @@ class HeardTracksTest {
     fun `artwork for a track that is no longer current is dropped`() {
         val history = HeardTracks.record(HeardTracks.record(emptyList(), track("A", at = 1)), track("B", at = 2))
         assertEquals(history, HeardTracks.attachArtwork(history, "A", "Artist", "s1", "https://art/a"))
-        assertEquals(emptyList<HeardTrack>(), HeardTracks.attachArtwork(emptyList(), "A", "Artist", "s1", "https://art/a"))
+        assertEquals(
+            emptyList<HeardTrack>(),
+            HeardTracks.attachArtwork(emptyList(), "A", "Artist", "s1", "https://art/a")
+        )
     }
 
     @Test
@@ -122,7 +131,8 @@ class HeardTracksTest {
 
     @Test
     fun `codec round-trips and tolerates garbage`() {
-        val history = listOf(track("A", at = 5), track("B", artist = null, stationId = null, at = 4))
+        val history =
+            listOf(track("A", at = 5), track("B", artist = null, stationId = null, at = 4))
         assertEquals(history, HeardTracks.decode(HeardTracks.encode(history)))
         assertEquals(emptyList<HeardTrack>(), HeardTracks.decode("{not json"))
         assertEquals(emptyList<HeardTrack>(), HeardTracks.decode(null))

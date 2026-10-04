@@ -20,6 +20,5 @@ import com.cascadiacollections.sir.core.playback.ReconnectBudget
 internal class StreamLoadErrorHandlingPolicy :
     DefaultLoadErrorHandlingPolicy(ReconnectBudget.LOAD_RETRIES_PER_CONNECTION) {
 
-    override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long =
-        C.TIME_UNSET
+    override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long = C.TIME_UNSET
 }

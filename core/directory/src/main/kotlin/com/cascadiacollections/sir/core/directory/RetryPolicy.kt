@@ -8,10 +8,7 @@ package com.cascadiacollections.sir.core.directory
  * The whole run is additionally capped by the directory's wall-clock failover budget,
  * so the backoff can never push a search past it.
  */
-data class RetryPolicy(
-    val maxAttempts: Int = DEFAULT_MAX_ATTEMPTS,
-    val baseDelayMs: Long = DEFAULT_BASE_DELAY_MS
-) {
+data class RetryPolicy(val maxAttempts: Int = DEFAULT_MAX_ATTEMPTS, val baseDelayMs: Long = DEFAULT_BASE_DELAY_MS) {
     init {
         require(maxAttempts >= 1) { "maxAttempts must be at least 1" }
         require(baseDelayMs >= 0) { "baseDelayMs must not be negative" }

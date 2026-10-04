@@ -32,16 +32,18 @@ class StaticShortcutsTest {
                             ?: parser.getAttributeValue(ANDROID_NS, "name")
                         intentSeen = false
                     }
+
                     "intent" -> if (tag != null && !intentSeen) {
                         intentSeen = true
                         entries += Entry(
                             tag = tag,
                             name = name,
                             targetClass = parser.getAttributeValue(ANDROID_NS, "targetClass"),
-                            action = parser.getAttributeValue(ANDROID_NS, "action"),
+                            action = parser.getAttributeValue(ANDROID_NS, "action")
                         )
                     }
                 }
+
                 XmlPullParser.END_TAG -> if (parser.name == "shortcut" || parser.name == "capability") tag = null
             }
         }
@@ -50,7 +52,12 @@ class StaticShortcutsTest {
 
     @Test
     fun `static shortcut count matches what StationShortcuts reserves`() {
-        assertEquals(StationShortcuts.STATIC_SHORTCUT_COUNT, entries().count { it.tag == "shortcut" })
+        assertEquals(
+            StationShortcuts.STATIC_SHORTCUT_COUNT,
+            entries().count {
+                it.tag == "shortcut"
+            }
+        )
     }
 
     @Test
@@ -59,10 +66,13 @@ class StaticShortcutsTest {
 
         assertEquals(NowPlayingAnnounceActivity::class.java.name, shortcuts.getValue("whats_playing").targetClass)
         assertEquals(NowPlayingAnnounceActivity.ACTION_WHATS_PLAYING, shortcuts.getValue("whats_playing").action)
-        assertEquals(FavoriteCurrentStationActivity::class.java.name, shortcuts.getValue("favorite_current").targetClass)
+        assertEquals(
+            FavoriteCurrentStationActivity::class.java.name,
+            shortcuts.getValue("favorite_current").targetClass
+        )
         assertEquals(
             FavoriteCurrentStationActivity.ACTION_FAVORITE_CURRENT,
-            shortcuts.getValue("favorite_current").action,
+            shortcuts.getValue("favorite_current").action
         )
     }
 
@@ -73,11 +83,11 @@ class StaticShortcutsTest {
         assertTrue("actions.intent.PLAY_MEDIA" in capabilities)
         assertEquals(
             NowPlayingAnnounceActivity::class.java.name,
-            capabilities.getValue("custom.actions.intent.WHATS_PLAYING").targetClass,
+            capabilities.getValue("custom.actions.intent.WHATS_PLAYING").targetClass
         )
         assertEquals(
             FavoriteCurrentStationActivity::class.java.name,
-            capabilities.getValue("custom.actions.intent.FAVORITE_CURRENT_STATION").targetClass,
+            capabilities.getValue("custom.actions.intent.FAVORITE_CURRENT_STATION").targetClass
         )
     }
 

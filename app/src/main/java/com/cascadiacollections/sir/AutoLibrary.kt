@@ -33,7 +33,7 @@ internal class AutoLibrary(
     private val savedStations: suspend () -> List<Station>,
     private val recentStations: suspend () -> List<Station>,
     private val hiddenRecentIds: suspend () -> Set<String>,
-    private val directory: () -> RadioDirectory,
+    private val directory: () -> RadioDirectory
 ) {
     private val resources = context.applicationContext.resources
 
@@ -41,7 +41,7 @@ internal class AutoLibrary(
     fun rootItem(): MediaItem = browsableItem(
         AutoBrowseTree.ROOT_ID,
         resources.getString(R.string.station_name),
-        styleExtras = null,
+        styleExtras = null
     )
 
     /**
@@ -61,8 +61,10 @@ internal class AutoLibrary(
         }
         return when (Category.fromId(parentId) ?: return null) {
             Category.YOUR_STATIONS -> listOf(sirStreamItem()) + yourStations().map(::stationItem)
+
             Category.RECENTLY_PLAYED ->
                 AutoBrowseTree.recentlyPlayed(recentStations(), hiddenRecentIds()).map(::stationItem)
+
             Category.TOP_STATIONS -> topStations().map(::stationItem)
         }
     }
@@ -92,7 +94,9 @@ internal class AutoLibrary(
     /** Saved stations matching [query], then the directory's name search. */
     suspend fun search(query: String): List<MediaItem> {
         if (query.isBlank()) return emptyList()
-        val remote = directoryCall { this.search(query.trim(), limit = AutoBrowseTree.SEARCH_LIMIT) }.orEmpty()
+        val remote = directoryCall {
+            this.search(query.trim(), limit = AutoBrowseTree.SEARCH_LIMIT)
+        }.orEmpty()
         return AutoBrowseTree.searchResults(query, savedStations(), remote).map(::stationItem)
     }
 
@@ -113,12 +117,14 @@ internal class AutoLibrary(
 
     private fun categoryItem(category: Category): MediaItem = when (category) {
         Category.YOUR_STATIONS -> browsableItem(category.id, resources.getString(R.string.auto_your_stations), null)
+
         // A history reads better as a list than as a wall of the same artwork.
         Category.RECENTLY_PLAYED -> browsableItem(
             category.id,
             resources.getString(R.string.recent_stations),
-            MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_LIST_ITEM,
+            MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_LIST_ITEM
         )
+
         Category.TOP_STATIONS -> browsableItem(category.id, resources.getString(R.string.auto_top_stations), null)
     }
 
@@ -133,7 +139,9 @@ internal class AutoLibrary(
                 .apply {
                     if (styleExtras != null) {
                         setExtras(
-                            Bundle().apply { putInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE, styleExtras) }
+                            Bundle().apply {
+                                putInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE, styleExtras)
+                            }
                         )
                     }
                 }

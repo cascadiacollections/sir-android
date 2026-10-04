@@ -42,11 +42,15 @@ class FavoriteCurrentStationActivity : ComponentActivity() {
         /** The Toast for [outcome]. */
         fun message(context: Context, outcome: Outcome): String = when (outcome) {
             is Outcome.Added -> context.getString(R.string.favorite_current_added, outcome.station.name)
+
             is Outcome.AlreadySaved -> context.getString(R.string.favorite_current_already_saved, outcome.station.name)
+
             // Add-only here, but the outcome type is shared with the notification heart.
             is Outcome.Removed -> context.getString(R.string.favorite_current_removed, outcome.station.name)
+
             Outcome.DefaultStream ->
                 context.getString(R.string.favorite_current_default_stream, context.getString(R.string.station_name))
+
             Outcome.NothingSelected -> context.getString(R.string.favorite_current_nothing_selected)
         }
     }

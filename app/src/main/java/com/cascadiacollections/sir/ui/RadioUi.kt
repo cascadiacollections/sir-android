@@ -108,13 +108,18 @@ fun RadioUi(
                         if (isPlaying && trackTitle != null) {
                             IconButton(onClick = {
                                 val shareText = listOfNotNull(trackTitle, artist).joinToString(" — ")
-                                context.startActivity(Intent.createChooser(
-                                    Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT,
-                                            resources.getString(R.string.share_now_playing, shareText))
-                                    }, null
-                                ))
+                                context.startActivity(
+                                    Intent.createChooser(
+                                        Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(
+                                                Intent.EXTRA_TEXT,
+                                                resources.getString(R.string.share_now_playing, shareText)
+                                            )
+                                        },
+                                        null
+                                    )
+                                )
                             }) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
@@ -152,7 +157,7 @@ fun RadioUi(
                 artist = artist,
                 sleepTimerLabel = sleepTimerLabel,
                 station = station,
-                failure = failure,
+                failure = failure
             ),
             onToggle = onToggle
         )
@@ -314,8 +319,10 @@ private fun StatusBadge(status: PlaybackStatus, failure: StreamFailure?) {
     val (container, content) = when (status) {
         PlaybackStatus.FAILED ->
             MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+
         PlaybackStatus.LIVE ->
             MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+
         else ->
             MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
     }
@@ -393,10 +400,7 @@ private fun NowPlayingOverflow(trackViewUrl: String?) {
 }
 
 @Composable
-internal fun StreamVisualizer(
-    isPlaying: Boolean,
-    modifier: Modifier = Modifier
-) {
+internal fun StreamVisualizer(isPlaying: Boolean, modifier: Modifier = Modifier) {
     val barColor = MaterialTheme.colorScheme.primaryContainer
 
     var tick by remember { mutableStateOf(0f) }
@@ -426,7 +430,7 @@ internal fun StreamVisualizer(
             Triple(1.3f, 0.55f, 2.5f),
             Triple(3.1f, 0.75f, 1.8f),
             Triple(0.3f, 0.65f, 2.2f),
-            Triple(2.0f, 0.85f, 1.6f),
+            Triple(2.0f, 0.85f, 1.6f)
         )
         bars.forEach { (offset, speed1, speed2) ->
             // Layer two sine waves at different frequencies for organic feel

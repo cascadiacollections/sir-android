@@ -28,7 +28,9 @@ object StreamPlaylistParser {
     private val plsEntry = Regex("""^File(\d+)\s*=\s*(.*)$""", RegexOption.IGNORE_CASE)
 
     fun parse(text: String): PlaylistContent {
-        val lines = text.removePrefix("﻿").lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+        val lines = text.removePrefix("\uFEFF").lineSequence().map {
+            it.trim()
+        }.filter { it.isNotEmpty() }.toList()
         if (lines.any { it.startsWith("#EXT-X-", ignoreCase = true) }) return PlaylistContent.Hls
 
         val plsUrls = lines.mapNotNull { line ->

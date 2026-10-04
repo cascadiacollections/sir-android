@@ -42,12 +42,7 @@ import com.cascadiacollections.sir.transportAction
  * I'm hearing" large.
  */
 @Composable
-fun MiniPlayer(
-    state: RadioUiState,
-    onToggle: () -> Unit,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun MiniPlayer(state: RadioUiState, onToggle: () -> Unit, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val isIdle = !state.isConnected
     val stationName = state.station?.name?.takeIf { it.isNotBlank() }
         ?: stringResource(R.string.station_name)

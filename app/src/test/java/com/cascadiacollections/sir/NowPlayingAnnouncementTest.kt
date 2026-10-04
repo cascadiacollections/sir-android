@@ -12,7 +12,7 @@ class NowPlayingAnnouncementTest {
         trackByArtistOnStation = "Now playing %1\$s by %2\$s on %3\$s",
         trackOnStation = "Now playing %1\$s on %2\$s",
         stationPlaying = "%1\$s is playing",
-        nothingPlaying = "Nothing is playing",
+        nothingPlaying = "Nothing is playing"
     )
 
     private fun announce(
@@ -21,7 +21,7 @@ class NowPlayingAnnouncementTest {
         artist: String? = "Fleetwood Mac",
         station: String? = "KEXP",
         hasResolvedTrack: Boolean = true,
-        hasResolvedArtist: Boolean = true,
+        hasResolvedArtist: Boolean = true
     ) = NowPlayingAnnouncement.from(
         isPlaying = isPlaying,
         title = title,
@@ -29,7 +29,7 @@ class NowPlayingAnnouncementTest {
         station = station,
         hasResolvedTrack = hasResolvedTrack,
         hasResolvedArtist = hasResolvedArtist,
-        fallbackStation = "SIR",
+        fallbackStation = "SIR"
     )
 
     @Test
@@ -56,7 +56,12 @@ class NowPlayingAnnouncementTest {
     @Test
     fun `no resolved track announces the station`() {
         // Unresolved, the session title is the station name and the artist a generic description.
-        val announcement = announce(title = "KEXP", artist = "Live stream", hasResolvedTrack = false, hasResolvedArtist = false)
+        val announcement = announce(
+            title = "KEXP",
+            artist = "Live stream",
+            hasResolvedTrack = false,
+            hasResolvedArtist = false
+        )
 
         assertEquals(StationOnly("KEXP"), announcement)
         assertEquals("KEXP is playing", announcement.text(templates))
@@ -83,6 +88,9 @@ class NowPlayingAnnouncementTest {
 
     @Test
     fun `values are trimmed`() {
-        assertEquals(Track("Dreams", "Fleetwood Mac", "KEXP"), announce(title = " Dreams ", artist = "Fleetwood Mac ", station = " KEXP"))
+        assertEquals(
+            Track("Dreams", "Fleetwood Mac", "KEXP"),
+            announce(title = " Dreams ", artist = "Fleetwood Mac ", station = " KEXP")
+        )
     }
 }

@@ -144,7 +144,11 @@ class WearActivity : ComponentActivity() {
                 currentStationId = player.currentMediaItem?.mediaId
             }
             future.addListener({
-                val ctrl = try { future.get() } catch (_: Exception) { return@addListener }
+                val ctrl = try {
+                    future.get()
+                } catch (_: Exception) {
+                    return@addListener
+                }
                 controller = ctrl
                 sync(ctrl)
                 ctrl.addListener(object : Player.Listener {
@@ -173,7 +177,9 @@ class WearActivity : ComponentActivity() {
                         currentStationId = currentStationId,
                         onToggle = {
                             controller?.let { ctrl ->
-                                if (ctrl.isPlaying) ctrl.pause() else {
+                                if (ctrl.isPlaying) {
+                                    ctrl.pause()
+                                } else {
                                     ContextCompat.startForegroundService(
                                         this@WearActivity,
                                         Intent(this@WearActivity, WearPlaybackService::class.java)

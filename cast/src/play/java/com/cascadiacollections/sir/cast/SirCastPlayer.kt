@@ -43,10 +43,7 @@ class SirCastPlayer(context: Context) : SessionAvailabilityListener {
     /**
      * Set callbacks for cast session state changes
      */
-    fun setSessionCallbacks(
-        onStarted: (RemoteCastPlayer) -> Unit,
-        onEnded: () -> Unit
-    ) {
+    fun setSessionCallbacks(onStarted: (RemoteCastPlayer) -> Unit, onEnded: () -> Unit) {
         onCastSessionStarted = onStarted
         onCastSessionEnded = onEnded
     }
@@ -54,13 +51,7 @@ class SirCastPlayer(context: Context) : SessionAvailabilityListener {
     /**
      * Transfer playback to cast device with current media item
      */
-    fun transferToCast(
-        streamUrl: String,
-        mimeType: String,
-        title: String,
-        artist: String?,
-        isPlaying: Boolean
-    ) {
+    fun transferToCast(streamUrl: String, mimeType: String, title: String, artist: String?, isPlaying: Boolean) {
         val castPlayer = this.castPlayer ?: return
         if (!isCasting()) return
 

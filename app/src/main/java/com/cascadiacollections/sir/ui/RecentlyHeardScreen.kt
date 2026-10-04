@@ -49,7 +49,7 @@ fun RecentlyHeardScreen(
     onBack: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
-    nowMillis: Long = System.currentTimeMillis(),
+    nowMillis: Long = System.currentTimeMillis()
 ) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -125,7 +125,9 @@ fun RecentlyHeardScreen(
                             }
                         },
                         leadingContent = { TrackArtwork(track.artworkUrl) },
-                        headlineContent = { Text(track.title.ifBlank { stringResource(R.string.unknown_track) }) },
+                        headlineContent = {
+                            Text(track.title.ifBlank { stringResource(R.string.unknown_track) })
+                        },
                         supportingContent = {
                             Text(
                                 listOfNotNull(

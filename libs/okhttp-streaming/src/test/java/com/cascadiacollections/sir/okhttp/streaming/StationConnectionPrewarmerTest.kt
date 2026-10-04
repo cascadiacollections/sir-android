@@ -22,7 +22,7 @@ class StationConnectionPrewarmerTest {
                     "https://first.example/live",
                     "https://first.example/other",
                     "https://second.example/live",
-                    "https://third.example/live",
+                    "https://third.example/live"
                 )
             )
 
@@ -40,17 +40,16 @@ class StationConnectionPrewarmerTest {
         assertEquals(emptyList<String>(), requests)
     }
 
-    private fun testClient(onRequest: (okhttp3.Request) -> Unit): OkHttpClient =
-        OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                onRequest(chain.request())
-                Response.Builder()
-                    .request(chain.request())
-                    .protocol(Protocol.HTTP_1_1)
-                    .code(204)
-                    .message("No Content")
-                    .body("".toResponseBody())
-                    .build()
-            }
-            .build()
+    private fun testClient(onRequest: (okhttp3.Request) -> Unit): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            onRequest(chain.request())
+            Response.Builder()
+                .request(chain.request())
+                .protocol(Protocol.HTTP_1_1)
+                .code(204)
+                .message("No Content")
+                .body("".toResponseBody())
+                .build()
+        }
+        .build()
 }

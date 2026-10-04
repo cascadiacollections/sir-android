@@ -35,7 +35,9 @@ android {
                 ?: keystoreProperties["keyAlias"]?.toString()
             val keyPwd = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() }
                 ?: keystoreProperties["keyPassword"]?.toString()
-            val storePath = System.getenv("KEYSTORE_PATH")?.takeIf { it.isNotBlank() }?.let { file(it) }
+            val storePath = System.getenv("KEYSTORE_PATH")?.takeIf {
+                it.isNotBlank()
+            }?.let { file(it) }
                 ?: keystoreProperties["storeFile"]?.toString()?.let { rootProject.file(it) }
             val storePwd = System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
                 ?: keystoreProperties["storePassword"]?.toString()
@@ -155,9 +157,9 @@ kotlin {
     compilerOptions {
         // Enable aggressive inlining for better performance
         freeCompilerArgs.addAll(
-            "-Xno-call-assertions",      // Skip null checks on platform types (we trust Android APIs)
-            "-Xno-param-assertions",     // Skip parameter null checks
-            "-Xno-receiver-assertions",  // Skip receiver null checks
+            "-Xno-call-assertions", // Skip null checks on platform types (we trust Android APIs)
+            "-Xno-param-assertions", // Skip parameter null checks
+            "-Xno-receiver-assertions" // Skip receiver null checks
         )
     }
 }
@@ -307,17 +309,20 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         csv.required.set(false)
     }
 
-    val kotlinClasses = fileTree("${layout.buildDirectory.get()}/intermediates/built_in_kotlinc/playDebug/compilePlayDebugKotlin/classes") {
+    val kotlinClasses = fileTree(
+        "${layout.buildDirectory.get()}/intermediates/built_in_kotlinc/playDebug/compilePlayDebugKotlin/classes"
+    ) {
         exclude(
-            "**/R.class", "**/R$*.class",
+            "**/R.class",
+            "**/R$*.class",
             "**/BuildConfig.class",
             "**/ui/theme/**",
-            "**/*Preview*.class",
+            "**/*Preview*.class"
         )
     }
 
     classDirectories.setFrom(kotlinClasses)
-    sourceDirectories.setFrom("${projectDir}/src/main/java")
+    sourceDirectories.setFrom("$projectDir/src/main/java")
     executionData.setFrom(
         fileTree(layout.buildDirectory) { include("jacoco/testPlayDebugUnitTest.exec") }
     )

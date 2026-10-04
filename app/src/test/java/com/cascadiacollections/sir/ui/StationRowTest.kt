@@ -24,7 +24,8 @@ class StationRowTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private val stationWithoutArtwork = Station(id = "a", name = "Station A", url = "https://example.com/a")
+    private val stationWithoutArtwork =
+        Station(id = "a", name = "Station A", url = "https://example.com/a")
     private val stationWithArtwork = stationWithoutArtwork.copy(favicon = "https://example.com/a.png")
 
     @Test
@@ -52,7 +53,13 @@ class StationRowTest {
         // the fallback is exercised deterministically rather than depending on an
         // actual network request's timing.
         val failingEngine = FakeImageLoaderEngine.Builder()
-            .default { chain -> ErrorResult(image = null, request = chain.request, throwable = RuntimeException("boom")) }
+            .default { chain ->
+                ErrorResult(
+                    image = null,
+                    request = chain.request,
+                    throwable = RuntimeException("boom")
+                )
+            }
             .build()
 
         composeRule.setContent {
@@ -71,7 +78,8 @@ class StationRowTest {
     fun `a blank artwork URL is treated the same as no artwork`() {
         composeRule.setContent {
             SirTheme {
-                StationRow(station = stationWithoutArtwork.copy(favicon = "   "), isPlaying = false, onPlay = {})
+                StationRow(station = stationWithoutArtwork.copy(favicon = "   "), isPlaying = false, onPlay = {
+                })
             }
         }
 

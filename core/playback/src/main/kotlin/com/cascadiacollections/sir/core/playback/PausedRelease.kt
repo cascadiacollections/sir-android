@@ -12,10 +12,7 @@ package com.cascadiacollections.sir.core.playback
  * service): the caller schedules its own check after [onPaused]'s delay, and releases only
  * if [isDue] still says so when it fires. Playing again cancels via [onPlay].
  */
-class PausedRelease(
-    private val clock: () -> Long,
-    private val timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-) {
+class PausedRelease(private val clock: () -> Long, private val timeoutMs: Long = DEFAULT_TIMEOUT_MS) {
     init {
         require(timeoutMs > 0) { "timeoutMs must be positive" }
     }

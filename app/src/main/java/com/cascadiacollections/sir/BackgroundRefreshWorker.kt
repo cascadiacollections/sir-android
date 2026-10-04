@@ -38,8 +38,10 @@ class BackgroundRefreshWorker(
         if (BuildConfig.DEBUG) Log.d(TAG, "Background refresh: $outcome")
         return when {
             !outcome.shouldRetry -> Result.success()
+
             // Give up until the next period rather than retrying an outage all day.
             runAttemptCount >= MAX_RETRIES -> Result.success()
+
             else -> Result.retry()
         }
     }

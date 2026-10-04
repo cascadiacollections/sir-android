@@ -132,7 +132,12 @@ class StationShortcutsTest {
         StationShortcuts.update(context, (1..10).map { station("s$it") })
 
         // 5 slots, 3 taken by "Play", "What's playing?" and "Favorite this station".
-        assertEquals(listOf("station-s1", "station-s2"), manager.dynamicShortcuts.sortedBy { it.rank }.map { it.id })
+        assertEquals(
+            listOf("station-s1", "station-s2"),
+            manager.dynamicShortcuts.sortedBy {
+                it.rank
+            }.map { it.id }
+        )
     }
 
     @Test

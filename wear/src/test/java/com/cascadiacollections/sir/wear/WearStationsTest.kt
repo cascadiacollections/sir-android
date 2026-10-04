@@ -22,7 +22,9 @@ class WearStationsTest {
 
     @Test
     fun `media item uses the resolved stream URL and the station name`() {
-        val station = station("a").copy(urlResolved = "https://cdn.example.com/a", favicon = "https://example.com/a.png")
+        val station = station(
+            "a"
+        ).copy(urlResolved = "https://cdn.example.com/a", favicon = "https://example.com/a.png")
 
         val item = WearStations.mediaItem(station, "Live stream")
 
@@ -83,7 +85,8 @@ class WearStationsTest {
     fun `station intent extra round trips`() {
         val station = station("a").copy(hls = 1)
         val encoded = WearPlaybackService.playStationIntent(
-            org.robolectric.RuntimeEnvironment.getApplication(), station
+            org.robolectric.RuntimeEnvironment.getApplication(),
+            station
         ).getStringExtra(WearPlaybackService.EXTRA_STATION)!!
         assertEquals(station, WearPlaybackService.decodeStation(encoded))
         assertNull(WearPlaybackService.decodeStation("garbage"))

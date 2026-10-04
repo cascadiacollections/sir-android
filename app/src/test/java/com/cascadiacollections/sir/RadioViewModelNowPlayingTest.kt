@@ -27,7 +27,8 @@ class RadioViewModelNowPlayingTest {
     private val app: Application
         get() = RuntimeEnvironment.getApplication()
 
-    private val station = Station(id = "np-1", name = "Now Playing FM", url = "https://example.com/np")
+    private val station =
+        Station(id = "np-1", name = "Now Playing FM", url = "https://example.com/np")
 
     @Before
     fun reset() = runBlocking {

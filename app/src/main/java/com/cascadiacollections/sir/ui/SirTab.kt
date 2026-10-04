@@ -15,12 +15,9 @@ import com.cascadiacollections.sir.R
  * Declared in display order; the shell renders the navigation bar straight from
  * [entries], so adding a tab here is the only change needed.
  */
-enum class SirTab(
-    @StringRes val labelRes: Int,
-    val icon: ImageVector,
-) {
+enum class SirTab(@StringRes val labelRes: Int, val icon: ImageVector) {
     LISTEN(R.string.tab_listen, Icons.Default.PlayCircle),
     BROWSE(R.string.tab_browse, Icons.Default.Search),
     LIBRARY(R.string.tab_library, Icons.Default.LibraryMusic),
-    SETTINGS(R.string.tab_settings, Icons.Default.Settings),
+    SETTINGS(R.string.tab_settings, Icons.Default.Settings)
 }

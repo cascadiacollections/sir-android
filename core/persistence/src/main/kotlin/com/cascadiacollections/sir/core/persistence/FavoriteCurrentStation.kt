@@ -33,8 +33,7 @@ object FavoriteCurrentStation {
     }
 
     /** Whether [selected] can be saved at all (see [Outcome.NothingSelected]). */
-    fun isFavoritable(selected: Station?): Boolean =
-        selected != null && selected.id.isNotBlank() && selected.isPlayable
+    fun isFavoritable(selected: Station?): Boolean = selected != null && selected.id.isNotBlank() && selected.isPlayable
 
     /** Whether the current selection is in [saved] — what the notification heart shows. */
     fun isSaved(selected: Station?, saved: List<Station>): Boolean =

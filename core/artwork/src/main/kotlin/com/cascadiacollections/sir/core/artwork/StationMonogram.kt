@@ -13,7 +13,7 @@ data class StationMonogram(
     /** One or two uppercase characters, never empty. */
     val initials: String,
     /** Hue in degrees, `[0, 360)`. Saturation and lightness are a theming decision for the UI. */
-    val hue: Float,
+    val hue: Float
 ) {
     companion object {
         /** Shown when a name has no letters or digits at all. */
@@ -37,7 +37,9 @@ data class StationMonogram(
             val words = name.split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
             if (words.isEmpty()) return FALLBACK_INITIAL
             return words.take(2)
-                .joinToString(separator = "") { word -> String(Character.toChars(word.codePointAt(0))) }
+                .joinToString(separator = "") { word ->
+                    String(Character.toChars(word.codePointAt(0)))
+                }
                 .uppercase(Locale.ROOT)
         }
 

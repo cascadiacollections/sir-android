@@ -6,6 +6,8 @@ import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,14 +15,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,44 +42,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.cascadiacollections.sir.PlaylistImportResult
 import com.cascadiacollections.sir.R
 import com.cascadiacollections.sir.RadioBrowserViewModel
 import com.cascadiacollections.sir.core.model.Station
-import com.cascadiacollections.sir.core.persistence.StationCollections
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material3.Badge
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import com.cascadiacollections.sir.core.persistence.FavoritesBackupCodec
+import com.cascadiacollections.sir.core.persistence.StationCollections
 import com.cascadiacollections.sir.core.persistence.TopTracks
 import com.cascadiacollections.sir.core.persistence.TopTracksTimeframe
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * Saved stations, listening history, Top Tracks and the Recently Heard drill-in.
@@ -80,7 +80,7 @@ import kotlinx.coroutines.withContext
 fun LibraryScreen(
     viewModel: RadioBrowserViewModel,
     modifier: Modifier = Modifier,
-    onOpenRecentlyHeard: () -> Unit = {},
+    onOpenRecentlyHeard: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -110,7 +110,9 @@ fun LibraryScreen(
     val showImportResult: (PlaylistImportResult) -> Unit = { result ->
         val message = when (result) {
             is PlaylistImportResult.Empty -> resources.getString(R.string.import_empty)
+
             is PlaylistImportResult.Unreadable -> resources.getString(R.string.import_unreadable)
+
             is PlaylistImportResult.Imported -> resources.getString(
                 R.string.import_result,
                 result.added,
@@ -211,7 +213,9 @@ fun LibraryScreen(
                 ImportExportRow(
                     onImport = { importLauncher.launch(arrayOf("*/*")) },
                     onExport = { exportLauncher.launch("sir_stations.m3u") },
-                    onExportBackup = { backupLauncher.launch(FavoritesBackupCodec.DEFAULT_FILE_NAME) },
+                    onExportBackup = {
+                        backupLauncher.launch(FavoritesBackupCodec.DEFAULT_FILE_NAME)
+                    },
                     exportEnabled = true
                 )
             }
@@ -244,7 +248,11 @@ fun LibraryScreen(
                                         onClick = {},
                                         modifier = Modifier.draggableHandle(
                                             onDragStopped = {
-                                                viewModel.reorderSavedStations(savedOrder.map { it.id })
+                                                viewModel.reorderSavedStations(
+                                                    savedOrder.map {
+                                                        it.id
+                                                    }
+                                                )
                                             }
                                         )
                                     ) {
@@ -338,11 +346,17 @@ fun LibraryScreen(
                     )
                 }
             } else {
-                items(topTracks, key = { "top-${it.title.lowercase()}\u001F${it.artist.lowercase()}" }) { track ->
+                items(topTracks, key = {
+                    "top-${it.title.lowercase()}\u001F${it.artist.lowercase()}"
+                }) { track ->
                     ListItem(
                         leadingContent = { TrackArtwork(track.artworkUrl) },
-                        headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = { Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        headlineContent = {
+                            Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        },
+                        supportingContent = {
+                            Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        },
                         trailingContent = {
                             Text(
                                 text = stringResource(R.string.top_track_play_count, track.playCount),
@@ -380,10 +394,7 @@ fun LibraryScreen(
 private fun savedKey(station: Station): String = "saved-${station.id}"
 
 @Composable
-private fun TopTracksTimeframePicker(
-    selected: TopTracksTimeframe,
-    onSelect: (TopTracksTimeframe) -> Unit
-) {
+private fun TopTracksTimeframePicker(selected: TopTracksTimeframe, onSelect: (TopTracksTimeframe) -> Unit) {
     val options = TopTracksTimeframe.entries
     SingleChoiceSegmentedButtonRow(
         modifier = Modifier
@@ -468,20 +479,18 @@ private suspend fun readPlaylistText(context: Context, uri: Uri): String? = with
 }
 
 /** Writes [text] to the document at [uri]; returns whether the write succeeded. */
-private suspend fun writePlaylistText(context: Context, uri: Uri, text: String): Boolean =
-    withContext(Dispatchers.IO) {
-        runCatching {
-            context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(text) }
-        }.isSuccess
-    }
+private suspend fun writePlaylistText(context: Context, uri: Uri, text: String): Boolean = withContext(Dispatchers.IO) {
+    runCatching {
+        context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(text) }
+    }.isSuccess
+}
 
 /**
  * The picked document's display name, used to tell PLS from M3U (and as a fallback signal
  * for a JSON backup). Content pickers rarely report a trustworthy MIME type for playlist
  * files, so the file extension is the more reliable signal.
  */
-private fun displayName(context: Context, uri: Uri): String? =
-    runCatching {
-        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-            ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
-    }.getOrNull() ?: uri.lastPathSegment
+private fun displayName(context: Context, uri: Uri): String? = runCatching {
+    context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+        ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+}.getOrNull() ?: uri.lastPathSegment

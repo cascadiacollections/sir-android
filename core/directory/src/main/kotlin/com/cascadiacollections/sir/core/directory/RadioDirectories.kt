@@ -1,10 +1,10 @@
 package com.cascadiacollections.sir.core.directory
 
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 /**
  * Composition root for the directory layer.
@@ -39,7 +39,9 @@ object RadioDirectories {
                 userAgent = userAgent
             )
         )
-        val persisted = snapshotStore?.let { SnapshotRadioDirectory(cached, it, backgroundScope) } ?: cached
+        val persisted = snapshotStore?.let {
+            SnapshotRadioDirectory(cached, it, backgroundScope)
+        } ?: cached
         return CuratedFallbackDirectory(persisted)
     }
 

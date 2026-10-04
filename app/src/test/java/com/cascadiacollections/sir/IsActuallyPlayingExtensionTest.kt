@@ -9,11 +9,10 @@ import org.junit.Test
 
 class IsActuallyPlayingExtensionTest {
 
-    private fun mockPlayer(playWhenReady: Boolean, playbackState: Int): Player =
-        mockk {
-            every { this@mockk.playWhenReady } returns playWhenReady
-            every { this@mockk.playbackState } returns playbackState
-        }
+    private fun mockPlayer(playWhenReady: Boolean, playbackState: Int): Player = mockk {
+        every { this@mockk.playWhenReady } returns playWhenReady
+        every { this@mockk.playbackState } returns playbackState
+    }
 
     @Test
     fun `isActuallyPlaying true when playWhenReady and STATE_READY`() {

@@ -21,9 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Stops scanning immediately when devices are found or app goes to background.
  */
-class CastDeviceDetector(
-    private val context: Context
-) : DefaultLifecycleObserver {
+class CastDeviceDetector(private val context: Context) : DefaultLifecycleObserver {
 
     private val _castDevicesAvailable = MutableStateFlow(false)
     val castDevicesAvailable: StateFlow<Boolean> = _castDevicesAvailable.asStateFlow()
@@ -50,7 +48,9 @@ class CastDeviceDetector(
     }
 
     private fun checkForCastDevices(router: MediaRouter) {
-        val hasCastDevices = router.routes.any { it.matchesSelector(routeSelector) && !it.isDefault }
+        val hasCastDevices = router.routes.any {
+            it.matchesSelector(routeSelector) && !it.isDefault
+        }
         if (hasCastDevices && !_castDevicesAvailable.value) {
             _castDevicesAvailable.value = true
             stopScanning() // Stop scanning once devices are found to save battery
@@ -114,4 +114,3 @@ class CastDeviceDetector(
         mediaRouter = null
     }
 }
-

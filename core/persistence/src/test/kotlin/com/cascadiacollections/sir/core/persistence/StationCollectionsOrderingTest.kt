@@ -12,12 +12,22 @@ class StationCollectionsOrderingTest {
 
     @Test
     fun `moving down shifts the stations in between up`() {
-        assertEquals(listOf("b", "c", "a", "d"), StationCollections.moveFavorite(abcd, 0, 2).map { it.id })
+        assertEquals(
+            listOf("b", "c", "a", "d"),
+            StationCollections.moveFavorite(abcd, 0, 2).map {
+                it.id
+            }
+        )
     }
 
     @Test
     fun `moving up shifts the stations in between down`() {
-        assertEquals(listOf("d", "a", "b", "c"), StationCollections.moveFavorite(abcd, 3, 0).map { it.id })
+        assertEquals(
+            listOf("d", "a", "b", "c"),
+            StationCollections.moveFavorite(abcd, 3, 0).map {
+                it.id
+            }
+        )
     }
 
     @Test

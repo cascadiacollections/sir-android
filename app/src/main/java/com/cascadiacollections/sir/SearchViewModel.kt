@@ -90,10 +90,8 @@ data class SearchUiState(
  * Saving and playing stay on [RadioBrowserViewModel], which the library tab shares.
  */
 @OptIn(FlowPreview::class)
-class SearchViewModel(
-    private val directory: RadioDirectory,
-    private val shelfStore: RecentShelfStore? = null
-) : ViewModel() {
+class SearchViewModel(private val directory: RadioDirectory, private val shelfStore: RecentShelfStore? = null) :
+    ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
@@ -108,11 +106,7 @@ class SearchViewModel(
             val debounced: Boolean,
             override val generation: Int
         ) : Request
-        data class Genre(
-            val tag: Tag,
-            val filters: StationSearchFilters,
-            override val generation: Int
-        ) : Request
+        data class Genre(val tag: Tag, val filters: StationSearchFilters, override val generation: Int) : Request
     }
 
     private val requests = Channel<Request>(Channel.UNLIMITED)
@@ -148,9 +142,14 @@ class SearchViewModel(
                 when (update) {
                     is DiscoveryUpdate.TopStations -> if (update.limit == POPULAR_LIMIT) {
                         popularUpdates++
-                        _uiState.update { it.copy(popularStations = update.stations, popularLoadFailed = false) }
+                        _uiState.update {
+                            it.copy(popularStations = update.stations, popularLoadFailed = false)
+                        }
                     }
-                    is DiscoveryUpdate.TopTags -> if (update.limit == RadioDirectory.DEFAULT_TAG_LIMIT && update.tags.isNotEmpty()) {
+
+                    is DiscoveryUpdate.TopTags -> if (update.limit == RadioDirectory.DEFAULT_TAG_LIMIT &&
+                        update.tags.isNotEmpty()
+                    ) {
                         genreUpdates++
                         _uiState.update { it.copy(genres = update.tags) }
                     }
@@ -180,7 +179,9 @@ class SearchViewModel(
      */
     fun hideFromRecentlyPlayed(station: Station) {
         val store = shelfStore ?: return
-        _uiState.update { state -> state.copy(recentShelf = state.recentShelf.filterNot { it.id == station.id }) }
+        _uiState.update { state ->
+            state.copy(recentShelf = state.recentShelf.filterNot { it.id == station.id })
+        }
         viewModelScope.launch { store.hideRecentStation(station.id) }
     }
 
@@ -199,14 +200,18 @@ class SearchViewModel(
         popularJob?.cancel()
         popularJob = viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
-            val tags = async { directory.topTags(RadioDirectory.DEFAULT_TAG_LIMIT, forceRefresh = true) }
+            val tags = async {
+                directory.topTags(RadioDirectory.DEFAULT_TAG_LIMIT, forceRefresh = true)
+            }
             val stations = directory.topStations(POPULAR_LIMIT, forceRefresh = true)
             tags.await().onSuccess { genres ->
                 if (genres.isNotEmpty()) _uiState.update { it.copy(genres = genres) }
             }
             ensureActive()
             // A superseded load's flags are cleared here, since its own final write never ran.
-            _uiState.update { it.withPopularResult(stations).copy(isRefreshing = false, isLoadingPopular = false) }
+            _uiState.update {
+                it.withPopularResult(stations).copy(isRefreshing = false, isLoadingPopular = false)
+            }
         }
     }
 
@@ -222,7 +227,9 @@ class SearchViewModel(
         val trimmed = text.trim()
 
         if (trimmed.isEmpty()) {
-            _uiState.update { it.copy(query = text, selectedGenre = null, phase = SearchPhase.Idle) }
+            _uiState.update {
+                it.copy(query = text, selectedGenre = null, phase = SearchPhase.Idle)
+            }
             lastNameText = null
             submit(Request.Idle(nextGeneration()))
             return
@@ -289,6 +296,7 @@ class SearchViewModel(
                 _uiState.update { it.copy(phase = SearchPhase.Searching) }
                 submit(Request.Genre(genre, state.filters, nextGeneration()))
             }
+
             trimmed.isNotEmpty() -> {
                 _uiState.update { it.copy(phase = SearchPhase.Searching) }
                 requestName(trimmed, state.filters, debounced = false)
@@ -311,10 +319,12 @@ class SearchViewModel(
         if (request.generation != generation) return
         val result = when (request) {
             is Request.Idle -> return
+
             is Request.Name -> {
                 _uiState.update { it.copy(phase = SearchPhase.Searching) }
                 directory.search(request.text, SEARCH_LIMIT, request.filters)
             }
+
             is Request.Genre -> {
                 _uiState.update { it.copy(phase = SearchPhase.Searching) }
                 directory.stationsByTag(request.tag.name, SEARCH_LIMIT, request.filters)
@@ -347,31 +357,40 @@ class SearchViewModel(
             ensureActive()
             val superseded = popularUpdates != updatesBefore && result.isSuccess
             _uiState.update {
-                (if (superseded) it else it.withPopularResult(result)).copy(isLoadingPopular = false, isRefreshing = false)
+                (
+                    if (superseded) {
+                        it
+                    } else {
+                        it.withPopularResult(
+                            result
+                        )
+                    }
+                    ).copy(isLoadingPopular = false, isRefreshing = false)
             }
         }
     }
 
-    private fun SearchUiState.withPopularResult(result: Result<List<Station>>): SearchUiState =
-        result.fold(
-            onSuccess = { copy(popularStations = it, popularLoadFailed = false) },
-            onFailure = { copy(popularLoadFailed = true) }
-        )
+    private fun SearchUiState.withPopularResult(result: Result<List<Station>>): SearchUiState = result.fold(
+        onSuccess = { copy(popularStations = it, popularLoadFailed = false) },
+        onFailure = { copy(popularLoadFailed = true) }
+    )
 
     /** Replaces the curated genres with the live list; a failure keeps the curated ones. */
     private fun loadGenres() {
         viewModelScope.launch {
             val updatesBefore = genreUpdates
             directory.topTags().onSuccess { tags ->
-                if (tags.isNotEmpty() && genreUpdates == updatesBefore) _uiState.update { it.copy(genres = tags) }
+                if (tags.isNotEmpty() && genreUpdates == updatesBefore) {
+                    _uiState.update {
+                        it.copy(genres = tags)
+                    }
+                }
             }
         }
     }
 
-    class Factory(
-        private val directory: RadioDirectory,
-        private val shelfStore: RecentShelfStore? = null
-    ) : ViewModelProvider.Factory {
+    class Factory(private val directory: RadioDirectory, private val shelfStore: RecentShelfStore? = null) :
+        ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
             return SearchViewModel(directory, shelfStore) as T

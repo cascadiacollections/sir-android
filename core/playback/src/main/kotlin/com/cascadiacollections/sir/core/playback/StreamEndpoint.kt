@@ -15,7 +15,7 @@ enum class StreamUrlKind {
      * A `.pls` or `.m3u` playlist whose entries point at the real stream. Imported and
      * custom stations, and directory entries without `url_resolved`, often carry one.
      */
-    PLAYLIST,
+    PLAYLIST
 }
 
 /** The URL the player should actually open, and whether it is HLS. */
@@ -45,12 +45,11 @@ object StreamEndpoints {
      * The endpoint for [url] when it can be decided without a network round trip, or
      * null when [url] is a playlist that has to be fetched first.
      */
-    fun withoutFetch(url: String, hlsHint: Boolean = false): StreamEndpoint? =
-        when (classify(url, hlsHint)) {
-            StreamUrlKind.DIRECT -> StreamEndpoint(url)
-            StreamUrlKind.HLS -> StreamEndpoint(url, isHls = true)
-            StreamUrlKind.PLAYLIST -> null
-        }
+    fun withoutFetch(url: String, hlsHint: Boolean = false): StreamEndpoint? = when (classify(url, hlsHint)) {
+        StreamUrlKind.DIRECT -> StreamEndpoint(url)
+        StreamUrlKind.HLS -> StreamEndpoint(url, isHls = true)
+        StreamUrlKind.PLAYLIST -> null
+    }
 
     /**
      * The endpoint for playlist [url] given its fetched [body] — null when the fetch
@@ -64,7 +63,9 @@ object StreamEndpoints {
                 url = content.url,
                 isHls = classify(content.url) == StreamUrlKind.HLS
             )
+
             PlaylistContent.Hls -> StreamEndpoint(url, isHls = true)
+
             PlaylistContent.Empty, null -> StreamEndpoint(url)
         }
 

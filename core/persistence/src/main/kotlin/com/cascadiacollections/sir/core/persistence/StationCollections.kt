@@ -75,7 +75,7 @@ object StationCollections {
         return MergeResult(
             stations = current + added,
             added = added.size,
-            skipped = imported.size - added.size,
+            skipped = imported.size - added.size
         )
     }
 
@@ -101,11 +101,7 @@ object StationCollections {
      * capped at [limit]. Replaying an existing entry moves it to the front rather than
      * duplicating it.
      */
-    fun recordRecent(
-        current: List<Station>,
-        station: Station,
-        limit: Int = RECENTS_LIMIT
-    ): List<Station> {
+    fun recordRecent(current: List<Station>, station: Station, limit: Int = RECENTS_LIMIT): List<Station> {
         require(limit > 0) { "limit must be positive" }
         if (!station.isPlayable) return current
         return (listOf(station) + current.filterNot { it.id == station.id }).take(limit)
@@ -122,11 +118,8 @@ object StationCollections {
      * gap instead of pulling the next-oldest station up into it (ShoutKit's behaviour) —
      * the shelf is "what you played last", not "the last five you didn't hide".
      */
-    fun recentShelf(
-        recents: List<Station>,
-        hiddenIds: Set<String>,
-        limit: Int = RECENT_SHELF_LIMIT
-    ): List<Station> = recents.take(limit).filterNot { it.id in hiddenIds }
+    fun recentShelf(recents: List<Station>, hiddenIds: Set<String>, limit: Int = RECENT_SHELF_LIMIT): List<Station> =
+        recents.take(limit).filterNot { it.id in hiddenIds }
 
     /**
      * Hidden shelf ids after [played] is selected: playing a station again un-hides it,

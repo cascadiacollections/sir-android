@@ -51,10 +51,9 @@ object QuickPlaySelection {
      * Up to two initials for the artwork placeholder: the first letter of the first two
      * words ("Radio Paradise" → "RP"), or the first letter of a one-word name.
      */
-    fun initials(name: String): String =
-        name.split(Regex("[\\s_\\-]+"))
-            .mapNotNull { word -> word.firstOrNull { it.isLetterOrDigit() } }
-            .take(2)
-            .joinToString("")
-            .uppercase(Locale.ROOT)
+    fun initials(name: String): String = name.split(Regex("[\\s_\\-]+"))
+        .mapNotNull { word -> word.firstOrNull { it.isLetterOrDigit() } }
+        .take(2)
+        .joinToString("")
+        .uppercase(Locale.ROOT)
 }

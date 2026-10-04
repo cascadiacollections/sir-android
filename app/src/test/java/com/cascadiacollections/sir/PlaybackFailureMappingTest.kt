@@ -34,16 +34,17 @@ import org.robolectric.annotation.Config
 @OptIn(UnstableApi::class)
 class PlaybackFailureMappingTest {
 
-    private fun exception(errorCode: Int, cause: Throwable? = null) =
-        PlaybackException("test", cause, errorCode)
+    private fun exception(errorCode: Int, cause: Throwable? = null) = PlaybackException("test", cause, errorCode)
 
     private fun invalidResponseCode(responseCode: Int) = HttpDataSource.InvalidResponseCodeException(
         responseCode,
-        /* responseMessage = */ null,
-        /* cause = */ null,
+        /* responseMessage = */
+        null,
+        /* cause = */
+        null,
         emptyMap(),
         DataSpec.Builder().setUri("https://stream.example/live").build(),
-        ByteArray(0),
+        ByteArray(0)
     )
 
     @Test
@@ -68,7 +69,7 @@ class PlaybackFailureMappingTest {
     fun `a 404 response code is read off the cause and is not retried`() {
         val failure = exception(
             PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
-            cause = invalidResponseCode(404),
+            cause = invalidResponseCode(404)
         ).toStreamFailure()
 
         assertEquals(StreamFailure.StationUnavailable(404), failure)
@@ -151,7 +152,7 @@ class PlaybackFailureMappingTest {
             StreamFailure.StationUnavailable(404),
             StreamFailure.Unplayable,
             StreamFailure.Transient,
-            StreamFailure.Stalled,
+            StreamFailure.Stalled
         ).forEach { failure ->
             assertTrue("no message for $failure", failure.messageRes() != 0)
         }
@@ -181,10 +182,7 @@ class PlaybackFailureMappingTest {
         )
     }
 
-    private fun loadError(
-        exception: IOException,
-        errorCount: Int,
-    ) = LoadErrorHandlingPolicy.LoadErrorInfo(
+    private fun loadError(exception: IOException, errorCount: Int) = LoadErrorHandlingPolicy.LoadErrorInfo(
         LoadEventInfo(
             LoadEventInfo.getNewId(),
             DataSpec.Builder().setUri("https://stream.example/live").build(),
@@ -192,10 +190,10 @@ class PlaybackFailureMappingTest {
             emptyMap(),
             SystemClock.elapsedRealtime(),
             0,
-            0,
+            0
         ),
         MediaLoadData(C.DATA_TYPE_MEDIA),
         exception,
-        errorCount,
+        errorCount
     )
 }

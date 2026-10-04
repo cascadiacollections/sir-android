@@ -1,11 +1,11 @@
 package com.cascadiacollections.sir.core.artwork
 
+import java.util.Locale
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import java.util.Locale
 
 /**
  * The pure half of the iTunes Search lookup: building the request and reading the answer.
@@ -33,14 +33,13 @@ object ITunesSearch {
      * The search URL for [artist] and [title] in [country]'s storefront. The query string is
      * encoded by [HttpUrl.Builder], so neither half needs escaping by the caller.
      */
-    fun searchUrl(artist: String, title: String, country: String?): HttpUrl =
-        BASE_URL.newBuilder()
-            .addQueryParameter("term", "${artist.trim()} ${title.trim()}")
-            .addQueryParameter("media", "music")
-            .addQueryParameter("entity", "song")
-            .addQueryParameter("limit", "1")
-            .addQueryParameter("country", storefront(country))
-            .build()
+    fun searchUrl(artist: String, title: String, country: String?): HttpUrl = BASE_URL.newBuilder()
+        .addQueryParameter("term", "${artist.trim()} ${title.trim()}")
+        .addQueryParameter("media", "music")
+        .addQueryParameter("entity", "song")
+        .addQueryParameter("limit", "1")
+        .addQueryParameter("country", storefront(country))
+        .build()
 
     /**
      * A two-letter storefront code. `Locale.getCountry()` can be empty (a language-only
@@ -48,7 +47,14 @@ object ITunesSearch {
      */
     fun storefront(country: String?): String {
         val code = country?.trim().orEmpty()
-        return if (code.length == 2 && code.all { it.isLetter() }) code.uppercase(Locale.ROOT) else DEFAULT_COUNTRY
+        return if (code.length == 2 && code.all {
+                it.isLetter()
+            }
+        ) {
+            code.uppercase(Locale.ROOT)
+        } else {
+            DEFAULT_COUNTRY
+        }
     }
 
     /**
@@ -63,7 +69,7 @@ object ITunesSearch {
         val thumbnail = first.artworkUrl100?.takeIf { it.isNotBlank() } ?: return null
         return AlbumArt(
             artworkUrl = upscale(thumbnail),
-            trackViewUrl = first.trackViewUrl?.takeIf { it.isNotBlank() },
+            trackViewUrl = first.trackViewUrl?.takeIf { it.isNotBlank() }
         )
     }
 
@@ -74,8 +80,5 @@ object ITunesSearch {
     private data class SearchResponse(val results: List<SearchResult> = emptyList())
 
     @Serializable
-    private data class SearchResult(
-        val artworkUrl100: String? = null,
-        val trackViewUrl: String? = null,
-    )
+    private data class SearchResult(val artworkUrl100: String? = null, val trackViewUrl: String? = null)
 }

@@ -35,6 +35,7 @@ data class RadioBrowserUiState(
 sealed interface PlaylistImportResult {
     data class Imported(val added: Int, val skipped: Int) : PlaylistImportResult
     data object Empty : PlaylistImportResult
+
     /** The file was a favourites backup this build can't read (bad JSON or schema). */
     data object Unreadable : PlaylistImportResult
 }
@@ -193,8 +194,8 @@ class RadioBrowserViewModel(
         }
     }
 
-    fun isStationSaved(station: Station): Boolean {
-        return _uiState.value.savedStations.any { it.id == station.id }
+    fun isStationSaved(station: Station): Boolean = _uiState.value.savedStations.any {
+        it.id == station.id
     }
 
     fun removeRecentStation(stationId: String) {
@@ -308,7 +309,9 @@ class RadioBrowserViewModel(
             if (station.isPlayable) return@mapNotNull station
             found[station.id]?.takeIf { it.isPlayable }?.let { fetched ->
                 fetched.copy(
-                    name = station.name.takeUnless { it.isBlank() || it == station.id } ?: fetched.name,
+                    name = station.name.takeUnless {
+                        it.isBlank() || it == station.id
+                    } ?: fetched.name,
                     favicon = station.favicon ?: fetched.favicon,
                     tags = station.tags.ifBlank { fetched.tags }
                 )

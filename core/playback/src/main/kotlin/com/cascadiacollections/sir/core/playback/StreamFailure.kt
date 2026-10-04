@@ -31,7 +31,7 @@ enum class StreamErrorKind {
     IO,
 
     /** A decoder, renderer or other in-player failure. */
-    PLAYBACK,
+    PLAYBACK
 }
 
 /**
@@ -84,9 +84,13 @@ object StreamFailureClassifier {
 
     fun classify(kind: StreamErrorKind, responseCode: Int? = null): StreamFailure = when (kind) {
         StreamErrorKind.NO_NETWORK -> StreamFailure.NoNetwork
+
         StreamErrorKind.NOT_FOUND -> StreamFailure.StationUnavailable(responseCode)
+
         StreamErrorKind.BAD_CONTENT_TYPE -> StreamFailure.StationUnavailable(responseCode)
+
         StreamErrorKind.UNPLAYABLE -> StreamFailure.Unplayable
+
         StreamErrorKind.BAD_HTTP_STATUS ->
             if (responseCode != null && isPermanent(responseCode)) {
                 StreamFailure.StationUnavailable(responseCode)
@@ -96,7 +100,7 @@ object StreamFailureClassifier {
 
         StreamErrorKind.TIMEOUT,
         StreamErrorKind.IO,
-        StreamErrorKind.PLAYBACK,
+        StreamErrorKind.PLAYBACK
         -> StreamFailure.Transient
     }
 

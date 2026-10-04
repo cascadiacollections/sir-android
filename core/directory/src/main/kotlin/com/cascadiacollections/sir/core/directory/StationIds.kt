@@ -9,7 +9,8 @@ package com.cascadiacollections.sir.core.directory
  */
 object StationIds {
 
-    private val UUID = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+    private val UUID =
+        Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
     /** True when [id] is a canonical 8-4-4-4-12 hex UUID, i.e. a radio-browser station. */
     fun isRadioBrowserUuid(id: String): Boolean = UUID.matches(id)

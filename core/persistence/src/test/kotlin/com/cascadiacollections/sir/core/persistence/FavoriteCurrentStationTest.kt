@@ -59,7 +59,10 @@ class FavoriteCurrentStationTest {
 
         assertEquals(Outcome.DefaultStream, outcome)
         assertEquals(listOf(a), FavoriteCurrentStation.apply(listOf(a), outcome))
-        assertEquals(Outcome.DefaultStream, FavoriteCurrentStation.decide(selected = null, saved = emptyList(), toggle = true))
+        assertEquals(
+            Outcome.DefaultStream,
+            FavoriteCurrentStation.decide(selected = null, saved = emptyList(), toggle = true)
+        )
     }
 
     @Test

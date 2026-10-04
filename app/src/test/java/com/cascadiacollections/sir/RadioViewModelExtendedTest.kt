@@ -1,10 +1,7 @@
 package com.cascadiacollections.sir
 
 import android.app.Application
-import android.net.ConnectivityManager
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
-import io.mockk.every
-import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -127,7 +124,9 @@ class RadioViewModelExtendedTest {
     fun `Factory creates correct type`() {
         val settings = SettingsRepository(app)
         val factory = RadioViewModel.Factory(app, settings)
-        val vm = factory.create(RadioViewModel::class.java).also { coroutineRule.registerViewModel(it) }
+        val vm = factory.create(RadioViewModel::class.java).also {
+            coroutineRule.registerViewModel(it)
+        }
         assertEquals(RadioViewModel::class.java, vm::class.java)
     }
 

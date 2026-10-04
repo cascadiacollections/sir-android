@@ -31,15 +31,19 @@ class StreamEndpointsTest {
     @Test
     fun `hls flag overrides the path`() {
         assertEquals(StreamUrlKind.HLS, StreamEndpoints.classify("https://example.com/live", hlsHint = true))
-        assertEquals(StreamEndpoint("https://example.com/live", isHls = true),
-            StreamEndpoints.withoutFetch("https://example.com/live", hlsHint = true))
+        assertEquals(
+            StreamEndpoint("https://example.com/live", isHls = true),
+            StreamEndpoints.withoutFetch("https://example.com/live", hlsHint = true)
+        )
     }
 
     @Test
     fun `direct and hls urls need no fetch`() {
         assertEquals(StreamEndpoint("http://example.com/s"), StreamEndpoints.withoutFetch("http://example.com/s"))
-        assertEquals(StreamEndpoint("https://example.com/a.m3u8", isHls = true),
-            StreamEndpoints.withoutFetch("https://example.com/a.m3u8"))
+        assertEquals(
+            StreamEndpoint("https://example.com/a.m3u8", isHls = true),
+            StreamEndpoints.withoutFetch("https://example.com/a.m3u8")
+        )
         assertNull(StreamEndpoints.withoutFetch("http://example.com/listen.pls"))
     }
 
@@ -69,9 +73,13 @@ class StreamEndpointsTest {
 
     @Test
     fun `failed or empty fetch falls back to the original url`() {
-        assertEquals(StreamEndpoint("http://example.com/listen.pls"),
-            StreamEndpoints.fromPlaylist("http://example.com/listen.pls", null))
-        assertEquals(StreamEndpoint("http://example.com/listen.m3u"),
-            StreamEndpoints.fromPlaylist("http://example.com/listen.m3u", "garbage"))
+        assertEquals(
+            StreamEndpoint("http://example.com/listen.pls"),
+            StreamEndpoints.fromPlaylist("http://example.com/listen.pls", null)
+        )
+        assertEquals(
+            StreamEndpoint("http://example.com/listen.m3u"),
+            StreamEndpoints.fromPlaylist("http://example.com/listen.m3u", "garbage")
+        )
     }
 }

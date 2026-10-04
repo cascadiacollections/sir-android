@@ -67,12 +67,14 @@ class PlayLastComplicationService : SuspendingComplicationDataSourceService() {
                     .setMonochromaticImage(MonochromaticImage.Builder(icon).build())
                     .setTapAction(tapAction)
                     .build()
+
                 ComplicationType.SMALL_IMAGE -> SmallImageComplicationData.Builder(
                     smallImage = SmallImage.Builder(icon, SmallImageType.ICON).build(),
                     contentDescription = description
                 )
                     .setTapAction(tapAction)
                     .build()
+
                 else -> null
             }
         }

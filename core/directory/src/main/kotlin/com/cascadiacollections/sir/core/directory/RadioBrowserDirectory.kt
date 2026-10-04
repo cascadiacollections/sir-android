@@ -2,6 +2,11 @@ package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.UnknownHostException
+import java.util.Locale
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -14,11 +19,6 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
-import java.net.ConnectException
-import java.net.NoRouteToHostException
-import java.net.UnknownHostException
-import java.util.Locale
 
 /**
  * [RadioDirectory] backed by the public radio-browser.info API.
@@ -45,13 +45,9 @@ class RadioBrowserDirectory(
     private val json = Json { ignoreUnknownKeys = true }
 
     @Serializable
-    private data class WireTag(
-        val name: String = "",
-        @SerialName("stationcount") val stationCount: Int = 0
-    )
+    private data class WireTag(val name: String = "", @SerialName("stationcount") val stationCount: Int = 0)
 
-    override suspend fun search(query: StationQuery): Result<List<Station>> =
-        search(query, StationSearchFilters.NONE)
+    override suspend fun search(query: StationQuery): Result<List<Station>> = search(query, StationSearchFilters.NONE)
 
     override suspend fun search(query: StationQuery, filters: StationSearchFilters): Result<List<Station>> {
         if (query.isBlank) return Result.success(emptyList())
@@ -64,16 +60,14 @@ class RadioBrowserDirectory(
     }
 
     override suspend fun topStations(limit: Int): Result<List<Station>> =
-        fetchStations(limit, StationSearchFilters.NONE) { base -> base.addPathSegments("json/stations/topclick") }
+        fetchStations(limit, StationSearchFilters.NONE) { base ->
+            base.addPathSegments("json/stations/topclick")
+        }
 
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
         stationsByTag(tag, limit, StationSearchFilters.NONE)
 
-    override suspend fun stationsByTag(
-        tag: String,
-        limit: Int,
-        filters: StationSearchFilters
-    ): Result<List<Station>> {
+    override suspend fun stationsByTag(tag: String, limit: Int, filters: StationSearchFilters): Result<List<Station>> {
         val normalized = tag.trim()
         if (normalized.isEmpty()) return Result.success(emptyList())
         // radio-browser stores tags lowercase; the genre list capitalizes them for display.
@@ -189,7 +183,9 @@ class RadioBrowserDirectory(
         val deadline = nanoTime() + failoverBudgetMs * NANOS_PER_MILLI
         val mirrors = mirrorProvider.mirrors()
             .mapNotNull { it.toHttpUrlOrNull() }
-            .ifEmpty { return@withContext Result.failure(IOException("No usable radio-browser mirror")) }
+            .ifEmpty {
+                return@withContext Result.failure(IOException("No usable radio-browser mirror"))
+            }
         val attempts = retryPolicy.maxAttempts
         var lastFailure: Throwable? = null
 

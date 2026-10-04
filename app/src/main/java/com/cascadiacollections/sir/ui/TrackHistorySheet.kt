@@ -38,11 +38,7 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TrackHistorySheet(
-    history: List<HeardTrack>,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun TrackHistorySheet(history: List<HeardTrack>, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -78,7 +74,9 @@ fun TrackHistorySheet(
                         }
                         ListItem(
                             leadingContent = { TrackArtwork(entry.artworkUrl) },
-                            headlineContent = { Text(entry.title.ifBlank { stringResource(R.string.unknown_track) }) },
+                            headlineContent = {
+                                Text(entry.title.ifBlank { stringResource(R.string.unknown_track) })
+                            },
                             supportingContent = {
                                 Text(listOfNotNull(entry.artist, timeLabel).joinToString(" • "))
                             },

@@ -17,8 +17,9 @@ enum class SleepTimerDuration(val minutes: Int, @StringRes val labelRes: Int) {
     val isActive: Boolean get() = minutes > 0
 
     companion object {
-        fun fromMinutes(minutes: Int): SleepTimerDuration =
-            entries.find { it.minutes == minutes } ?: OFF
+        fun fromMinutes(minutes: Int): SleepTimerDuration = entries.find {
+            it.minutes == minutes
+        } ?: OFF
     }
 }
 

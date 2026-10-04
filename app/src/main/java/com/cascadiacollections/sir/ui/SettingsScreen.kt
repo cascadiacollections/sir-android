@@ -135,7 +135,9 @@ fun SettingsContent(
                 value = stringResource(sleepTimerDuration.labelRes),
                 onValueChange = {},
                 readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sleepTimerExpanded) },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = sleepTimerExpanded)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -157,9 +159,14 @@ fun SettingsContent(
                                         putExtra(RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES, duration.minutes)
                                     }
                                 )
-                                val message = if (duration == SleepTimerDuration.OFF)
+                                val message = if (duration == SleepTimerDuration.OFF) {
                                     resources.getString(R.string.sleep_timer_off)
-                                else resources.getString(R.string.sleep_timer_set, resources.getString(duration.labelRes))
+                                } else {
+                                    resources.getString(
+                                        R.string.sleep_timer_set,
+                                        resources.getString(duration.labelRes)
+                                    )
+                                }
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                             }
                         }
@@ -190,7 +197,9 @@ fun SettingsContent(
                 },
                 onValueChange = {},
                 readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = equalizerExpanded) },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = equalizerExpanded)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -258,11 +267,14 @@ fun SettingsContent(
         if (castModuleState !is CastModuleState.Unavailable) {
             val castStatusText = when (castModuleState) {
                 is CastModuleState.Installed -> stringResource(R.string.chromecast_enabled)
+
                 is CastModuleState.Installing -> {
                     val progress = (castModuleState as CastModuleState.Installing).progress
                     "${stringResource(R.string.chromecast_downloading)} ${(progress * 100).toInt()}%"
                 }
+
                 is CastModuleState.Failed -> stringResource(R.string.chromecast_not_available)
+
                 else -> null
             }
             ListItem(
@@ -271,7 +283,9 @@ fun SettingsContent(
                 trailingContent = {
                     when (castModuleState) {
                         is CastModuleState.Installing -> LoadingIndicator(modifier = Modifier.size(24.dp))
+
                         is CastModuleState.Installed -> Switch(checked = true, onCheckedChange = null, enabled = false)
+
                         else -> Switch(
                             checked = chromecastEnabled,
                             onCheckedChange = { enabled ->
@@ -323,7 +337,9 @@ fun SettingsContent(
         // Privacy Policy
         TextButton(
             onClick = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, resources.getString(R.string.privacy_policy_url).toUri()))
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, resources.getString(R.string.privacy_policy_url).toUri())
+                )
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -347,7 +363,9 @@ fun SettingsContent(
                     station.name to station.url
                 }
             }
-            val selectedPresetLabel = presetOptions.firstOrNull { it.second == customStreamUrl }?.first
+            val selectedPresetLabel = presetOptions.firstOrNull {
+                it.second == customStreamUrl
+            }?.first
                 ?: stringResource(R.string.stream_override_custom)
 
             HorizontalDivider()
@@ -375,7 +393,9 @@ fun SettingsContent(
                     value = selectedPresetLabel,
                     onValueChange = {},
                     readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = streamPresetExpanded) },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = streamPresetExpanded)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -439,7 +459,11 @@ fun SettingsContent(
                         scope.launch {
                             settingsRepository.setCustomStreamUrl(null)
                             customStreamText = ""
-                            Toast.makeText(context, resources.getString(R.string.custom_stream_reset), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                resources.getString(R.string.custom_stream_reset),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     },
                     enabled = customStreamUrl != null
@@ -456,10 +480,18 @@ fun SettingsContent(
                         if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
                             scope.launch {
                                 settingsRepository.setCustomStreamUrl(candidate)
-                                Toast.makeText(context, resources.getString(R.string.custom_stream_saved), Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    context,
+                                    resources.getString(R.string.custom_stream_saved),
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         } else {
-                            Toast.makeText(context, resources.getString(R.string.custom_stream_invalid), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                resources.getString(R.string.custom_stream_invalid),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     },
                     enabled = customStreamText.isNotBlank() && customStreamText != customStreamUrl
@@ -504,7 +536,11 @@ private fun EqualizerBandSliders(
         gains.forEachIndexed { index, gain ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = stringResource(EQUALIZER_BAND_LABEL_RES.getOrElse(index) { R.string.equalizer_band_mid }),
+                    text = stringResource(
+                        EQUALIZER_BAND_LABEL_RES.getOrElse(index) {
+                            R.string.equalizer_band_mid
+                        }
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.width(72.dp)

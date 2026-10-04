@@ -1,10 +1,10 @@
 package com.cascadiacollections.sir.okhttp.streaming
 
+import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionPool
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
-import java.util.concurrent.TimeUnit
 
 /**
  * Creates a pre-configured [OkHttpClient.Builder] optimized for live audio streaming:

@@ -48,7 +48,12 @@ object IcyMetadataParser {
      * common; a lone `TrackId=123` is not something worth guessing about, so it is absent.
      */
     private val recognizedSingleFieldKeys = setOf(
-        "streamtitle", "streamurl", "title", "artist", "album", "text",
+        "streamtitle",
+        "streamurl",
+        "title",
+        "artist",
+        "album",
+        "text"
     )
 
     /** Keys whose value bundles "Artist - Title" together, in priority order. */
@@ -87,7 +92,7 @@ object IcyMetadataParser {
             if (fields.containsKey("title") || fields.containsKey("artist")) {
                 return IcyTrack(
                     title = fields["title"]?.trim()?.takeUnless(String::isEmpty),
-                    artist = fields["artist"]?.trim()?.takeUnless(String::isEmpty),
+                    artist = fields["artist"]?.trim()?.takeUnless(String::isEmpty)
                 )
             }
 
@@ -196,7 +201,7 @@ object IcyMetadataParser {
     /**
      * True when [index] is the end of the string, or is followed — after skipping any
      * separators and whitespace — by what looks like the start of the next `key=` pair.
-     * Separators vary by dialect (`;`, `,`, or a bare space in Triton Digital's cue
+     * Separators vary by dialect (`;`, `, `, or a bare space in Triton Digital's cue
      * metadata), so this checks structurally rather than for one fixed character.
      */
     private fun looksLikeFieldBoundary(text: String, index: Int): Boolean {
@@ -210,8 +215,7 @@ object IcyMetadataParser {
         return keyEnd != cursor && keyEnd != end && text[keyEnd] == '='
     }
 
-    private fun isSeparator(character: Char): Boolean =
-        character == ';' || character == ',' || character.isWhitespace()
+    private fun isSeparator(character: Char): Boolean = character == ';' || character == ',' || character.isWhitespace()
 
     private fun isKeyCharacter(character: Char): Boolean =
         character.isLetter() || character.isDigit() || character == '_'
@@ -231,7 +235,7 @@ object IcyMetadataParser {
         val title = streamTitle.substring(separator + ARTIST_TITLE_SEPARATOR.length).trim()
         return IcyTrack(
             title = title.takeUnless(String::isEmpty),
-            artist = artist.takeUnless(String::isEmpty),
+            artist = artist.takeUnless(String::isEmpty)
         )
     }
 }

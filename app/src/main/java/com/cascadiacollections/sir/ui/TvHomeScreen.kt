@@ -71,7 +71,7 @@ fun TvHomeScreen(
     onStationSelected: (Station) -> Unit,
     onTogglePlayback: () -> Unit,
     onStop: () -> Unit,
-    onRetryPopular: () -> Unit = {},
+    onRetryPopular: () -> Unit = {}
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         LazyColumn(
@@ -90,6 +90,7 @@ fun TvHomeScreen(
                 val title = stringResource(R.string.popular_stations)
                 when (popular) {
                     TvPopular.Loading -> ShelfMessage(title, stringResource(R.string.tv_loading_stations))
+
                     TvPopular.Failed -> ShelfMessage(title, stringResource(R.string.tv_stations_unavailable)) {
                         OutlinedButton(onClick = onRetryPopular, modifier = Modifier.focusScale()) {
                             Icon(Icons.Default.Refresh, contentDescription = null)
@@ -97,6 +98,7 @@ fun TvHomeScreen(
                             Text(stringResource(R.string.retry))
                         }
                     }
+
                     is TvPopular.Loaded ->
                         if (popular.stations.isEmpty()) {
                             ShelfMessage(title, stringResource(R.string.tv_no_stations))
@@ -111,7 +113,9 @@ fun TvHomeScreen(
 
 @Composable
 private fun NowPlayingBanner(radio: RadioUiState, onTogglePlayback: () -> Unit, onStop: () -> Unit) {
-    val stationName = radio.station?.name?.takeIf { it.isNotBlank() } ?: stringResource(R.string.station_name)
+    val stationName = radio.station?.name?.takeIf {
+        it.isNotBlank()
+    } ?: stringResource(R.string.station_name)
     val playFocus = remember { FocusRequester() }
     // Land on the transport so OK plays straight away, as the tvOS banner does.
     LaunchedEffect(Unit) { runCatching { playFocus.requestFocus() } }
@@ -177,7 +181,9 @@ private fun Shelf(title: String, stations: List<Station>, currentId: String?, on
             contentPadding = PaddingValues(vertical = 12.dp, horizontal = 8.dp)
         ) {
             items(stations, key = { it.id.ifBlank { it.url } }) { station ->
-                StationCard(station, isCurrent = station.id == currentId, onClick = { onSelect(station) })
+                StationCard(station, isCurrent = station.id == currentId, onClick = {
+                    onSelect(station)
+                })
             }
         }
     }
@@ -200,7 +206,12 @@ private fun StationCard(station: Station, isCurrent: Boolean, onClick: () -> Uni
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             StationArtworkImage(station = station, stationName = station.name, size = CARD_WIDTH - 24.dp)
-            Text(station.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                station.name,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Text(
                 station.genreLabel().orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,

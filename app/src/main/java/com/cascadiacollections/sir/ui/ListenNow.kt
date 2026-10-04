@@ -97,7 +97,8 @@ internal fun PopularStationTile(
     onToggleSaved: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val label = stringResource(if (isSaved) R.string.remove_from_my_stations else R.string.add_to_my_stations)
+    val label =
+        stringResource(if (isSaved) R.string.remove_from_my_stations else R.string.add_to_my_stations)
     StationTile(
         station = station,
         isPlaying = isPlaying,

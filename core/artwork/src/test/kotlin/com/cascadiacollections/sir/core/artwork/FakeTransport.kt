@@ -1,13 +1,13 @@
 package com.cascadiacollections.sir.core.artwork
 
+import java.io.IOException
+import java.util.Collections
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
-import java.io.IOException
-import java.util.Collections
 
 /** What the fake network answers for one request. */
 sealed interface Reply {
@@ -27,6 +27,7 @@ class FakeTransport(var reply: Reply = Reply.Http()) : Interceptor {
         requests += request
         return when (val r = reply) {
             is Reply.Fail -> throw r.error
+
             is Reply.Http -> Response.Builder()
                 .request(request)
                 .protocol(Protocol.HTTP_1_1)

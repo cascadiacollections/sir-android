@@ -52,7 +52,10 @@ class RadioBrowserViewModelPlaylistTest {
     private fun RadioBrowserViewModel.importAndAwait(text: String, isPls: Boolean): PlaylistImportResult {
         val latch = CountDownLatch(1)
         var result: PlaylistImportResult? = null
-        importPlaylist(text = text, isPls = isPls) { result = it; latch.countDown() }
+        importPlaylist(text = text, isPls = isPls) {
+            result = it
+            latch.countDown()
+        }
         assertTrue("import did not complete in time", latch.await(5, TimeUnit.SECONDS))
         return result!!
     }
@@ -109,7 +112,9 @@ class RadioBrowserViewModelPlaylistTest {
     @Test
     fun `importing a station whose URL is already saved is skipped, not duplicated`() {
         val repo = repo()
-        runBlocking { repo.saveStation(Station(id = "existing", name = "Existing", url = "https://example.com/a")) }
+        runBlocking {
+            repo.saveStation(Station(id = "existing", name = "Existing", url = "https://example.com/a"))
+        }
         val vm = viewModel(repo)
         vm.awaitSavedStationsSize(1)
 
@@ -131,7 +136,9 @@ class RadioBrowserViewModelPlaylistTest {
     @Test
     fun `exporting renders the current saved stations as M3U`() {
         val repo = repo()
-        runBlocking { repo.saveStation(Station(id = "a", name = "Station A", url = "https://example.com/a")) }
+        runBlocking {
+            repo.saveStation(Station(id = "a", name = "Station A", url = "https://example.com/a"))
+        }
         val vm = viewModel(repo)
         vm.awaitSavedStationsSize(1)
 
@@ -143,7 +150,10 @@ class RadioBrowserViewModelPlaylistTest {
     private fun RadioBrowserViewModel.importStationsAndAwait(text: String, fileName: String?): PlaylistImportResult {
         val latch = CountDownLatch(1)
         var result: PlaylistImportResult? = null
-        importStations(text = text, fileName = fileName) { result = it; latch.countDown() }
+        importStations(text = text, fileName = fileName) {
+            result = it
+            latch.countDown()
+        }
         assertTrue("import did not complete in time", latch.await(5, TimeUnit.SECONDS))
         return result!!
     }
@@ -151,7 +161,9 @@ class RadioBrowserViewModelPlaylistTest {
     @Test
     fun `importing a JSON backup merges by id and appends new favourites at the end`() {
         val repo = repo()
-        runBlocking { repo.saveStation(Station(id = "b", name = "Mine", url = "https://example.com/b")) }
+        runBlocking {
+            repo.saveStation(Station(id = "b", name = "Mine", url = "https://example.com/b"))
+        }
         val vm = viewModel(repo)
         vm.awaitSavedStationsSize(1)
 
@@ -177,7 +189,12 @@ class RadioBrowserViewModelPlaylistTest {
         val directory = object : RadioDirectory by NoopDirectory {
             override suspend fun getStations(ids: List<String>) = Result.success(
                 ids.filter { it == known }.map {
-                    Station(id = it, name = "Directory Name", url = "https://x/listen.pls", urlResolved = "https://x/stream")
+                    Station(
+                        id = it,
+                        name = "Directory Name",
+                        url = "https://x/listen.pls",
+                        urlResolved = "https://x/stream"
+                    )
                 }
             )
         }

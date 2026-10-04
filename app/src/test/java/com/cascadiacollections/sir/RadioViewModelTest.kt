@@ -6,8 +6,6 @@ import android.net.NetworkCapabilities
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -100,7 +98,9 @@ class RadioViewModelTest {
     private fun connectivity(metered: Boolean, online: Boolean = true): ConnectivityManager {
         val network = mockk<android.net.Network>()
         val capabilities = mockk<android.net.NetworkCapabilities> {
-            every { hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns true
+            every {
+                hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            } returns true
         }
         return mockk {
             every { isActiveNetworkMetered } returns metered
@@ -210,14 +210,13 @@ class RadioViewModelTest {
     fun `Factory creates RadioViewModel instance`() {
         val settings = SettingsRepository(app)
         val factory = RadioViewModel.Factory(app, settings)
-        val vm = factory.create(RadioViewModel::class.java).also { coroutineRule.registerViewModel(it) }
+        val vm = factory.create(RadioViewModel::class.java).also {
+            coroutineRule.registerViewModel(it)
+        }
         assertTrue(vm is RadioViewModel)
     }
 
-    private suspend fun waitUntil(
-        timeoutMillis: Long = 10_000L,
-        condition: () -> Boolean
-    ) {
+    private suspend fun waitUntil(timeoutMillis: Long = 10_000L, condition: () -> Boolean) {
         withTimeout(timeoutMillis) {
             while (!condition()) {
                 delay(10L)

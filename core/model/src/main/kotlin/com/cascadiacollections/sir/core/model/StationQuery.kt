@@ -7,10 +7,7 @@ package com.cascadiacollections.sir.core.model
  * user's raw text input maps onto a request without each re-implementing trimming
  * and limit clamping.
  */
-data class StationQuery(
-    val text: String,
-    val limit: Int = DEFAULT_LIMIT
-) {
+data class StationQuery(val text: String, val limit: Int = DEFAULT_LIMIT) {
     val normalizedText: String = text.trim()
 
     val isBlank: Boolean get() = normalizedText.isEmpty()

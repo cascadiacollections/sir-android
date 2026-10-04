@@ -19,10 +19,7 @@ import kotlin.time.Duration.Companion.seconds
  *   the maximum replay window.
  * @param bytesPerSecond Stream byte rate, i.e. bitrate in bits per second divided by 8.
  */
-class TimeShiftController(
-    capacityBytes: Int,
-    private val bytesPerSecond: Int
-) {
+class TimeShiftController(capacityBytes: Int, private val bytesPerSecond: Int) {
 
     init {
         require(bytesPerSecond > 0) { "bytesPerSecond must be positive" }
@@ -42,8 +39,7 @@ class TimeShiftController(
         get() = buffer.isLive()
 
     /** True when at least [duration] of already-played audio can be replayed. */
-    fun canSeekBack(duration: Duration): Boolean =
-        buffer.canSeekBack(durationToBytes(duration))
+    fun canSeekBack(duration: Duration): Boolean = buffer.canSeekBack(durationToBytes(duration))
 
     /**
      * Move playback backward by [duration].
@@ -74,6 +70,5 @@ class TimeShiftController(
         return bytes.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 
-    private fun bytesToDuration(bytes: Int): Duration =
-        (bytes.toDouble() / bytesPerSecond).seconds
+    private fun bytesToDuration(bytes: Int): Duration = (bytes.toDouble() / bytesPerSecond).seconds
 }

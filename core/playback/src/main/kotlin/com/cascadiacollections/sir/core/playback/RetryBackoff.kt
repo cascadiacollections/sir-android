@@ -14,7 +14,7 @@ package com.cascadiacollections.sir.core.playback
 class RetryBackoff(
     private val maxRetries: Int = DEFAULT_MAX_RETRIES,
     private val initialDelayMs: Long = DEFAULT_INITIAL_DELAY_MS,
-    private val maxDelayMs: Long = DEFAULT_MAX_DELAY_MS,
+    private val maxDelayMs: Long = DEFAULT_MAX_DELAY_MS
 ) {
     init {
         require(maxRetries >= 0) { "maxRetries must not be negative" }

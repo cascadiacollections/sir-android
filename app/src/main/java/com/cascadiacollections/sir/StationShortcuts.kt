@@ -29,8 +29,7 @@ object StationShortcuts {
     const val STATIC_SHORTCUT_COUNT = 3
 
     /** How many station shortcuts fit beside the static ones under [maxPerActivity]. */
-    fun dynamicCapacity(maxPerActivity: Int): Int =
-        (maxPerActivity - STATIC_SHORTCUT_COUNT).coerceAtLeast(0)
+    fun dynamicCapacity(maxPerActivity: Int): Int = (maxPerActivity - STATIC_SHORTCUT_COUNT).coerceAtLeast(0)
 
     /**
      * Replaces the app's dynamic shortcuts with one per station in [stations] (most
@@ -42,7 +41,8 @@ object StationShortcuts {
         // maxCount <= 0 means this launcher doesn't support shortcuts at all (rather
         // than "zero slots free") — still clear any shortcuts a previous launcher may
         // have left behind, rather than returning early and leaving them stale.
-        val maxCount = dynamicCapacity(ShortcutManagerCompat.getMaxShortcutCountPerActivity(context))
+        val maxCount =
+            dynamicCapacity(ShortcutManagerCompat.getMaxShortcutCountPerActivity(context))
 
         val shortcuts = stations
             .filter { it.isPlayable && it.name.isNotBlank() }

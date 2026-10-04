@@ -10,14 +10,14 @@ class StreamMetadataResolverTest {
 
     private val resolver = StreamMetadataResolver(
         staticTitles = setOf("Will Radio Stream", "SIR"),
-        staticArtists = setOf("Live Internet Radio"),
+        staticArtists = setOf("Live Internet Radio")
     )
 
     @Test
     fun `real track metadata replaces previous state`() {
         val update = resolver.resolve(
             StreamMetadata(),
-            RawStreamMetadata(title = "Song", artist = "Band", station = "SIR FM"),
+            RawStreamMetadata(title = "Song", artist = "Band", station = "SIR FM")
         )
 
         assertEquals("Song", update.metadata.trackTitle)
@@ -31,7 +31,7 @@ class StreamMetadataResolverTest {
         val previous = StreamMetadata(trackTitle = "Song", artist = "Band")
         val update = resolver.resolve(
             previous,
-            RawStreamMetadata(title = "Will Radio Stream"),
+            RawStreamMetadata(title = "Will Radio Stream")
         )
 
         assertEquals("Song", update.metadata.trackTitle)
@@ -51,7 +51,7 @@ class StreamMetadataResolverTest {
     fun `placeholder artist is dropped`() {
         val update = resolver.resolve(
             StreamMetadata(),
-            RawStreamMetadata(title = "Song", artist = "Live Internet Radio"),
+            RawStreamMetadata(title = "Song", artist = "Live Internet Radio")
         )
 
         assertEquals("Song", update.metadata.trackTitle)
@@ -63,7 +63,7 @@ class StreamMetadataResolverTest {
         val previous = StreamMetadata(trackTitle = "Song", station = "Old")
         val update = resolver.resolve(
             previous,
-            RawStreamMetadata(title = "Will Radio Stream", station = "New"),
+            RawStreamMetadata(title = "Will Radio Stream", station = "New")
         )
 
         assertEquals("New", update.metadata.station)
@@ -84,7 +84,7 @@ class StreamMetadataResolverTest {
         val previous = StreamMetadata(trackTitle = "Song", artist = "Band", station = "SIR FM")
         val update = resolver.resolve(
             previous,
-            RawStreamMetadata(title = "Song", artist = "Band", station = "SIR FM"),
+            RawStreamMetadata(title = "Song", artist = "Band", station = "SIR FM")
         )
 
         assertFalse(update.notifyChanged)
@@ -96,7 +96,7 @@ class StreamMetadataResolverTest {
 
         val update = resolver.resolve(
             previous,
-            RawStreamMetadata(title = "Song", artist = "   ", station = "SIR FM"),
+            RawStreamMetadata(title = "Song", artist = "   ", station = "SIR FM")
         )
 
         // Keeping "" replaced a real artist with an empty subtitle in the notification.
@@ -120,7 +120,7 @@ class StreamMetadataResolverTest {
         // What Media3 actually hands us: the raw StreamTitle, artist and all.
         val update = resolver.resolve(
             StreamMetadata(),
-            RawStreamMetadata(title = "Fleetwood Mac - Dreams", station = "SIR FM"),
+            RawStreamMetadata(title = "Fleetwood Mac - Dreams", station = "SIR FM")
         )
 
         assertEquals("Dreams", update.metadata.trackTitle)
@@ -134,7 +134,7 @@ class StreamMetadataResolverTest {
         // so the one parsed out of the stream title is the better answer.
         val update = resolver.resolve(
             StreamMetadata(),
-            RawStreamMetadata(title = "Prince - Kiss", artist = "Live Internet Radio"),
+            RawStreamMetadata(title = "Prince - Kiss", artist = "Live Internet Radio")
         )
 
         assertEquals("Kiss", update.metadata.trackTitle)
@@ -169,7 +169,7 @@ class StreamMetadataResolverTest {
         val update = resolver.resolve(
             previous,
             RawStreamMetadata(title = "KEXP 90.3 FM"),
-            stationName = "KEXP903FM",
+            stationName = "KEXP903FM"
         )
 
         assertEquals("Dreams", update.metadata.trackTitle)
@@ -192,7 +192,7 @@ class StreamMetadataResolverTest {
 
         val update = resolver.resolve(
             previous,
-            RawStreamMetadata(title = "Spot Block End", station = "New"),
+            RawStreamMetadata(title = "Spot Block End", station = "New")
         )
 
         assertEquals("New", update.metadata.station)

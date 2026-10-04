@@ -1,7 +1,6 @@
 package com.cascadiacollections.sir
 
 import androidx.media3.common.Player
-import io.mockk.every
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

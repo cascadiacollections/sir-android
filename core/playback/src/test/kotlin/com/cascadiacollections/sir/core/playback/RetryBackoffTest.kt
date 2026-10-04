@@ -85,6 +85,5 @@ class RetryBackoffTest {
     }
 
     /** Pulls delays until the budget is exhausted. */
-    private fun RetryBackoff.drain(): List<Long> =
-        generateSequence { nextDelayMs() }.toList()
+    private fun RetryBackoff.drain(): List<Long> = generateSequence { nextDelayMs() }.toList()
 }

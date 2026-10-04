@@ -1,10 +1,10 @@
 package com.cascadiacollections.sir.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -163,7 +163,7 @@ class RadioUiTest {
             StreamFailure.StationUnavailable(404) to
                 ("Unavailable" to "This station isn't available right now. Try another station."),
             StreamFailure.Unplayable to ("Stream error" to "The stream stopped unexpectedly. Tap to retry."),
-            StreamFailure.Stalled to ("Stream stalled" to "The stream stopped responding. Tap to retry."),
+            StreamFailure.Stalled to ("Stream stalled" to "The stream stopped responding. Tap to retry.")
         )
         var failure by mutableStateOf<StreamFailure?>(null)
         composeRule.setContent {
@@ -189,7 +189,7 @@ class RadioUiTest {
                     state = RadioUiState(
                         isConnected = true,
                         isPlaying = true,
-                        station = Station(id = "kexp", name = "KEXP", url = "https://k", tags = "indie,rock"),
+                        station = Station(id = "kexp", name = "KEXP", url = "https://k", tags = "indie,rock")
                     ),
                     onToggle = {}
                 )
@@ -222,7 +222,7 @@ class RadioUiTest {
                     state = RadioUiState(
                         isConnected = true,
                         station = Station(id = "a", name = "A", url = "https://a"),
-                        isFavorite = true,
+                        isFavorite = true
                     ),
                     onToggleFavorite = { toggled = true },
                     onToggle = {}

@@ -9,7 +9,7 @@ enum class EndOfStreamAction {
     LOOP,
 
     /** A finished broadcast: stop at the start, paused, so play replays it. */
-    STOP,
+    STOP
 }
 
 /**

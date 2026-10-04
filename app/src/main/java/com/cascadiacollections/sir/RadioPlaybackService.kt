@@ -52,15 +52,15 @@ import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftController
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
 import com.cascadiacollections.sir.core.directory.search
+import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.FavoriteCurrentStation
 import com.cascadiacollections.sir.core.persistence.HeardTrack
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.core.persistence.StationCollections
 import com.cascadiacollections.sir.core.persistence.TrackHistoryRepository
-import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.AudioRoutePolicy
-import com.cascadiacollections.sir.core.playback.EqualizerCurves
 import com.cascadiacollections.sir.core.playback.EndOfStreamAction
+import com.cascadiacollections.sir.core.playback.EqualizerCurves
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.FinishedBroadcastPolicy
 import com.cascadiacollections.sir.core.playback.PausedRelease
@@ -83,6 +83,7 @@ import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -96,7 +97,6 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 class RadioPlaybackService : MediaLibraryService() {
 
@@ -106,6 +106,7 @@ class RadioPlaybackService : MediaLibraryService() {
     private var isNoisyReceiverRegistered = false
     private var isRouteReceiverRegistered = false
     private val audioRoutePolicy = AudioRoutePolicy()
+
     // The one reconnect budget (3 attempts: 2s, 4s, 8s). Media3 retries nothing underneath
     // it — see StreamLoadErrorHandlingPolicy — so the two can no longer multiply.
     private val recovery = StreamRecovery()
@@ -128,7 +129,7 @@ class RadioPlaybackService : MediaLibraryService() {
     // Current stream metadata from ICY headers
     private val metadataResolver = StreamMetadataResolver(
         staticTitles = setOf(STREAM_STATIC_TITLE, DEFAULT_STATION_NAME),
-        staticArtists = setOf(STREAM_STATIC_ARTIST),
+        staticArtists = setOf(STREAM_STATIC_ARTIST)
     )
     private var streamMetadata = StreamMetadata()
     private val currentTrackTitle: String? get() = streamMetadata.trackTitle
@@ -142,10 +143,12 @@ class RadioPlaybackService : MediaLibraryService() {
     // Equalizer
     private var equalizer: Equalizer? = null
     private var currentEqualizerPreset: EqualizerPreset = EqualizerPreset.NORMAL
+
     // A custom curve and a named preset are mutually exclusive; this flag says which of
     // currentEqualizerPreset / currentCustomEqualizerBands is currently in effect.
     private var isUsingCustomEqualizerBands: Boolean = false
     private var currentCustomEqualizerBands: List<Float> = emptyList()
+
     // Generated ourselves in onCreate so the equalizer can be constructed without racing
     // renderer initialization. Media3's C.AUDIO_SESSION_ID_UNSET is @UnstableApi and is
     // defined as this exact constant, so using the platform one keeps the property
@@ -163,14 +166,15 @@ class RadioPlaybackService : MediaLibraryService() {
             savedStations = { settingsRepository.savedStations.first() },
             recentStations = { settingsRepository.recentStations.first() },
             hiddenRecentIds = { settingsRepository.hiddenRecentStationIds.first() },
-            directory = { AppDirectory.instance },
+            directory = { AppDirectory.instance }
         )
     }
 
     // Per-browser root-children limit from the root hints, and the last search answered,
     // so onGetSearchResult does not repeat the request onSearch just made.
     private val rootChildrenLimits = ConcurrentHashMap<MediaSession.ControllerInfo, Int>()
-    private val lastSearch = ConcurrentHashMap<MediaSession.ControllerInfo, Pair<String, List<MediaItem>>>()
+    private val lastSearch =
+        ConcurrentHashMap<MediaSession.ControllerInfo, Pair<String, List<MediaItem>>>()
 
     // Current stream URL (may be a directory station or a debug override). This is the
     // station's own URL, used to tell whether a selection actually changed; what the
@@ -223,7 +227,9 @@ class RadioPlaybackService : MediaLibraryService() {
     private var reportedFailureRetrying = false
 
     // Persisted Recently Heard history, recorded here so it accrues without any UI alive
-    private val trackHistoryRepository: TrackHistoryRepository by lazy { TrackHistoryRepository(this) }
+    private val trackHistoryRepository: TrackHistoryRepository by lazy {
+        TrackHistoryRepository(this)
+    }
 
     // DVR time-shift buffer
     private val timeShift = TimeShiftController(REPLAY_BUFFER_SIZE, STREAM_BYTES_PER_SEC)
@@ -337,7 +343,10 @@ class RadioPlaybackService : MediaLibraryService() {
         // Keep the notification heart in step with the selection and My Stations, whoever
         // changed them (the heart itself, the phone UI, a shortcut, Assistant).
         serviceScope.launch {
-            combine(settingsRepository.selectedStation, settingsRepository.savedStations) { selected, saved ->
+            combine(settingsRepository.selectedStation, settingsRepository.savedStations) {
+                    selected,
+                    saved
+                ->
                 if (FavoriteCurrentStation.isFavoritable(selected)) {
                     FavoriteCurrentStation.isSaved(selected, saved)
                 } else {
@@ -384,7 +393,7 @@ class RadioPlaybackService : MediaLibraryService() {
         val httpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
             .setDefaultRequestProperties(
                 buildMap {
-                    put("Icy-MetaData", "1")  // Request ICY metadata
+                    put("Icy-MetaData", "1") // Request ICY metadata
                     put("User-Agent", USER_AGENT)
                 }
             )
@@ -401,7 +410,7 @@ class RadioPlaybackService : MediaLibraryService() {
         // OkHttp, because the buffer models one continuous connection and HLS is many.
         val mediaSourceFactory = StreamMediaSourceFactory(
             progressive = DefaultMediaSourceFactory(context).setDataSourceFactory(timeShiftFactory),
-            hls = HlsMediaSource.Factory(httpDataSourceFactory),
+            hls = HlsMediaSource.Factory(httpDataSourceFactory)
         ).setLoadErrorHandlingPolicy(StreamLoadErrorHandlingPolicy())
 
         // Generate the audio session id ourselves so it's available immediately,
@@ -427,15 +436,15 @@ class RadioPlaybackService : MediaLibraryService() {
             .setSeekBackIncrementMs(SEEK_BACK_INCREMENT.inWholeMilliseconds)
             .setAudioAttributes(
                 SpatialAudio.audioAttributes(spatialAudioEnabled),
-                true  // Handle audio focus automatically
+                true // Handle audio focus automatically
             )
-            .setHandleAudioBecomingNoisy(false)  // We handle this manually for more control
-            .setWakeMode(C.WAKE_MODE_NETWORK)    // Keep CPU and network active
+            .setHandleAudioBecomingNoisy(false) // We handle this manually for more control
+            .setWakeMode(C.WAKE_MODE_NETWORK) // Keep CPU and network active
             .build()
             .apply {
-                repeatMode = Player.REPEAT_MODE_OFF  // Live stream doesn't repeat
-                playWhenReady = false  // Don't auto-play on creation
-                volume = 0f  // The first start fades in like every later one (VolumeFader)
+                repeatMode = Player.REPEAT_MODE_OFF // Live stream doesn't repeat
+                playWhenReady = false // Don't auto-play on creation
+                volume = 0f // The first start fades in like every later one (VolumeFader)
             }
         player = exoPlayer
 
@@ -447,7 +456,10 @@ class RadioPlaybackService : MediaLibraryService() {
         exoPlayer.setMediaItem(buildMediaItem())
 
         // Create media library session before adding listeners (to avoid null pointer in callbacks)
-        mediaSession = MediaLibrarySession.Builder(context, exoPlayer, object : MediaLibrarySession.Callback {
+        mediaSession = MediaLibrarySession.Builder(
+            context,
+            exoPlayer,
+            object : MediaLibrarySession.Callback {
                 override fun onConnect(
                     session: MediaSession,
                     controller: MediaSession.ControllerInfo
@@ -483,7 +495,11 @@ class RadioPlaybackService : MediaLibraryService() {
                 ): ListenableFuture<SessionResult> {
                     when (customCommand.customAction) {
                         ACTION_SEEK_BACK -> {
-                            if (!SEEKBACK_ENABLED) return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
+                            if (!SEEKBACK_ENABLED) {
+                                return Futures.immediateFuture(
+                                    SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED)
+                                )
+                            }
                             if (!timeShift.seekBack(SEEK_BACK_INCREMENT)) {
                                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
                             }
@@ -492,14 +508,20 @@ class RadioPlaybackService : MediaLibraryService() {
                             updateCustomLayout()
                             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                         }
+
                         ACTION_GO_LIVE -> {
-                            if (!SEEKBACK_ENABLED) return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
+                            if (!SEEKBACK_ENABLED) {
+                                return Futures.immediateFuture(
+                                    SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED)
+                                )
+                            }
                             timeShift.goLive()
                             playbackMode = PlaybackMode.Live
                             flushPlayer()
                             updateCustomLayout()
                             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                         }
+
                         // The heart: toggles the selected station in My Stations. The
                         // favourite-state collector redraws the button once the write lands.
                         ACTION_TOGGLE_FAVORITE -> return serviceScope.future {
@@ -508,6 +530,7 @@ class RadioPlaybackService : MediaLibraryService() {
                                 is FavoriteCurrentStation.Outcome.Removed,
                                 is FavoriteCurrentStation.Outcome.AlreadySaved ->
                                     SessionResult(SessionResult.RESULT_SUCCESS)
+
                                 FavoriteCurrentStation.Outcome.DefaultStream,
                                 FavoriteCurrentStation.Outcome.NothingSelected ->
                                     SessionResult(SessionError.ERROR_NOT_SUPPORTED)
@@ -644,7 +667,8 @@ class RadioPlaybackService : MediaLibraryService() {
                         MediaSession.MediaItemsWithStartPosition(listOf(item), 0, C.TIME_UNSET)
                     }
                 }
-            })
+            }
+        )
             .setId(MEDIA_SESSION_ID)
             .setSessionActivity(
                 PendingIntent.getActivity(
@@ -657,9 +681,9 @@ class RadioPlaybackService : MediaLibraryService() {
                 )
             )
             .build()
-            // No initial custom layout — updateCustomLayout() adds "Replay 30s"
-            // once the buffer has enough data. Calling setCustomLayout with an
-            // empty list crashes the legacy PlaybackStateCompat stub.
+        // No initial custom layout — updateCustomLayout() adds "Replay 30s"
+        // once the buffer has enough data. Calling setCustomLayout with an
+        // empty list crashes the legacy PlaybackStateCompat stub.
 
         // Now add listeners after mediaSession is created
         // Media3 already measures what a tap-to-audio trace would: join time and
@@ -765,7 +789,7 @@ class RadioPlaybackService : MediaLibraryService() {
                 val raw = RawStreamMetadata(
                     title = mediaMetadata.title?.toString(),
                     artist = mediaMetadata.artist?.toString(),
-                    station = mediaMetadata.station?.toString(),
+                    station = mediaMetadata.station?.toString()
                 )
                 Log.d(TAG, "Stream metadata: $raw")
 
@@ -774,7 +798,7 @@ class RadioPlaybackService : MediaLibraryService() {
                 val update = metadataResolver.resolve(
                     previous = previous,
                     raw = raw,
-                    stationName = stationName,
+                    stationName = stationName
                 )
                 streamMetadata = update.metadata
                 val artCleared = albumArt.onTrackChanged(currentArtist, currentTrackTitle)
@@ -905,14 +929,11 @@ class RadioPlaybackService : MediaLibraryService() {
                 val bands = intent.getFloatArrayExtra(EXTRA_EQUALIZER_BANDS)?.toList()
                 if (bands != null) applyCustomEqualizerBands(bands, persist = false)
             }
-
         }
         return super.onStartCommand(intent, flags, startId)
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
-        return mediaSession
-    }
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaSession
 
     override fun onDestroy() {
         // Cancel pending callbacks
@@ -967,7 +988,7 @@ class RadioPlaybackService : MediaLibraryService() {
             artist = next.artist,
             stationId = currentStationId,
             stationName = stationName,
-            timestampMillis = System.currentTimeMillis(),
+            timestampMillis = System.currentTimeMillis()
         )
         serviceScope.launch { trackHistoryRepository.record(track) }
     }
@@ -984,7 +1005,9 @@ class RadioPlaybackService : MediaLibraryService() {
         val title = metadata.trackTitle.orEmpty()
         val artist = metadata.artist
         val stationId = currentStationId
-        serviceScope.launch { trackHistoryRepository.attachArtwork(title, artist, stationId, artworkUrl) }
+        serviceScope.launch {
+            trackHistoryRepository.attachArtwork(title, artist, stationId, artworkUrl)
+        }
     }
 
     /**
@@ -1037,10 +1060,12 @@ class RadioPlaybackService : MediaLibraryService() {
     private fun recover(failure: StreamFailure) {
         when (val decision = recovery.onFailure(failure, playbackWanted = player?.playWhenReady == true)) {
             RecoveryDecision.Ignore -> Log.d(TAG, "Not recovering $failure: playback not requested")
+
             is RecoveryDecision.Reconnect -> {
                 reportFailure(failure, retrying = true)
                 scheduleReconnect(decision.delayMs)
             }
+
             is RecoveryDecision.Fail -> {
                 cancelReconnect()
                 reportFailure(decision.failure)
@@ -1070,7 +1095,9 @@ class RadioPlaybackService : MediaLibraryService() {
                 Log.w(TAG, "Live stream ended unexpectedly (attempt ${recovery.attemptLabel})")
                 recover(StreamFailure.Transient)
             }
+
             EndOfStreamAction.LOOP -> p.seekToDefaultPosition()
+
             EndOfStreamAction.STOP -> {
                 Log.d(TAG, "Broadcast finished")
                 p.pause()
@@ -1094,7 +1121,7 @@ class RadioPlaybackService : MediaLibraryService() {
         !p.currentTimeline.isEmpty && FinishedBroadcastPolicy.isFinite(
             isLive = p.isCurrentMediaItemLive,
             isDynamic = p.isCurrentMediaItemDynamic,
-            durationMs = p.duration.takeIf { it != C.TIME_UNSET },
+            durationMs = p.duration.takeIf { it != C.TIME_UNSET }
         )
 
     /**
@@ -1282,8 +1309,8 @@ class RadioPlaybackService : MediaLibraryService() {
         .setMediaId(currentStreamUrl)
         .setLiveConfiguration(
             MediaItem.LiveConfiguration.Builder()
-                .setMaxPlaybackSpeed(1.02f)  // Slight speedup to catch up if behind
-                .setMinPlaybackSpeed(0.98f)  // Slight slowdown if too far ahead
+                .setMaxPlaybackSpeed(1.02f) // Slight speedup to catch up if behind
+                .setMinPlaybackSpeed(0.98f) // Slight slowdown if too far ahead
                 .build()
         )
         .setMediaMetadata(
@@ -1333,7 +1360,9 @@ class RadioPlaybackService : MediaLibraryService() {
 
         val delayMs = minutes * 60 * 1000L
         sleepTimerHandler.postDelayed(runnable, delayMs)
-        serviceScope.launch { settingsRepository.setSleepTimerFiresAt(System.currentTimeMillis() + delayMs) }
+        serviceScope.launch {
+            settingsRepository.setSleepTimerFiresAt(System.currentTimeMillis() + delayMs)
+        }
         Log.d(TAG, "Sleep timer set for $minutes minutes")
     }
 
@@ -1449,7 +1478,9 @@ class RadioPlaybackService : MediaLibraryService() {
     private suspend fun resolveStreamSource(): StreamSource = StreamSourceResolver.resolve(
         debugOverrideUrl = if (BuildConfig.DEBUG) settingsRepository.customStreamUrl.first() else null,
         selectedStation = settingsRepository.selectedStation.first()
-            ?.let { StreamSource(url = it.streamUrl, title = it.name, stationId = it.id, isHls = it.isHls) },
+            ?.let {
+                StreamSource(url = it.streamUrl, title = it.name, stationId = it.id, isHls = it.isHls)
+            },
         qualityUrl = settingsRepository.streamQuality.first().url,
         defaultTitle = DEFAULT_STATION_NAME
     )
@@ -1566,6 +1597,7 @@ class RadioPlaybackService : MediaLibraryService() {
         private const val MEDIA_SESSION_ID = "will_radio_session"
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
+
         // Feature flags
         const val SEEKBACK_ENABLED = false
 
@@ -1573,7 +1605,7 @@ class RadioPlaybackService : MediaLibraryService() {
 
         // DVR time-shift buffer: 512KB ≈ 64s at 64kbps
         internal const val REPLAY_BUFFER_SIZE = 524_288
-        private const val STREAM_BYTES_PER_SEC = 8_000  // 64kbps
+        private const val STREAM_BYTES_PER_SEC = 8_000 // 64kbps
 
         // Intent actions
         private const val ACTION_STOP = "com.cascadiacollections.sir.action.STOP"

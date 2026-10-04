@@ -1,10 +1,10 @@
 package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Locale
 
 class CuratedStationsTest {
 

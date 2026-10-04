@@ -23,19 +23,25 @@ internal fun PlaybackException.toStreamFailure(): StreamFailure =
 
 private fun PlaybackException.errorKind(): StreamErrorKind = when (errorCode) {
     PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> StreamErrorKind.NO_NETWORK
+
     PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> StreamErrorKind.TIMEOUT
+
     PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> StreamErrorKind.BAD_HTTP_STATUS
+
     PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> StreamErrorKind.NOT_FOUND
+
     PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE -> StreamErrorKind.BAD_CONTENT_TYPE
+
     // Retrying cannot make an unsupported codec supported, or cleartext permitted.
     // A decoder *init* failure is deliberately absent: a busy hardware decoder is
     // exactly the kind of thing that succeeds on the next attempt.
     PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED,
     PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
-    PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+    PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED
     -> StreamErrorKind.UNPLAYABLE
 
     PlaybackException.ERROR_CODE_IO_UNSPECIFIED -> StreamErrorKind.IO
+
     else -> StreamErrorKind.PLAYBACK
 }
 
@@ -47,12 +53,9 @@ private fun PlaybackException.errorKind(): StreamErrorKind = when (errorCode) {
  * not part of any contract we should rely on.
  */
 @OptIn(UnstableApi::class)
-private fun PlaybackException.httpResponseCode(): Int? {
-    return cause.httpResponseCode()
-}
+private fun PlaybackException.httpResponseCode(): Int? = cause.httpResponseCode()
 
-private fun Throwable?.httpResponseCode(): Int? =
-    findCause<HttpDataSource.InvalidResponseCodeException>()?.responseCode
+private fun Throwable?.httpResponseCode(): Int? = findCause<HttpDataSource.InvalidResponseCodeException>()?.responseCode
 
 private inline fun <reified T : Throwable> Throwable?.findCause(): T? {
     var candidate = this

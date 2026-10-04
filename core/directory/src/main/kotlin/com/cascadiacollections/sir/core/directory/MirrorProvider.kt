@@ -1,14 +1,14 @@
 package com.cascadiacollections.sir.core.directory
 
+import java.io.IOException
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 /**
  * Supplies radio-browser.info API mirrors.
@@ -176,7 +176,8 @@ class DiscoveringMirrorProvider(
         const val DEFAULT_FAILURE_RETRY_MILLIS: Long = 10 * 60 * 1000L
 
         private const val LAST_RESORT = RotatingMirrorProvider.ALL_MIRRORS_HOST
-        private val HOST_NAME = Regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
+        private val HOST_NAME =
+            Regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
 
         /**
          * Turns a discovered server name into an https base URL, rejecting anything that

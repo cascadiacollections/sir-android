@@ -193,4 +193,6 @@
     <string name="directory_unavailable">电台目录不可用</string>
     <string name="try_again">再试一次</string>
     <string name="showing_saved_stations">正在显示已保存的电台</string>
+    <string name="browse_more_genres">更多类型</string>
+    <string name="browse_fewer_genres">收起类型</string>
 </resources>

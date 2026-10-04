@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.cascadiacollections.sir.BuildConfig
 import com.cascadiacollections.sir.R
+import com.cascadiacollections.sir.SpatialAudio
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.launch
 
@@ -33,6 +35,9 @@ internal fun PlaybackSettingsSection(settingsRepository: SettingsRepository) {
     val scope = rememberCoroutineScope()
     val prewarm by settingsRepository.connectionPrewarmingEnabled.collectAsState(initial = false)
     val loopBroadcasts by settingsRepository.loopFinishedBroadcasts.collectAsState(initial = false)
+    val spatialAudio by settingsRepository.spatialAudioEnabled.collectAsState(initial = false)
+    val context = LocalContext.current
+    val spatialSupported = remember { SpatialAudio.isSupported(context) }
 
     SettingsSectionHeading(stringResource(R.string.playback_heading))
     // Read once at launch by SirApp, so a change takes effect from the next launch.
@@ -61,6 +66,21 @@ internal fun PlaybackSettingsSection(settingsRepository: SettingsRepository) {
             )
         }
     )
+    // Only where the device has a spatializer; read live by RadioPlaybackService.
+    if (spatialSupported) {
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.spatial_audio)) },
+            supportingContent = { Text(stringResource(R.string.spatial_audio_summary)) },
+            trailingContent = {
+                Switch(
+                    checked = spatialAudio,
+                    onCheckedChange = { enabled ->
+                        scope.launch { settingsRepository.setSpatialAudioEnabled(enabled) }
+                    }
+                )
+            }
+        )
+    }
 }
 
 /** Settings → About, at the end of the screen. */

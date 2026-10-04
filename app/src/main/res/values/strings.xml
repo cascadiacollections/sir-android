@@ -209,6 +209,8 @@
     <string name="prewarm_connections">Pre-connect to favorite stations</string>
     <string name="prewarm_connections_summary">Starts your most-played favorites faster. Uses a little data when the app launches.</string>
     <string name="loop_finished_broadcasts">Loop finished broadcasts</string>
+    <string name="spatial_audio">Spatial Audio</string>
+    <string name="spatial_audio_summary">Places the stream around you on supported headphones.</string>
     <string name="loop_finished_broadcasts_summary">Replays a broadcast that ends, like an hourly newscast, instead of stopping. Live stations are unaffected.</string>
 
     <!-- Settings: About -->

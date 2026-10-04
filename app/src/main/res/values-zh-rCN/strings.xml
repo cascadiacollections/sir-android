@@ -186,6 +186,8 @@
     <string name="prewarm_connections">预先连接收藏的电台</string>
     <string name="prewarm_connections_summary">让最常播放的收藏电台更快开始播放。应用启动时会使用少量数据。</string>
     <string name="loop_finished_broadcasts">循环播放已结束的节目</string>
+    <string name="spatial_audio">空间音频</string>
+    <string name="spatial_audio_summary">在支持的耳机上营造环绕声场。</string>
     <string name="loop_finished_broadcasts_summary">节目（如整点新闻）播放结束后从头重播，而不是停止。直播电台不受影响。</string>
 
     <!-- Settings: About -->

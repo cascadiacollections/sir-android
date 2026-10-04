@@ -63,6 +63,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.material3.AssistChip
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -288,6 +291,14 @@ private fun ListenNowContent(
     onHideRecent: (Station) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val gridState = rememberLazyGridState()
+    // The shelf loads after the genres and grid are already laid out, and a lazy grid keeps
+    // its first visible item anchored when items are inserted above it — so the shelf landed
+    // just off-screen. Bring it into view, unless the listener already scrolled away.
+    val hasShelf = state.recentShelf.isNotEmpty()
+    LaunchedEffect(hasShelf) {
+        if (hasShelf && gridState.firstVisibleItemIndex <= SHELF_ITEM_COUNT) gridState.scrollToItem(0)
+    }
     PullToRefreshBox(
         isRefreshing = state.isRefreshing,
         onRefresh = onRefresh,
@@ -295,6 +306,7 @@ private fun ListenNowContent(
     ) {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(POPULAR_TILE_MIN_WIDTH),
+            state = gridState,
             contentPadding = PaddingValues(start = GRID_GUTTER, end = GRID_GUTTER, bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -363,6 +375,12 @@ private fun ListenNowContent(
 }
 
 private val GRID_GUTTER = 16.dp
+
+/** The shelf's header and row: the items inserted above the genres when recents load. */
+private const val SHELF_ITEM_COUNT = 2
+
+/** Genre chips shown before "More genres"; the live list has ~48, which buried the grid. */
+private const val COLLAPSED_GENRE_COUNT = 12
 
 /**
  * Lets a full-span grid item draw across the grid's side gutters, so headers, chips and the
@@ -454,13 +472,23 @@ private fun SearchResultsList(
 
 @Composable
 private fun GenreChips(state: SearchUiState, onSelectGenre: (Tag) -> Unit, modifier: Modifier = Modifier) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val collapsible = state.genres.size > COLLAPSED_GENRE_COUNT
+    val shown = if (expanded || !collapsible) {
+        state.genres
+    } else {
+        // Keep a selected genre visible even when it sits past the cut.
+        val head = state.genres.take(COLLAPSED_GENRE_COUNT)
+        val selected = state.genres.firstOrNull { it.name == state.selectedGenre?.name }
+        if (selected == null || selected in head) head else head + selected
+    }
     FlowRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        state.genres.forEach { tag ->
+        shown.forEach { tag ->
             val selected = state.selectedGenre?.name == tag.name
             FilterChip(
                 selected = selected,
@@ -470,6 +498,14 @@ private fun GenreChips(state: SearchUiState, onSelectGenre: (Tag) -> Unit, modif
                     { Icon(Icons.Default.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }
                 } else {
                     null
+                }
+            )
+        }
+        if (collapsible) {
+            AssistChip(
+                onClick = { expanded = !expanded },
+                label = {
+                    Text(stringResource(if (expanded) R.string.browse_fewer_genres else R.string.browse_more_genres))
                 }
             )
         }

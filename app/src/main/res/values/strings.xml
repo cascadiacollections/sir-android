@@ -217,4 +217,6 @@
     <string name="directory_unavailable">Directory unavailable</string>
     <string name="try_again">Try again</string>
     <string name="showing_saved_stations">Showing saved stations</string>
+    <string name="browse_more_genres">More genres</string>
+    <string name="browse_fewer_genres">Fewer genres</string>
 </resources>

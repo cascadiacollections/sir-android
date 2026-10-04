@@ -19,8 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.WifiOff
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -55,7 +53,8 @@ internal data class TileAction(val label: String, val onClick: () -> Unit)
 
 /**
  * ShoutKit's Recently Played shelf: a horizontal row of station tiles. Tapping plays;
- * the long-press menu (or the matching accessibility action) hides a tile.
+ * the long-press menu (or the matching accessibility action) hides a tile, or copies its
+ * automation link / pins it to the home screen.
  */
 @Composable
 internal fun RecentlyPlayedShelf(
@@ -79,7 +78,7 @@ internal fun RecentlyPlayedShelf(
                 station = station,
                 isPlaying = station.id == selectedStationId,
                 onPlay = { onPlay(station) },
-                actions = listOf(TileAction(hideLabel) { onHide(station) }),
+                actions = listOf(TileAction(hideLabel) { onHide(station) }) + stationAutomationActions(station),
                 testTag = ListenNowTestTags.recentTile(station.id),
                 modifier = Modifier.width(RECENT_TILE_SIZE)
             )
@@ -87,7 +86,10 @@ internal fun RecentlyPlayedShelf(
     }
 }
 
-/** A Popular Stations grid tile; the long-press menu saves or unsaves the station. */
+/**
+ * A Popular Stations grid tile; the long-press menu saves or unsaves the station, or
+ * copies its automation link / pins it to the home screen.
+ */
 @Composable
 internal fun PopularStationTile(
     station: Station,
@@ -103,7 +105,7 @@ internal fun PopularStationTile(
         station = station,
         isPlaying = isPlaying,
         onPlay = onPlay,
-        actions = listOf(TileAction(label, onToggleSaved)),
+        actions = listOf(TileAction(label, onToggleSaved)) + stationAutomationActions(station),
         testTag = ListenNowTestTags.popularTile(station.id),
         modifier = modifier
     )
@@ -192,17 +194,7 @@ private fun StationTile(
                 modifier = Modifier.padding(horizontal = 2.dp)
             )
         }
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            actions.forEach { action ->
-                DropdownMenuItem(
-                    text = { Text(action.label) },
-                    onClick = {
-                        menuOpen = false
-                        action.onClick()
-                    }
-                )
-            }
-        }
+        StationActionsMenu(expanded = menuOpen, onDismiss = { menuOpen = false }, actions = actions)
     }
 }
 

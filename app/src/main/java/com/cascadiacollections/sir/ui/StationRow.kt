@@ -28,8 +28,8 @@ import com.cascadiacollections.sir.core.model.Station
  *
  * Tapping anywhere on the row starts playback, which leaves the trailing slot free for
  * the list-specific action (save, remove, ...). [onLongClick] is opt-in per call site
- * (e.g. the library's saved-stations section wires it to open the edit sheet) since
- * long-press has no meaning for browse results or recents. [subtitle] defaults to the
+ * (the library's saved-stations section opens the edit sheet; browse results open the
+ * automation menu). [subtitle] defaults to the
  * station's codec/bitrate label; null or empty omits the supporting line.
  */
 @Composable

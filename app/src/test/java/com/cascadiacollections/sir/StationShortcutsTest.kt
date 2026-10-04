@@ -1,12 +1,16 @@
 package com.cascadiacollections.sir
 
+import android.content.ClipboardManager
 import android.content.pm.ShortcutManager
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.containsOnly
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isLessThanOrEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.model.Station
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -14,6 +18,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowToast
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -157,5 +162,49 @@ class StationShortcutsTest {
         assertThat(StationShortcuts.dynamicCapacity(2)).isEqualTo(0)
         assertThat(StationShortcuts.dynamicCapacity(4)).isEqualTo(1)
         assertThat(StationShortcuts.dynamicCapacity(5)).isEqualTo(2)
+    }
+
+    @Test
+    fun `a pinned shortcut plays the station headlessly, apart from the dynamic ones`() {
+        val context = RuntimeEnvironment.getApplication()
+        val manager = context.getSystemService(ShortcutManager::class.java)
+
+        assertThat(StationShortcuts.requestPin(context, station("a", name = "KEXP"))).isTrue()
+
+        val pinned = manager.pinnedShortcuts.single()
+        assertThat(pinned.id).isEqualTo("play-a")
+        assertThat(pinned.shortLabel.toString()).isEqualTo("KEXP")
+        val intent = pinned.intent!!
+        assertThat(intent.component?.className).isEqualTo(PlayStationActivity::class.java.name)
+        assertThat(intent.action).isEqualTo(PlayStationActivity.ACTION_PLAY_STATION)
+        assertThat(intent.data.toString()).isEqualTo("sir://play/a")
+        assertThat(dynamicShortcutIds()).isEmpty()
+    }
+
+    @Test
+    fun `nothing is pinned for a station with nothing to play`() {
+        val context = RuntimeEnvironment.getApplication()
+
+        assertThat(StationShortcuts.requestPin(context, Station(id = "b", name = "No URL"))).isFalse()
+    }
+
+    @Test
+    fun `copying the automation link puts the play link on the clipboard`() {
+        val context = RuntimeEnvironment.getApplication()
+
+        AutomationLinks.copy(context, station("a5314180-7573-4b46-aafc-51ed2d5b9e71"))
+
+        val clip = context.getSystemService(ClipboardManager::class.java).primaryClip!!
+        assertThat(clip.getItemAt(0).text.toString()).isEqualTo("sir://play/a5314180-7573-4b46-aafc-51ed2d5b9e71")
+        // Android 13+ shows its own clipboard confirmation.
+        assertThat(ShadowToast.getTextOfLatestToast()).isNull()
+    }
+
+    @Test
+    @Config(sdk = [32])
+    fun `before Android 13 a copy is confirmed with a toast`() {
+        AutomationLinks.copy(RuntimeEnvironment.getApplication(), station("a"))
+
+        assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Automation link copied")
     }
 }

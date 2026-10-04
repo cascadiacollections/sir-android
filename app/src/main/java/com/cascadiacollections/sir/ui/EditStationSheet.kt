@@ -2,6 +2,7 @@ package com.cascadiacollections.sir.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,14 +40,17 @@ object EditStationSheetTestTags {
  *
  * State is keyed to [station.id] so switching which station is being edited (the sheet
  * is recreated per long-press) resets the fields instead of carrying over stale edits.
+ * [actions] (the station's automation link and home-screen shortcut) sit under the title;
+ * they act on the saved station, not the unsaved edits.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditStationSheet(
+internal fun EditStationSheet(
     station: Station,
     onDismiss: () -> Unit,
     onSave: (Station) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    actions: List<TileAction> = emptyList()
 ) {
     var name by remember(station.id) { mutableStateOf(station.name) }
     var url by remember(station.id) { mutableStateOf(station.url) }
@@ -67,6 +71,13 @@ fun EditStationSheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(stringResource(R.string.edit_station), style = MaterialTheme.typography.titleMedium)
+            if (actions.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    actions.forEach { action ->
+                        TextButton(onClick = action.onClick) { Text(action.label) }
+                    }
+                }
+            }
             Spacer(Modifier.height(16.dp))
             OutlinedTextField(
                 value = name,

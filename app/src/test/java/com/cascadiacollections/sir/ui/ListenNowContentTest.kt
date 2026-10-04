@@ -14,7 +14,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import assertk.assertThat
 import assertk.assertions.containsExactly
-import assertk.assertions.isEqualTo
 import assertk.assertions.isLessThan
 import assertk.assertions.isTrue
 import com.cascadiacollections.sir.SearchUiState
@@ -126,10 +125,15 @@ class ListenNowContentTest {
         fun actionsOf(tag: String) =
             composeRule.onNodeWithTag(tag).fetchSemanticsNode().config[SemanticsActions.CustomActions]
 
-        val hide = actionsOf(ListenNowTestTags.recentTile("r")).single()
-        assertThat(hide.label).isEqualTo("Hide from Recently Played")
-        val save = actionsOf(ListenNowTestTags.popularTile("p")).single()
-        assertThat(save.label).isEqualTo("Add to My Stations")
+        // Each tile's own action first, then the automation link and home-screen shortcut.
+        val recentActions = actionsOf(ListenNowTestTags.recentTile("r"))
+        assertThat(recentActions.map { it.label })
+            .containsExactly("Hide from Recently Played", "Copy automation link", "Add to home screen")
+        val popularActions = actionsOf(ListenNowTestTags.popularTile("p"))
+        assertThat(popularActions.map { it.label })
+            .containsExactly("Add to My Stations", "Copy automation link", "Add to home screen")
+        val hide = recentActions.first()
+        val save = popularActions.first()
 
         composeRule.runOnIdle {
             hide.action()

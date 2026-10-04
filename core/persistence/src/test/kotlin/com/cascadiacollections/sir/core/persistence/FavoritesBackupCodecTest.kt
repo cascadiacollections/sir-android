@@ -49,7 +49,11 @@ class FavoritesBackupCodecTest {
     fun `decodes a ShoutKit export in sortIndex order with the field mapping`() {
         val stations = FavoritesBackupCodec.decode(shoutKitExport)
 
-        assertEquals(listOf("961a2c6c-0601-11e8-ae97-52543be04c81", "9617a958-0601-11e8-ae97-52543be04c81"), stations.map { it.id })
+        assertEquals(
+            listOf("961a2c6c-0601-11e8-ae97-52543be04c81", "9617a958-0601-11e8-ae97-52543be04c81", "no-stream"),
+            stations.map { it.id }
+        )
+        assertFalse("kept for the importer to re-resolve", stations[2].isPlayable)
         val kexp = stations[1]
         assertEquals("KEXP 90.3", kexp.name)
         assertEquals("https://kexp.streamguys1.com/kexp160.aac", kexp.url)
@@ -76,6 +80,25 @@ class FavoritesBackupCodecTest {
         assertEquals(listOf(0, 1), favorites.map { it.getValue("sortIndex").jsonPrimitive.int })
         assertFalse("absent artwork is omitted, as ShoutKit does", "artworkURL" in favorites[1])
         assertEquals("", favorites[1].getValue("genre").jsonPrimitive.content)
+    }
+
+    @Test
+    fun `encode writes the resolved stream so ShoutKit never receives a playlist url`() {
+        val text = FavoritesBackupCodec.encode(
+            listOf(Station(id = "a", name = "A", url = "https://a/listen.pls", urlResolved = "https://a/stream.mp3"))
+        )
+        val favorite = Json.parseToJsonElement(text).jsonObject.getValue("favorites").jsonArray[0].jsonObject
+        assertEquals("https://a/stream.mp3", favorite.getValue("streamURL").jsonPrimitive.content)
+    }
+
+    @Test
+    fun `entries without a stream url are kept for re-resolution`() {
+        val text = """{"schemaVersion":1,"favorites":[
+            {"id":"96062a7b-0601-11e8-ae97-52543be04c81","name":"Jazz","genre":"","sortIndex":0}]}"""
+        val station = FavoritesBackupCodec.decode(text).single()
+        assertEquals("96062a7b-0601-11e8-ae97-52543be04c81", station.id)
+        assertEquals("", station.url)
+        assertFalse(station.isPlayable)
     }
 
     @Test

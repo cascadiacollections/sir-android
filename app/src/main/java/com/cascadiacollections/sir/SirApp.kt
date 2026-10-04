@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir
 
 import android.app.Application
+import android.os.Build
 import android.os.StrictMode
 import android.util.Log
 import androidx.work.WorkManager
@@ -22,9 +23,7 @@ class SirApp : Application() {
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
-                    .detectDiskReads()
-                    .detectDiskWrites()
-                    .detectNetwork()
+                    .detectAll()
                     .penaltyLog()
                     .build()
             )
@@ -32,7 +31,17 @@ class SirApp : Application() {
                 StrictMode.VmPolicy.Builder()
                     .detectLeakedSqlLiteObjects()
                     .detectLeakedClosableObjects()
+                    .detectLeakedRegistrationObjects()
                     .detectActivityLeaks()
+                    .detectFileUriExposure()
+                    .detectCleartextNetwork()
+                    .apply {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) detectContentUriWithoutPermission()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) detectImplicitDirectBoot()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) detectIncorrectContextUse()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) detectUnsafeIntentLaunch()
+                    }
+                    // Not detectAll(): untagged sockets fire on every OkHttp/ExoPlayer request.
                     .penaltyLog()
                     .build()
             )

@@ -195,6 +195,7 @@
     <string name="about_version">版本</string>
     <string name="about_source_code">源代码</string>
     <string name="about_report_issue">报告问题</string>
+    <string name="about_support">支持 SIR</string>
     <string name="about_station_data">电台数据来自 Radio Browser</string>
 
     <!-- Library: ordering, backup, Recently Heard, Top Tracks -->

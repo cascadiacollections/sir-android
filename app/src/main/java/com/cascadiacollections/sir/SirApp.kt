@@ -45,6 +45,9 @@ class SirApp : Application() {
         ).start(applicationScope)
         // Re-renders the Quick Play widget as playback changes; idle unless one is placed.
         QuickPlayWidgetUpdater.startIfWidgetsPlaced(this)
+        // Mirrors the last-played station and recents to the Wear app (Play only; a no-op
+        // in the FOSS flavor, which has no Data Layer).
+        WearStationPublisher.start(this, applicationScope)
         applicationScope.launch {
             try {
                 BackgroundRefreshWorker.schedule(WorkManager.getInstance(this@SirApp))

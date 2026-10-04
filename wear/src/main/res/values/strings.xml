@@ -6,4 +6,9 @@
     <string name="live">Live</string>
     <string name="connecting">Connecting…</string>
     <string name="stream_description">Live stream</string>
+    <string name="stop">Stop</string>
+    <string name="recent_stations">Recent stations</string>
+    <string name="now_playing">Now playing</string>
+    <string name="play_last">Play last</string>
+    <string name="play_station">Play %1$s</string>
 </resources>

@@ -252,6 +252,11 @@ dependencies {
     // so shipping this in the FOSS APK added a non-free dependency that could never work.
     "playImplementation"(libs.play.feature.delivery.ktx)
 
+    // Wearable Data Layer: sends the last-played station and recents to the Wear app.
+    // Play only: it is part of proprietary Play services; the FOSS stub is inert.
+    "playImplementation"(libs.play.services.wearable)
+    "playImplementation"(libs.kotlinx.coroutines.play.services)
+
     // Settings persistence
     implementation(libs.datastore.preferences)
 

@@ -1,7 +1,10 @@
 package com.cascadiacollections.sir
 
+import android.content.Context
+import com.cascadiacollections.sir.core.directory.FileDiscoverySnapshotStore
 import com.cascadiacollections.sir.core.directory.RadioDirectories
 import com.cascadiacollections.sir.core.directory.RadioDirectory
+import java.io.File
 
 /**
  * Process-wide [RadioDirectory].
@@ -11,8 +14,28 @@ import com.cascadiacollections.sir.core.directory.RadioDirectory
  * composition would both leak thread pools across configuration changes and throw the
  * cache away on exactly the rotation and back-navigation cases it exists to serve.
  *
- * Holds no [android.content.Context], so it is safe as a static singleton.
+ * [install] (called first thing in [SirApp.onCreate]) gives it a place for the on-disk
+ * discovery snapshot. Without it — e.g. a test that never created the application — the
+ * chain simply has no snapshot layer. Only the application context is retained, so this
+ * is safe as a static singleton.
  */
 object AppDirectory {
-    val instance: RadioDirectory by lazy { RadioDirectories.create() }
+
+    @Volatile
+    private var appContext: Context? = null
+
+    fun install(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    val instance: RadioDirectory by lazy {
+        RadioDirectories.create(
+            snapshotStore = appContext?.let { context ->
+                // Resolved lazily (on first use, off the main thread's critical path) because
+                // noBackupFilesDir may create the directory. No-backup: it is a cache that a
+                // restore onto another device would only make stale.
+                FileDiscoverySnapshotStore(File(context.noBackupFilesDir, FileDiscoverySnapshotStore.FILE_NAME))
+            }
+        )
+    }
 }

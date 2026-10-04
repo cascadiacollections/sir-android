@@ -2,6 +2,7 @@ package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.Locale
@@ -91,6 +92,11 @@ class CachingRadioDirectory(
         cached("byuuid:$id") {
             delegate.getStation(id).map { station -> station?.let(::listOf) ?: emptyList() }
         }.map { it.firstOrNull() }
+
+    /** Never cached: it exists to fetch what changed since the stations were saved. */
+    override suspend fun getStations(ids: List<String>): Result<List<Station>> = delegate.getStations(ids)
+
+    override val discoveryUpdates: Flow<DiscoveryUpdate> get() = delegate.discoveryUpdates
 
     /**
      * Applies the same clamp the network directory applies, so a caller asking for 1000

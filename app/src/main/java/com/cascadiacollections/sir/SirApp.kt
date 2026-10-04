@@ -2,6 +2,8 @@ package com.cascadiacollections.sir
 
 import android.app.Application
 import android.os.StrictMode
+import android.util.Log
+import androidx.work.WorkManager
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.okhttp.streaming.StationConnectionPrewarmer
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +17,8 @@ class SirApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Before anything can touch AppDirectory.instance, so the chain gets its snapshot.
+        AppDirectory.install(this)
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
@@ -41,6 +45,15 @@ class SirApp : Application() {
         ).start(applicationScope)
         // Re-renders the Quick Play widget as playback changes; idle unless one is placed.
         QuickPlayWidgetUpdater.startIfWidgetsPlaced(this)
+        applicationScope.launch {
+            try {
+                BackgroundRefreshWorker.schedule(WorkManager.getInstance(this@SirApp))
+            } catch (e: IllegalStateException) {
+                // WorkManager is initialised by its startup provider; a host that skips
+                // providers (Robolectric) has none, and that must not take the app down.
+                Log.w("SirApp", "Background refresh not scheduled", e)
+            }
+        }
         applicationScope.launch {
             val settings = SettingsRepository(applicationContext)
             if (settings.connectionPrewarmingEnabled.first()) {

@@ -3,6 +3,7 @@ package com.cascadiacollections.sir
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.cascadiacollections.sir.core.directory.DiscoveryUpdate
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.directory.StationSearchFilters
 import com.cascadiacollections.sir.core.directory.Tag
@@ -128,10 +129,43 @@ class SearchViewModel(
                 .debounce { if (it is Request.Name && it.debounced) DEBOUNCE_MILLIS else 0L }
                 .collectLatest(::execute)
         }
+        // Subscribed first, so a background refresh that lands while the first load is still
+        // in flight is never missed.
+        observeDiscoveryUpdates()
         loadPopularStations()
         loadGenres()
         shelfStore?.let(::observeShelf)
     }
+
+    /**
+     * A discovery answer can be served from the on-disk snapshot and refreshed in the
+     * background afterwards (stale-while-revalidate, or the periodic worker). When that
+     * fresher answer lands, swap it in so the grid does not keep showing the old one.
+     */
+    private fun observeDiscoveryUpdates() {
+        viewModelScope.launch {
+            directory.discoveryUpdates.collect { update ->
+                when (update) {
+                    is DiscoveryUpdate.TopStations -> if (update.limit == POPULAR_LIMIT) {
+                        popularUpdates++
+                        _uiState.update { it.copy(popularStations = update.stations, popularLoadFailed = false) }
+                    }
+                    is DiscoveryUpdate.TopTags -> if (update.limit == RadioDirectory.DEFAULT_TAG_LIMIT && update.tags.isNotEmpty()) {
+                        genreUpdates++
+                        _uiState.update { it.copy(genres = update.tags) }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Discovery updates applied so far (main thread only). A load that started before an
+     * update and finished after it holds the older answer — typically the stale snapshot
+     * whose own revalidation produced the update — so it must not paint over it.
+     */
+    private var popularUpdates = 0
+    private var genreUpdates = 0
 
     private fun observeShelf(store: RecentShelfStore) {
         viewModelScope.launch {
@@ -308,9 +342,13 @@ class SearchViewModel(
         popularJob?.cancel()
         popularJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoadingPopular = true) }
+            val updatesBefore = popularUpdates
             val result = directory.topStations(POPULAR_LIMIT)
             ensureActive()
-            _uiState.update { it.withPopularResult(result).copy(isLoadingPopular = false, isRefreshing = false) }
+            val superseded = popularUpdates != updatesBefore && result.isSuccess
+            _uiState.update {
+                (if (superseded) it else it.withPopularResult(result)).copy(isLoadingPopular = false, isRefreshing = false)
+            }
         }
     }
 
@@ -323,8 +361,9 @@ class SearchViewModel(
     /** Replaces the curated genres with the live list; a failure keeps the curated ones. */
     private fun loadGenres() {
         viewModelScope.launch {
+            val updatesBefore = genreUpdates
             directory.topTags().onSuccess { tags ->
-                if (tags.isNotEmpty()) _uiState.update { it.copy(genres = tags) }
+                if (tags.isNotEmpty() && genreUpdates == updatesBefore) _uiState.update { it.copy(genres = tags) }
             }
         }
     }

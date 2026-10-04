@@ -1,5 +1,8 @@
 package com.cascadiacollections.sir.core.directory
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -13,24 +16,32 @@ import java.util.concurrent.TimeUnit
 object RadioDirectories {
 
     /**
-     * Builds `CuratedFallback(Caching(RadioBrowser))`.
+     * Builds `CuratedFallback(Snapshot(Caching(RadioBrowser)))`, or
+     * `CuratedFallback(Caching(RadioBrowser))` when there is no [snapshotStore].
      *
-     * Caching sits closest to the network so only real responses are memoized, and the
-     * curated fallback wraps everything so an outage degrades instead of failing.
+     * Caching sits closest to the network so only real responses are memoized. The
+     * on-disk discovery snapshot sits above it, so a stale-while-revalidate refresh can
+     * still be answered by a response cached moments earlier, and below the curated
+     * fallback, so bundled stations are only shown when there is no snapshot at all. The
+     * fallback wraps everything so an outage degrades instead of failing.
      */
     fun create(
         httpClient: OkHttpClient = defaultHttpClient(),
         userAgent: String = RadioBrowserDirectory.DEFAULT_USER_AGENT,
-        mirrorProvider: MirrorProvider = discoveringMirrorProvider(httpClient, userAgent)
-    ): RadioDirectory = CuratedFallbackDirectory(
-        CachingRadioDirectory(
+        mirrorProvider: MirrorProvider = discoveringMirrorProvider(httpClient, userAgent),
+        snapshotStore: DiscoverySnapshotStore? = null,
+        backgroundScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    ): RadioDirectory {
+        val cached = CachingRadioDirectory(
             RadioBrowserDirectory(
                 httpClient = httpClient,
                 mirrorProvider = mirrorProvider,
                 userAgent = userAgent
             )
         )
-    )
+        val persisted = snapshotStore?.let { SnapshotRadioDirectory(cached, it, backgroundScope) } ?: cached
+        return CuratedFallbackDirectory(persisted)
+    }
 
     /**
      * Mirrors discovered from `all.api.radio-browser.info/json/servers`, cached for the

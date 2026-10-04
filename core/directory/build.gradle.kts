@@ -11,7 +11,8 @@ dependencies {
     api(projects.core.model)
     api(platform(libs.okhttp.bom))
     api(libs.okhttp)
-    implementation(libs.kotlinx.coroutines.core)
+    // RadioDirectory.discoveryUpdates exposes a Flow, so coroutines are part of the API.
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)

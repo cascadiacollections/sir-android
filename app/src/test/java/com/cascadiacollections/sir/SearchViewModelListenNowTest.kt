@@ -2,6 +2,9 @@ package com.cascadiacollections.sir
 
 import com.cascadiacollections.sir.core.directory.CachingRadioDirectory
 import com.cascadiacollections.sir.core.directory.CuratedFallbackDirectory
+import com.cascadiacollections.sir.core.directory.DiscoverySnapshot
+import com.cascadiacollections.sir.core.directory.DiscoverySnapshotStore
+import com.cascadiacollections.sir.core.directory.SnapshotRadioDirectory
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.directory.Tag
 import com.cascadiacollections.sir.core.model.Station
@@ -191,6 +194,57 @@ class SearchViewModelListenNowTest {
         assertEquals(listOf("r2", "r1"), vm.uiState.value.recentShelf.map { it.id })
     }
 
+    private class MemorySnapshotStore(var snapshot: DiscoverySnapshot?) : DiscoverySnapshotStore {
+        override suspend fun read() = snapshot
+        override suspend fun write(snapshot: DiscoverySnapshot) {
+            this.snapshot = snapshot
+        }
+    }
+
+    private fun TestScope.snapshotChain(ageMillis: Long): RadioDirectory {
+        val now = 100 * HOUR
+        val saved = DiscoverySnapshot(
+            topStations = DiscoverySnapshot.StationsSection(SearchViewModel.POPULAR_LIMIT, now - ageMillis, listOf(station("saved"))),
+            topTags = DiscoverySnapshot.TagsSection(RadioDirectory.DEFAULT_TAG_LIMIT, now - ageMillis, listOf(Tag("saved", 1)))
+        )
+        return CuratedFallbackDirectory(
+            SnapshotRadioDirectory(
+                CachingRadioDirectory(network, clock = { 0L }),
+                MemorySnapshotStore(saved),
+                backgroundScope = this,
+                clock = { now }
+            ),
+            curated = listOf(CURATED)
+        )
+    }
+
+    @Test
+    fun `a cold start paints a fresh snapshot with no request, even offline`() = test {
+        network.top = Result.failure(IOException("offline"))
+        network.tags = Result.failure(IOException("offline"))
+
+        val vm = viewModel(snapshotChain(ageMillis = 1 * HOUR))
+        runCurrent()
+
+        assertEquals(listOf(station("saved")), vm.uiState.value.popularStations)
+        assertEquals(listOf(Tag("saved", 1)), vm.uiState.value.genres)
+        assertTrue(network.topLimits.isEmpty())
+        assertEquals(0, network.tagCalls)
+    }
+
+    @Test
+    fun `a stale snapshot is shown at once and replaced when the background refresh lands`() = test {
+        val vm = viewModel(snapshotChain(ageMillis = 7 * HOUR))
+
+        // Both the stale answer and the revalidation ran (the dispatcher is unconfined).
+        runCurrent()
+
+        assertEquals(listOf(SearchViewModel.POPULAR_LIMIT), network.topLimits)
+        assertEquals(listOf(station("live")), vm.uiState.value.popularStations)
+        assertEquals(listOf(Tag("live", 1)), vm.uiState.value.genres)
+        assertFalse(vm.uiState.value.showsSavedStationsNotice)
+    }
+
     /** Counts what reaches "the network" beneath the cache. */
     private class CountingDirectory : RadioDirectory {
         var top: Result<List<Station>> = Result.success(listOf(station("live")))
@@ -235,6 +289,7 @@ class SearchViewModelListenNowTest {
 
     private companion object {
         val CURATED = station("curated")
+        const val HOUR = 60 * 60 * 1000L
 
         fun station(id: String) = Station(id = id, name = id, url = "https://example.com/$id")
     }

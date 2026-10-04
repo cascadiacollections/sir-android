@@ -40,7 +40,7 @@ allowed the type to move out of `:app` without a data migration.
 behaviour is assembled from decorators by `RadioDirectories.create()`:
 
 ```
-CuratedFallbackDirectory( CachingRadioDirectory( RadioBrowserDirectory ) )
+CuratedFallbackDirectory( SnapshotRadioDirectory( CachingRadioDirectory( RadioBrowserDirectory ) ) )
 ```
 
 - `RadioBrowserDirectory` — talks to radio-browser.info following its published
@@ -89,8 +89,52 @@ CuratedFallbackDirectory( CachingRadioDirectory( RadioBrowserDirectory ) )
   instead of substituting bundled data — the caller already has stations on screen and
   keeps them, flagged "Showing saved stations".
 
+- `SnapshotRadioDirectory` — ShoutKit's `DirectoryDiscoverySnapshot`: the last successful
+  discovery answers (`topStations` — the browse tab's 24 — and `topTags`) persisted as one
+  JSON file (`DiscoverySnapshot`, `noBackupFilesDir/discovery-snapshot.json`), so a cold
+  start paints the browse tab with no request and still shows real stations offline. Each
+  section records its `limit` and save time, and the file a `schemaVersion`; a different
+  limit, another schema or an undecodable file is a miss. Younger than 6 h is served with
+  no request; older is served at once and revalidated in the background
+  (stale-while-revalidate, one refresh per section at a time); `forceRefresh` always goes
+  to the network. Only non-empty successes are stored. Search, genre browse and lookups
+  pass through and are never persisted. `FileDiscoverySnapshotStore` writes a temp file,
+  `fsync`s it and renames it over the old one, so a crash never leaves a truncated
+  snapshot; the store is an interface, so the policy is tested on the JVM. It sits above
+  the in-memory cache (a revalidation can reuse a response cached moments earlier) and
+  below the curated fallback (bundled stations only when there is no snapshot at all).
+  `AppDirectory.install` (first thing in `SirApp.onCreate`) supplies the file; without it
+  the chain has no snapshot layer.
+
+  A background success is announced on `RadioDirectory.discoveryUpdates` (empty by
+  default; the other decorators forward it) and `SearchViewModel` swaps it into the grid
+  and genre chips, so a stale snapshot is replaced on screen without a reload. A load that
+  started before such an update and finished after it is not allowed to paint over it.
+- `getStations(ids)` is a batched `byuuid?uuids=a,b,c` lookup (≤ 100 ids per request,
+  radio-browser UUIDs only, all batches must succeed). It is never cached and has no
+  fallback.
+
 Ordering is owned by the factory rather than by call sites, so the chain can be
 re-tuned in one place.
+
+### Background refresh
+
+`BackgroundRefreshWorker` (WorkManager, ShoutKit's `BackgroundRefreshController`) runs
+`BackgroundRefresh` every 4 h on unmetered networks with the battery not low — ShoutKit
+skips prefetch on cellular and Low Data Mode. It is enqueued with
+`enqueueUniquePeriodicWork(KEEP)` from `SirApp.onCreate`. One pass force-refreshes
+discovery (which updates the snapshot and anything on screen) and refreshes saved
+stations with one batched `getStations` call; it never reports clicks. A pass in which
+nothing succeeded retries with backoff, up to three times, then waits for the next period.
+
+Saved stations are updated through `SettingsRepository.refreshSavedStations`, in one
+DataStore transaction, by `SavedStationRefresh` (`:core:persistence`). There is no
+"edited" flag, so the rule follows what the edit sheet can change: the name and URL are
+never touched; `url_resolved`/`hls`/`bitrate`/`codec` are taken only while the directory
+still lists the saved URL (an edited URL, or a station the directory moved, is left
+alone — playback prefers `url_resolved`, so adopting it would play the stream the user
+edited away from); artwork is only filled in when the saved one is blank. The current
+selection is not rewritten, so playback never switches streams mid-listen.
 
 ## `:core:playback`
 

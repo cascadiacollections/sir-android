@@ -101,7 +101,7 @@ object FavoritesBackupCodec {
             .map { favorite ->
                 Station(
                     id = favorite.id,
-                    name = favorite.name.ifBlank { favorite.streamURL ?: favorite.id },
+                    name = favorite.name.ifBlank { favorite.streamURL?.takeIf { it.isNotBlank() } ?: favorite.id },
                     url = favorite.streamURL.orEmpty(),
                     favicon = favorite.artworkURL?.takeIf { it.isNotBlank() },
                     tags = favorite.genre.trim(),

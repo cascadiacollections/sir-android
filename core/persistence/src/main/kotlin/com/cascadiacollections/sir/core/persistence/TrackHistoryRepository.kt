@@ -78,6 +78,15 @@ class TrackHistoryRepository(context: Context) {
         }
     }
 
+    /** Adds cover art to the current hearing; see [HeardTracks.attachArtwork]. */
+    suspend fun attachArtwork(title: String, artist: String?, stationId: String?, artworkUrl: String) {
+        dataStore.edit { preferences ->
+            val current = HeardTracks.decode(preferences[tracksKey])
+            val updated = HeardTracks.attachArtwork(current, title, artist, stationId, artworkUrl)
+            if (updated != current) preferences[tracksKey] = HeardTracks.encode(updated)
+        }
+    }
+
     suspend fun clear() {
         dataStore.edit { preferences -> preferences.remove(tracksKey) }
     }

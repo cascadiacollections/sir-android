@@ -9,8 +9,8 @@ import androidx.core.graphics.drawable.IconCompat
 import com.cascadiacollections.sir.core.model.Station
 
 /**
- * Publishes per-station dynamic home-screen shortcuts, alongside the static "Play"
- * shortcut declared in `shortcuts.xml`.
+ * Publishes per-station dynamic home-screen shortcuts, alongside the static "Play",
+ * "What's playing?" and "Favorite this station" shortcuts declared in `shortcuts.xml`.
  *
  * Each shortcut targets the same `sir://station/{id}` deep link `MainActivity` already
  * resolves for other entry points (widgets, Assistant), so there's no separate
@@ -22,6 +22,17 @@ object StationShortcuts {
     private const val ID_PREFIX = "station-"
 
     /**
+     * The `<shortcut>`s in `res/xml/shortcuts.xml`. The launcher's per-activity limit
+     * counts static and dynamic shortcuts together, so these come off the stations' share:
+     * the static ones are the app's fixed actions and always win the slots.
+     */
+    const val STATIC_SHORTCUT_COUNT = 3
+
+    /** How many station shortcuts fit beside the static ones under [maxPerActivity]. */
+    fun dynamicCapacity(maxPerActivity: Int): Int =
+        (maxPerActivity - STATIC_SHORTCUT_COUNT).coerceAtLeast(0)
+
+    /**
      * Replaces the app's dynamic shortcuts with one per station in [stations] (most
      * important first), capped at whatever the launcher actually supports. Called with
      * an empty or shrunk list, this correctly clears shortcuts for stations no longer
@@ -31,7 +42,7 @@ object StationShortcuts {
         // maxCount <= 0 means this launcher doesn't support shortcuts at all (rather
         // than "zero slots free") — still clear any shortcuts a previous launcher may
         // have left behind, rather than returning early and leaving them stale.
-        val maxCount = ShortcutManagerCompat.getMaxShortcutCountPerActivity(context).coerceAtLeast(0)
+        val maxCount = dynamicCapacity(ShortcutManagerCompat.getMaxShortcutCountPerActivity(context))
 
         val shortcuts = stations
             .filter { it.isPlayable && it.name.isNotBlank() }

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+<!-- Static shortcuts. Every one here takes a slot from the dynamic station shortcuts
+     (StationShortcuts.STATIC_SHORTCUT_COUNT must match; StaticShortcutsTest checks it). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
     <shortcut
         android:shortcutId="play"
         android:enabled="true"
@@ -12,10 +16,58 @@
             android:targetClass="com.cascadiacollections.sir.MainActivity" />
     </shortcut>
 
+    <!-- ShoutKit's "What's playing on Holmdel" Siri shortcut: speaks the current track. -->
+    <shortcut
+        android:shortcutId="whats_playing"
+        tools:targetApi="n_mr1"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:shortcutShortLabel="@string/shortcut_whats_playing_short"
+        android:shortcutLongLabel="@string/shortcut_whats_playing_long">
+        <intent
+            android:action="com.cascadiacollections.sir.action.WHATS_PLAYING"
+            android:targetPackage="com.cascadiacollections.sir"
+            android:targetClass="com.cascadiacollections.sir.NowPlayingAnnounceActivity" />
+    </shortcut>
+
+    <!-- ShoutKit's "Favorite this station in Holmdel": saves the current station, no UI. -->
+    <shortcut
+        android:shortcutId="favorite_current"
+        tools:targetApi="n_mr1"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:shortcutShortLabel="@string/shortcut_favorite_short"
+        android:shortcutLongLabel="@string/shortcut_favorite_long">
+        <intent
+            android:action="com.cascadiacollections.sir.action.FAVORITE_CURRENT_STATION"
+            android:targetPackage="com.cascadiacollections.sir"
+            android:targetClass="com.cascadiacollections.sir.FavoriteCurrentStationActivity" />
+    </shortcut>
+
     <capability android:name="actions.intent.PLAY_MEDIA">
         <intent
             android:action="com.cascadiacollections.sir.SHORTCUT_PLAY"
             android:targetPackage="com.cascadiacollections.sir"
             android:targetClass="com.cascadiacollections.sir.MainActivity" />
+    </capability>
+
+    <!-- The App Actions catalogue has no built-in intent for "what's playing" or "save
+         this", so both are custom intents with their own query patterns. -->
+    <capability
+        android:name="custom.actions.intent.WHATS_PLAYING"
+        app:queryPatterns="@array/whats_playing_queries">
+        <intent
+            android:action="com.cascadiacollections.sir.action.WHATS_PLAYING"
+            android:targetPackage="com.cascadiacollections.sir"
+            android:targetClass="com.cascadiacollections.sir.NowPlayingAnnounceActivity" />
+    </capability>
+
+    <capability
+        android:name="custom.actions.intent.FAVORITE_CURRENT_STATION"
+        app:queryPatterns="@array/favorite_station_queries">
+        <intent
+            android:action="com.cascadiacollections.sir.action.FAVORITE_CURRENT_STATION"
+            android:targetPackage="com.cascadiacollections.sir"
+            android:targetClass="com.cascadiacollections.sir.FavoriteCurrentStationActivity" />
     </capability>
 </shortcuts>

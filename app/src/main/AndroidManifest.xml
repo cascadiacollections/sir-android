@@ -14,6 +14,14 @@
         android:name="android.permission.BLUETOOTH_CONNECT"
         tools:targetApi="s" />
 
+    <!-- "What's playing?" speaks its answer; package visibility (API 30+) has to let the
+         TextToSpeech client see the installed engines. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <!-- ChromeOS compatibility: touchscreen not required -->
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -63,6 +71,35 @@
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
+        </activity>
+        <!-- Headless voice/shortcut actions (static shortcuts + App Actions capabilities in
+             res/xml/shortcuts.xml). Exported with an explicit action each, so Assistant and
+             `adb shell am start` can reach them; neither takes input from the intent. -->
+        <activity
+            android:name=".NowPlayingAnnounceActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:label="@string/shortcut_whats_playing_long"
+            android:theme="@style/Theme.Sir.Headless">
+            <intent-filter>
+                <action android:name="com.cascadiacollections.sir.action.WHATS_PLAYING" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".FavoriteCurrentStationActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:label="@string/shortcut_favorite_long"
+            android:theme="@style/Theme.Sir.Headless">
+            <intent-filter>
+                <action android:name="com.cascadiacollections.sir.action.FAVORITE_CURRENT_STATION" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
         <service
             android:name=".RadioPlaybackService"

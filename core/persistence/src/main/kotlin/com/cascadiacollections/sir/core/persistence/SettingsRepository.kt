@@ -343,6 +343,29 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
         }
     }
 
+    /**
+     * Saves the currently selected station — "Favorite this station" from a shortcut,
+     * Assistant or the notification heart — reading the selection and writing favourites
+     * in one transaction, so it can never save a station the selection has moved away
+     * from. Add-only unless [toggle], which unsaves an already saved station (dropping its
+     * play count, as [removeStation] does). See [FavoriteCurrentStation] for the outcomes.
+     */
+    suspend fun favoriteSelectedStation(toggle: Boolean = false): FavoriteCurrentStation.Outcome {
+        var outcome: FavoriteCurrentStation.Outcome = FavoriteCurrentStation.Outcome.NothingSelected
+        context.dataStore.edit { preferences ->
+            val saved = StationCodec.decode(preferences[savedStationsKey])
+            val selected = StationCodec.decode(preferences[selectedStationKey]).firstOrNull()
+            val decided = FavoriteCurrentStation.decide(selected, saved, toggle)
+            outcome = decided
+            val updated = FavoriteCurrentStation.apply(saved, decided)
+            if (updated != saved) preferences[savedStationsKey] = StationCodec.encode(updated)
+            if (decided is FavoriteCurrentStation.Outcome.Removed) {
+                preferences.putPlayCounts(decodePlayCounts(preferences[stationPlayCountsKey]) - decided.station.id)
+            }
+        }
+        return outcome
+    }
+
     // No standalone `recordRecentStation`: recents are written by `selectStation` inside
     // the same transaction as the selection. A separate entry point could record a play
     // the selection never saw, which is exactly the divergence that transaction prevents.

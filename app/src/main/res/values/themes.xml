@@ -3,6 +3,13 @@
 
     <style name="Theme.Sir" parent="android:Theme.Material.Light.NoActionBar" />
 
+    <!-- Headless voice/shortcut actions ("What's playing?", "Favorite this station"):
+         nothing is drawn, so the screen underneath stays as it was. -->
+    <style name="Theme.Sir.Headless" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
     <style name="Theme.Sir.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>

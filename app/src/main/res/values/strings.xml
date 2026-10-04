@@ -152,6 +152,35 @@
 
     <!-- App shortcuts -->
     <string name="shortcut_play_long">Play SIR Radio</string>
+    <string name="shortcut_whats_playing_short">What\'s playing</string>
+    <string name="shortcut_whats_playing_long">What\'s playing?</string>
+    <string name="shortcut_favorite_short">Favorite</string>
+    <string name="shortcut_favorite_long">Favorite this station</string>
+    <!-- Spoken and shown by "What's playing?". %1$s title, %2$s artist, %3$s station -->
+    <string name="announce_track_by_artist_on_station">Now playing %1$s by %2$s on %3$s</string>
+    <!-- %1$s title, %2$s station -->
+    <string name="announce_track_on_station">Now playing %1$s on %2$s</string>
+    <!-- %1$s station -->
+    <string name="announce_station_playing">%1$s is playing</string>
+    <string name="announce_nothing_playing">Nothing is playing</string>
+    <!-- "Favorite this station" results. %1$s station -->
+    <string name="favorite_current_added">Added %1$s to My Stations</string>
+    <string name="favorite_current_already_saved">%1$s is already in My Stations</string>
+    <string name="favorite_current_default_stream">%1$s is always available and can\'t be added to My Stations</string>
+    <string name="favorite_current_nothing_selected">No station is selected</string>
+    <string name="favorite_current_removed">Removed %1$s from My Stations</string>
+    <!-- Assistant (App Actions) query patterns for the custom capabilities -->
+    <string-array name="whats_playing_queries">
+        <item>what\'s playing</item>
+        <item>what is playing</item>
+        <item>what song is this</item>
+        <item>what\'s on</item>
+    </string-array>
+    <string-array name="favorite_station_queries">
+        <item>favorite this station</item>
+        <item>save this station</item>
+        <item>add this station to my stations</item>
+    </string-array>
 
     <!-- Notification / Service -->
     <string name="notification_channel_name">Radio Playback</string>

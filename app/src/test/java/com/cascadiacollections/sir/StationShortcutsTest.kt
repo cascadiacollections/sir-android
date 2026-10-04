@@ -122,4 +122,35 @@ class StationShortcutsTest {
         assertEquals(1, ranks.getValue("station-b"))
         assertEquals(2, ranks.getValue("station-c"))
     }
+
+    @Test
+    fun `station shortcuts leave room for the static ones`() {
+        val context = RuntimeEnvironment.getApplication()
+        val manager = context.getSystemService(ShortcutManager::class.java)
+        shadowOf(manager).setMaxShortcutCountPerActivity(5)
+
+        StationShortcuts.update(context, (1..10).map { station("s$it") })
+
+        // 5 slots, 3 taken by "Play", "What's playing?" and "Favorite this station".
+        assertEquals(listOf("station-s1", "station-s2"), manager.dynamicShortcuts.sortedBy { it.rank }.map { it.id })
+    }
+
+    @Test
+    fun `no station shortcuts when the static ones fill the launcher`() {
+        val context = RuntimeEnvironment.getApplication()
+        val manager = context.getSystemService(ShortcutManager::class.java)
+        shadowOf(manager).setMaxShortcutCountPerActivity(StationShortcuts.STATIC_SHORTCUT_COUNT)
+
+        StationShortcuts.update(context, listOf(station("a")))
+
+        assertTrue(dynamicShortcutIds().isEmpty())
+    }
+
+    @Test
+    fun `dynamic capacity never goes negative`() {
+        assertEquals(0, StationShortcuts.dynamicCapacity(0))
+        assertEquals(0, StationShortcuts.dynamicCapacity(2))
+        assertEquals(1, StationShortcuts.dynamicCapacity(4))
+        assertEquals(2, StationShortcuts.dynamicCapacity(5))
+    }
 }

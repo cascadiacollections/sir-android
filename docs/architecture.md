@@ -410,6 +410,40 @@ playing.
   `onSearch`/`onGetSearchResult` answer the car's search: saved stations whose name
   matches, then the directory's name search, 20 at most. Voice "play X" still arrives
   through `onSetMediaItems` with a search query, as before.
+- **Voice and shortcut actions** — ShoutKit's Siri shortcuts "What's playing on Holmdel"
+  and "Favorite this station in Holmdel". Android has no "ask an app" intent, so each is a
+  static app shortcut plus an App Actions capability in `res/xml/shortcuts.xml`. The
+  built-in intent catalogue has nothing that fits either (`GET_THING` is a search), so both
+  are custom intents (`custom.actions.intent.WHATS_PLAYING` / `FAVORITE_CURRENT_STATION`,
+  query patterns in `strings.xml`) next to the existing `actions.intent.PLAY_MEDIA`. Both
+  open a headless activity (translucent, nothing drawn, excluded from recents, an explicit
+  action each so Assistant and `adb` can reach them):
+  - *What's playing?* — `NowPlayingAnnounceActivity` connects a `MediaController`
+    asynchronously, builds a `NowPlayingAnnouncement` (pure, JVM-tested) from the session
+    metadata and speaks it with `TextToSpeech` ("Now playing *title* by *artist* on
+    *station*" / "*station* is playing" / "Nothing is playing"), with a Toast, then finishes.
+    It holds `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` while speaking, so ExoPlayer ducks the
+    radio rather than pausing it. A resolved track replaces the session title and artist, so
+    the service also publishes the station name (`EXTRA_STATION_NAME`) and whether the
+    artist is real (`EXTRA_HAS_RESOLVED_ARTIST`) as metadata extras. If the service is not
+    running (`RadioPlaybackService.isRunning`), nothing can be playing and it is not bound —
+    binding would create it and prepare a stream only to say so.
+  - *Favorite this station* — `FavoriteCurrentStationActivity` calls
+    `SettingsRepository.favoriteSelectedStation()`, which reads the selection and writes
+    favourites in one transaction under `FavoriteCurrentStation`'s rules (`:core:persistence`):
+    add-only, so saying it twice never unsaves; the app's own stream (a `null` selection) and
+    a selection with no id or stream are no-ops with their own Toast. The service is neither
+    started nor bound for the write.
+  - *Notification heart.* The media notification (and lock screen, and any controller)
+    gets a Media3 `CommandButton` heart from `updateCustomLayout()`, filled when the selected
+    station is in My Stations, absent for the app's stream. It sends the
+    `ACTION_TOGGLE_FAVORITE` session command, which toggles through the same repository
+    call; a collector over the selection and favourites redraws it whoever changed them.
+    Once any layout has been published an empty one is sent too, so a heart never outlives
+    its station.
+  - *Shortcut slots.* The launcher's per-activity limit counts static and dynamic shortcuts
+    together, so `StationShortcuts` gives the station shortcuts what is left after the three
+    static ones (`STATIC_SHORTCUT_COUNT`, checked against the XML by `StaticShortcutsTest`).
 - **Quick-settings tile** takes its subtitle from the media session metadata, so it
   follows a directory station and ICY title updates. It falls back to the app's station
   name when no controller is connected.

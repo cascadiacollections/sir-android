@@ -53,6 +53,7 @@ import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftController
 import com.cascadiacollections.android.media3.timeshift.TimeShiftDataSource
 import com.cascadiacollections.sir.core.directory.search
+import com.cascadiacollections.sir.core.persistence.FavoriteCurrentStation
 import com.cascadiacollections.sir.core.persistence.HeardTrack
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.core.persistence.StationCollections
@@ -90,6 +91,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.future
@@ -201,6 +204,14 @@ class RadioPlaybackService : MediaLibraryService() {
         }
     }
 
+    // The notification heart: null while the current stream cannot be saved (the app's own
+    // stream), else whether the selected station is in My Stations.
+    private var favoriteState: Boolean? = null
+
+    // Whether a custom layout has ever been published, so a now-empty one is still sent
+    // (to take a stale heart down) but an empty one is never the first.
+    private var hasPublishedCustomLayout = false
+
     // The typed failure last published to controllers as session extras (see reportFailure)
     private var reportedFailure: StreamFailure? = null
     private var reportedFailureRetrying = false
@@ -242,6 +253,7 @@ class RadioPlaybackService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         val context = this
 
         // Media3's own provider owns the channel, foreground promotion/demotion, and
@@ -307,6 +319,23 @@ class RadioPlaybackService : MediaLibraryService() {
                 loopFinishedBroadcasts = enabled
                 applyRepeatMode()
             }
+        }
+
+        // Keep the notification heart in step with the selection and My Stations, whoever
+        // changed them (the heart itself, the phone UI, a shortcut, Assistant).
+        serviceScope.launch {
+            combine(settingsRepository.selectedStation, settingsRepository.savedStations) { selected, saved ->
+                if (FavoriteCurrentStation.isFavoritable(selected)) {
+                    FavoriteCurrentStation.isSaved(selected, saved)
+                } else {
+                    null
+                }
+            }
+                .distinctUntilChanged()
+                .collect { state ->
+                    favoriteState = state
+                    updateCustomLayout()
+                }
         }
 
         // React to the user picking a different station while the service is alive
@@ -427,6 +456,7 @@ class RadioPlaybackService : MediaLibraryService() {
                         MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                             .add(SessionCommand(ACTION_SEEK_BACK, android.os.Bundle.EMPTY))
                             .add(SessionCommand(ACTION_GO_LIVE, android.os.Bundle.EMPTY))
+                            .add(SessionCommand(ACTION_TOGGLE_FAVORITE, android.os.Bundle.EMPTY))
                             .build()
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailablePlayerCommands(availableCommands)
@@ -458,6 +488,19 @@ class RadioPlaybackService : MediaLibraryService() {
                             flushPlayer()
                             updateCustomLayout()
                             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                        }
+                        // The heart: toggles the selected station in My Stations. The
+                        // favourite-state collector redraws the button once the write lands.
+                        ACTION_TOGGLE_FAVORITE -> return serviceScope.future {
+                            when (settingsRepository.favoriteSelectedStation(toggle = true)) {
+                                is FavoriteCurrentStation.Outcome.Added,
+                                is FavoriteCurrentStation.Outcome.Removed,
+                                is FavoriteCurrentStation.Outcome.AlreadySaved ->
+                                    SessionResult(SessionResult.RESULT_SUCCESS)
+                                FavoriteCurrentStation.Outcome.DefaultStream,
+                                FavoriteCurrentStation.Outcome.NothingSelected ->
+                                    SessionResult(SessionError.ERROR_NOT_SUPPORTED)
+                            }
                         }
                     }
                     return super.onCustomCommand(session, controller, customCommand, args)
@@ -889,6 +932,7 @@ class RadioPlaybackService : MediaLibraryService() {
             isRouteReceiverRegistered = false
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
+        isRunning = false
         super.onDestroy()
     }
 
@@ -943,6 +987,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .setExtras(
                 (item.mediaMetadata.extras?.let { Bundle(it) } ?: Bundle()).apply {
                     putBoolean(EXTRA_HAS_RESOLVED_TRACK, currentTrackTitle != null)
+                    putBoolean(EXTRA_HAS_RESOLVED_ARTIST, currentArtist != null)
                     putString(EXTRA_ALBUM_ART_URL, art?.artworkUrl)
                     putString(EXTRA_TRACK_VIEW_URL, art?.trackViewUrl)
                 }
@@ -1182,11 +1227,23 @@ class RadioPlaybackService : MediaLibraryService() {
                 .setSessionCommand(SessionCommand(ACTION_GO_LIVE, android.os.Bundle.EMPTY))
                 .build()
         }
-        // Only update layout when we have buttons — empty list crashes the
-        // legacy PlaybackStateCompat CustomAction builder (requires icon). The session's
-        // own notification manager picks up the change and refreshes the notification.
-        if (buttons.isNotEmpty()) {
+        // The heart, for a station that can be saved: filled when it is in My Stations,
+        // and a tap toggles it. The app's own stream has no heart.
+        favoriteState?.let { saved ->
+            buttons += CommandButton.Builder(
+                if (saved) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED
+            )
+                .setDisplayName(getString(if (saved) R.string.remove_from_my_stations else R.string.add_to_my_stations))
+                .setSessionCommand(SessionCommand(ACTION_TOGGLE_FAVORITE, android.os.Bundle.EMPTY))
+                .build()
+        }
+        // No layout is published until there is a button to show; after that an empty
+        // list is sent too, or a heart would outlive the station it belonged to. The
+        // session's own notification manager picks up the change and refreshes the
+        // notification.
+        if (buttons.isNotEmpty() || hasPublishedCustomLayout) {
             session.setCustomLayout(ImmutableList.copyOf(buttons))
+            hasPublishedCustomLayout = true
         }
     }
 
@@ -1215,6 +1272,7 @@ class RadioPlaybackService : MediaLibraryService() {
                 .setExtras(
                     Bundle().apply {
                         putString(EXTRA_STREAM_URL, currentEndpoint.url)
+                        putString(EXTRA_STATION_NAME, currentStationTitle ?: getString(R.string.station_name))
                         if (currentEndpoint.isHls) putString(EXTRA_STREAM_MIME_TYPE, MimeTypes.APPLICATION_M3U8)
                     }
                 )
@@ -1455,6 +1513,15 @@ class RadioPlaybackService : MediaLibraryService() {
     companion object {
         private const val TAG = "RadioPlaybackService"
 
+        /**
+         * Whether the service exists in this process. "What's playing?" checks it before
+         * connecting a controller, because binding would create the service — and preparing
+         * a stream — only to answer "nothing is playing".
+         */
+        @Volatile
+        var isRunning: Boolean = false
+            internal set
+
         /** Distinct tag so join/rebuffer numbers can be scraped without the rest of the log. */
         private const val TAG_PLAYBACK_STATS = "SirPlaybackStats"
 
@@ -1490,6 +1557,9 @@ class RadioPlaybackService : MediaLibraryService() {
         const val ACTION_PLAY_FROM_SEARCH = "com.cascadiacollections.sir.action.PLAY_FROM_SEARCH"
         const val ACTION_SET_EQUALIZER_BANDS = "com.cascadiacollections.sir.action.SET_EQUALIZER_BANDS"
 
+        /** Session command behind the notification heart: toggle the selection in My Stations. */
+        const val ACTION_TOGGLE_FAVORITE = "com.cascadiacollections.sir.action.TOGGLE_FAVORITE"
+
         // Intent extras
         const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
@@ -1502,6 +1572,19 @@ class RadioPlaybackService : MediaLibraryService() {
          * fallback. See [publishResolvedMetadata].
          */
         const val EXTRA_HAS_RESOLVED_TRACK = "has_resolved_track"
+
+        /**
+         * [MediaMetadata.extras] key: whether the artist is a resolved ICY artist rather than
+         * the generic stream description that otherwise fills the slot.
+         */
+        const val EXTRA_HAS_RESOLVED_ARTIST = "has_resolved_artist"
+
+        /**
+         * [MediaMetadata.extras] key: the station's display name. Once a track resolves the
+         * title and artist belong to the song, so this is the only place the station is left —
+         * "What's playing?" ([NowPlayingAnnounceActivity]) reads it.
+         */
+        const val EXTRA_STATION_NAME = "station_name"
 
         /**
          * [MediaMetadata.extras] key for the actual playable stream URL of the current

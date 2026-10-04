@@ -8,7 +8,11 @@ profile:
 projectJDK: "21"
 # The image's SDK may predate compileSdk 37; fetch the platform when an sdkmanager exists
 # (otherwise AGP downloads missing platforms itself).
+# AGP 9 only enables unit tests for the tested (debug) build type, but the IDE's Gradle import
+# Qodana runs creates Compose Preview tasks for release variants too, which need them; flip it
+# for the analysis run only (the checkout is throwaway).
 bootstrap: |
+  printf '\nandroid.onlyEnableUnitTestForTheTestedBuildType=false\n' >> gradle.properties
   SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/opt/android-sdk}}"
   SDKMANAGER="$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)"
   if [ -n "$SDKMANAGER" ] && [ ! -d "$SDK/platforms/android-37.0" ]; then

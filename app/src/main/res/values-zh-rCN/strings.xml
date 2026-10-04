@@ -168,6 +168,14 @@
         <item>保存此电台</item>
         <item>把此电台添加到我的电台</item>
     </string-array>
+    <string name="play_station_link_label">播放电台</string>
+    <string name="play_link_invalid">该 SIR 播放链接无效</string>
+    <string name="play_link_unknown_station">找不到该电台</string>
+    <string name="play_link_failed">无法开始播放</string>
+    <string name="copy_automation_link">复制自动化链接</string>
+    <string name="automation_link_clip_label">SIR 自动化链接</string>
+    <string name="automation_link_copied">已复制自动化链接</string>
+    <string name="add_to_home_screen">添加到主屏幕</string>
     <!-- Notification / Service -->
     <string name="notification_channel_name">电台播放</string>
     <string name="stream_description">直播流</string>

@@ -189,6 +189,17 @@
         <item>add this station to my stations</item>
     </string-array>
 
+    <!-- Automation: sir://play links (routines, Tasker, pinned shortcuts) -->
+    <string name="play_station_link_label">Play station</string>
+    <string name="play_link_invalid">That SIR play link isn\'t valid</string>
+    <string name="play_link_unknown_station">Couldn\'t find that station</string>
+    <string name="play_link_failed">Couldn\'t start playback</string>
+    <string name="copy_automation_link">Copy automation link</string>
+    <!-- Clipboard label (shown by the system clipboard UI) -->
+    <string name="automation_link_clip_label">SIR automation link</string>
+    <string name="automation_link_copied">Automation link copied</string>
+    <string name="add_to_home_screen">Add to home screen</string>
+
     <!-- Notification / Service -->
     <string name="notification_channel_name">Radio Playback</string>
     <string name="station_name" translatable="false">SIR</string>

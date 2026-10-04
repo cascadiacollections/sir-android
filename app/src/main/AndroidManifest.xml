@@ -117,6 +117,37 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <!-- Automation (routines, Tasker, pinned shortcuts, adb): sir://play/{id} or
+             sir://play, or the explicit action, starts playback with no UI. Unlike the two
+             above it does read the intent: only the play link's station id, validated in
+             StationDeepLink.playRequest. Shown over the lock screen (it draws nothing) so a
+             routine firing on a locked phone isn't left waiting behind the keyguard. -->
+        <activity
+            android:name=".PlayStationActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:showWhenLocked="true"
+            android:label="@string/play_station_link_label"
+            android:theme="@style/Theme.Sir.Headless"
+            tools:targetApi="o_mr1">
+            <intent-filter>
+                <action android:name="com.cascadiacollections.sir.action.PLAY_STATION" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.cascadiacollections.sir.action.PLAY_STATION" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sir" android:host="play" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sir" android:host="play" />
+            </intent-filter>
+        </activity>
         <service
             android:name=".RadioPlaybackService"
             android:exported="false"

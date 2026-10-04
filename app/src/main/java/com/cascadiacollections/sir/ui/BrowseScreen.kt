@@ -74,6 +74,8 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -407,6 +409,53 @@ private fun Modifier.bleed(): Modifier = layout { measurable, constraints ->
     }
 }
 
+/**
+ * One search result. Long-press opens the automation menu (copy link, add to home screen),
+ * also offered to TalkBack as custom actions since a long-press menu isn't discoverable there.
+ */
+@Composable
+private fun SearchResultRow(
+    station: Station,
+    isSaved: Boolean,
+    isPlaying: Boolean,
+    onPlay: () -> Unit,
+    onToggleSaved: (Station, Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val resources = LocalResources.current
+    var menuOpen by remember { mutableStateOf(false) }
+    val automationActions = stationAutomationActions(station)
+    Box(modifier = modifier) {
+        StationRow(
+            station = station,
+            isPlaying = isPlaying,
+            onPlay = onPlay,
+            onLongClick = { menuOpen = true }.takeIf { automationActions.isNotEmpty() },
+            modifier = Modifier.semantics {
+                customActions = automationActions.map { action ->
+                    CustomAccessibilityAction(action.label) {
+                        action.onClick()
+                        true
+                    }
+                }
+            },
+            subtitle = station.browseSubtitle {
+                resources.getString(R.string.bitrate_kbps, it)
+            },
+            trailing = {
+                IconButton(onClick = { onToggleSaved(station, isSaved) }) {
+                    if (isSaved) {
+                        Icon(Icons.Default.Check, contentDescription = stringResource(R.string.station_saved))
+                    } else {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.save_station))
+                    }
+                }
+            }
+        )
+        StationActionsMenu(expanded = menuOpen, onDismiss = { menuOpen = false }, actions = automationActions)
+    }
+}
+
 /** Typed search and genre browse results, with the genre chips kept while browsing a genre. */
 @Composable
 private fun SearchResultsList(
@@ -431,23 +480,12 @@ private fun SearchResultsList(
         val stationRow: LazyListScope.(List<Station>) -> Unit = { stations ->
             // Unkeyed: directory results are not guaranteed unique, and a duplicate key crashes.
             items(stations) { station ->
-                val isSaved = station.id in savedStationIds
-                StationRow(
+                SearchResultRow(
                     station = station,
+                    isSaved = station.id in savedStationIds,
                     isPlaying = station.id == selectedStationId,
                     onPlay = { onPlay(station) },
-                    subtitle = station.browseSubtitle {
-                        resources.getString(R.string.bitrate_kbps, it)
-                    },
-                    trailing = {
-                        IconButton(onClick = { onToggleSaved(station, isSaved) }) {
-                            if (isSaved) {
-                                Icon(Icons.Default.Check, contentDescription = stringResource(R.string.station_saved))
-                            } else {
-                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.save_station))
-                            }
-                        }
-                    }
+                    onToggleSaved = onToggleSaved
                 )
             }
         }

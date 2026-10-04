@@ -2,7 +2,6 @@ package com.cascadiacollections.sir
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
@@ -20,6 +19,9 @@ import com.cascadiacollections.sir.core.model.Station
 object StationShortcuts {
 
     private const val ID_PREFIX = "station-"
+
+    // Pinned play shortcuts (requestPin); never shared with the dynamic ones above.
+    private const val PIN_PREFIX = "play-"
 
     /**
      * The `<shortcut>`s in `res/xml/shortcuts.xml`. The launcher's per-activity limit
@@ -62,14 +64,37 @@ object StationShortcuts {
             .setRank(rank)
             .setIcon(IconCompat.createWithResource(context, R.drawable.ic_launcher_foreground))
             .setIntent(
-                Intent(Intent.ACTION_VIEW, deepLinkFor(station.id))
+                // Station IDs derived from imported stream URLs can contain reserved
+                // characters like ':' and '/'; the link percent-encodes them so
+                // MainActivity's lastPathSegment gets the whole ID back intact.
+                Intent(Intent.ACTION_VIEW, StationDeepLink.stationLink(station.id))
                     .setClass(context, MainActivity::class.java)
             )
             .build()
 
-    // Station IDs derived from imported stream URLs can contain reserved characters
-    // like ':' and '/'; appendPath percent-encodes them so MainActivity's
-    // lastPathSegment gets the whole ID back intact instead of just its trailing chunk.
-    private fun deepLinkFor(stationId: String): Uri =
-        Uri.Builder().scheme("sir").authority("station").appendPath(stationId).build()
+    /** Whether the launcher can pin a shortcut on request ([requestPin]). */
+    fun canPin(context: Context): Boolean = ShortcutManagerCompat.isRequestPinShortcutSupported(context)
+
+    /**
+     * Asks the launcher to pin a home-screen shortcut that plays [station] without opening
+     * the app (`sir://play/{id}` through [PlayStationActivity]) — the one-tap version of an
+     * automation link, and something routines that can only "open a shortcut" can use.
+     *
+     * Its own id prefix: a pinned shortcut sharing a dynamic shortcut's id would be rewritten
+     * by the next [update], which points at MainActivity. Returns false when the launcher
+     * can't pin; otherwise the launcher shows its own confirmation.
+     */
+    fun requestPin(context: Context, station: Station): Boolean {
+        if (!canPin(context) || !station.isPlayable) return false
+        val shortcut = ShortcutInfoCompat.Builder(context, PIN_PREFIX + station.id)
+            .setShortLabel(station.name.ifBlank { context.getString(R.string.play_station_link_label) })
+            .setLongLabel(station.name.ifBlank { context.getString(R.string.play_station_link_label) })
+            .setIcon(IconCompat.createWithResource(context, R.drawable.ic_launcher_foreground))
+            .setIntent(
+                Intent(PlayStationActivity.ACTION_PLAY_STATION, StationDeepLink.playLink(station.id))
+                    .setClass(context, PlayStationActivity::class.java)
+            )
+            .build()
+        return ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
+    }
 }

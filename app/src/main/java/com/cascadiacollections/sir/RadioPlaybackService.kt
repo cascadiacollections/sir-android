@@ -18,6 +18,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -880,16 +881,21 @@ class RadioPlaybackService : MediaLibraryService() {
             ACTION_PLAY_FROM_SEARCH -> {
                 val query = intent.getStringExtra(EXTRA_SEARCH_QUERY)
                 serviceScope.launch {
-                    val station = query?.takeIf { it.isNotBlank() }?.let { resolveVoiceSearch(it) }
-                    if (station != null) {
-                        // Picked up by the selectedStation collector in onCreate, which
-                        // starts playback itself — nothing further to do here.
-                        settingsRepository.selectStation(station)
-                    } else {
-                        if (player?.playbackState == Player.STATE_IDLE) player?.prepare()
-                        player?.play()
-                    }
+                    // No match plays whatever is selected. A match that was already the
+                    // selection changes nothing the selection collector would see, so
+                    // playback is started here either way (see playSelection).
+                    query?.takeIf { it.isNotBlank() }
+                        ?.let { resolveVoiceSearch(it) }
+                        ?.let { settingsRepository.selectStation(it) }
+                    playSelection()
                 }
+            }
+
+            // Automation (`sir://play[/{id}]`, via PlayStationActivity): select the linked
+            // station if there is one, then play the selection — cold start or not.
+            ACTION_PLAY_LINK -> {
+                val stationId = intent.getStringExtra(EXTRA_STATION_ID)?.takeIf(StationDeepLink::isValidId)
+                serviceScope.launch { playLink(stationId) }
             }
 
             ACTION_SEEK_BACK -> {
@@ -1440,6 +1446,36 @@ class RadioPlaybackService : MediaLibraryService() {
     }
 
     /**
+     * Plays an automation link: [stationId] (resolved like every other station link, see
+     * [StationDeepLink.play]) or, when null, whatever is selected. An unknown station plays
+     * nothing and says so.
+     */
+    private suspend fun playLink(stationId: String?) {
+        if (stationId != null && !StationDeepLink.play(stationId, AppDirectory.instance, settingsRepository)) {
+            Log.w(TAG, "Play link: no playable station $stationId")
+            Toast.makeText(applicationContext, R.string.play_link_unknown_station, Toast.LENGTH_SHORT).show()
+            return
+        }
+        playSelection()
+    }
+
+    /**
+     * Points the player at the persisted selection and plays it.
+     *
+     * Not left to the selection collector: it skips its first value (on a cold start that
+     * may already be the new station), and selecting the station that is already selected
+     * emits nothing at all — the morning routine's case, where yesterday's newscast is still
+     * the selection — so the player would sit prepared but paused. Whichever of this and the
+     * collector runs second finds the stream current and no-ops.
+     */
+    private suspend fun playSelection() {
+        applyStreamSource(resolveStreamSource(), startPlayback = true)
+        val p = player ?: return
+        if (p.playbackState == Player.STATE_IDLE) p.prepare()
+        p.play()
+    }
+
+    /**
      * Applies a custom equalizer curve — one gain per UI slider, interpolated across
      * however many hardware bands the device actually has.
      */
@@ -1618,6 +1654,9 @@ class RadioPlaybackService : MediaLibraryService() {
         const val ACTION_PLAY_FROM_SEARCH = "com.cascadiacollections.sir.action.PLAY_FROM_SEARCH"
         const val ACTION_SET_EQUALIZER_BANDS = "com.cascadiacollections.sir.action.SET_EQUALIZER_BANDS"
 
+        /** Play an automation link; carries [EXTRA_STATION_ID], or none to play the selection. */
+        const val ACTION_PLAY_LINK = "com.cascadiacollections.sir.action.PLAY_LINK"
+
         /** Session command behind the notification heart: toggle the selection in My Stations. */
         const val ACTION_TOGGLE_FAVORITE = "com.cascadiacollections.sir.action.TOGGLE_FAVORITE"
 
@@ -1626,6 +1665,7 @@ class RadioPlaybackService : MediaLibraryService() {
         const val EXTRA_EQUALIZER_PRESET = "equalizer_preset"
         const val EXTRA_SEARCH_QUERY = "search_query"
         const val EXTRA_EQUALIZER_BANDS = "equalizer_bands"
+        const val EXTRA_STATION_ID = "station_id"
 
         /**
          * [MediaMetadata.extras] key: whether the current metadata update carries a

@@ -24,6 +24,12 @@ private const val TAG = "TimeShiftDataSource"
  * When the upstream ends or fails, the buffer is marked end-of-stream so the consumer
  * drains what is buffered and then sees [C.RESULT_END_OF_INPUT] rather than blocking.
  *
+ * A resource whose length the upstream knows (a file served with `Content-Length`, such as
+ * an hourly newscast MP3) is not a live stream and is passed straight through, length and
+ * all. Hiding the length behind the buffer made such a file look unbounded: the player
+ * could neither seek in it nor know its duration, so its natural end was mistaken for a
+ * dropped live stream. Time-shift has nothing to add to a file the player can seek itself.
+ *
  * @param upstream The upstream [DataSource] to read from.
  * @param controller Controller owning the buffer these bytes stream into.
  * @param threadName Name for the background reader thread.
@@ -41,12 +47,20 @@ class TimeShiftDataSource(
 
     private var readerThread: Thread? = null
 
+    // The open resource has a known length and is read directly, bypassing the buffer.
+    private var passThrough = false
+
     override fun addTransferListener(transferListener: TransferListener) {
         upstream.addTransferListener(transferListener)
     }
 
     override fun open(dataSpec: DataSpec): Long {
-        upstream.open(dataSpec)
+        val length = upstream.open(dataSpec)
+        if (length != C.LENGTH_UNSET.toLong()) {
+            passThrough = true
+            return length
+        }
+        passThrough = false
 
         // A previous data source over this buffer may have ended it; this one is live again.
         buffer.resumeStream()
@@ -75,7 +89,11 @@ class TimeShiftDataSource(
         return C.LENGTH_UNSET.toLong()
     }
 
-    override fun read(target: ByteArray, offset: Int, length: Int): Int = buffer.read(target, offset, length)
+    override fun read(target: ByteArray, offset: Int, length: Int): Int = if (passThrough) {
+        upstream.read(target, offset, length)
+    } else {
+        buffer.read(target, offset, length)
+    }
 
     override fun getUri(): Uri? = upstream.uri
 
@@ -87,6 +105,12 @@ class TimeShiftDataSource(
     override fun getResponseHeaders(): Map<String, List<String>> = upstream.responseHeaders
 
     override fun close() {
+        if (passThrough) {
+            // Nothing was written to the buffer, and it may belong to a live stream's source.
+            passThrough = false
+            upstream.close()
+            return
+        }
         readerThread?.interrupt()
         readerThread = null
         buffer.signalEndOfStream()

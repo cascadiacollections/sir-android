@@ -167,6 +167,7 @@ fun LibraryScreen(
     editingStation?.let { station ->
         EditStationSheet(
             station = station,
+            actions = stationAutomationActions(station),
             onDismiss = { editingStation = null },
             onSave = { updated ->
                 viewModel.saveStation(updated)

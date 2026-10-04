@@ -1,10 +1,13 @@
 package com.cascadiacollections.sir
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Looper
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.model.Station
@@ -21,7 +24,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
 
-/** The two headless shortcut/Assistant activities, end to end. */
+/** The headless shortcut, Assistant and automation activities, end to end. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class HeadlessActionActivitiesTest {
@@ -90,6 +93,45 @@ class HeadlessActionActivitiesTest {
         Robolectric.buildActivity(NowPlayingAnnounceActivity::class.java).setup()
 
         assertThat(awaitToast()).isEqualTo("Nothing is playing")
+        assertThat(shadowOf(app).nextStartedService).isNull()
+    }
+
+    private fun playLink(uri: String?, action: String = Intent.ACTION_VIEW): PlayStationActivity =
+        Robolectric.buildActivity(PlayStationActivity::class.java, Intent(action, uri?.let(Uri::parse)))
+            .setup()
+            .get()
+
+    @Test
+    fun `a play link hands the station to the service and finishes without UI`() {
+        val activity = playLink("sir://play/a5314180-7573-4b46-aafc-51ed2d5b9e71")
+
+        assertThat(activity.isFinishing).isTrue()
+        val started = shadowOf(app).nextStartedService
+        assertThat(started.component?.className).isEqualTo(RadioPlaybackService::class.java.name)
+        assertThat(started.action).isEqualTo(RadioPlaybackService.ACTION_PLAY_LINK)
+        assertThat(started.getStringExtra(RadioPlaybackService.EXTRA_STATION_ID))
+            .isEqualTo("a5314180-7573-4b46-aafc-51ed2d5b9e71")
+        assertThat(ShadowToast.getTextOfLatestToast()).isNull()
+    }
+
+    @Test
+    fun `a play link without a station, or the bare action, plays the selection`() {
+        playLink("sir://play")
+        playLink(uri = null, action = PlayStationActivity.ACTION_PLAY_STATION)
+
+        repeat(2) {
+            val started = shadowOf(app).nextStartedService
+            assertThat(started.action).isEqualTo(RadioPlaybackService.ACTION_PLAY_LINK)
+            assertThat(started.hasExtra(RadioPlaybackService.EXTRA_STATION_ID)).isFalse()
+        }
+    }
+
+    @Test
+    fun `a malformed play link says so and starts nothing`() {
+        val activity = playLink("sir://play/%3Cscript%3E")
+
+        assertThat(activity.isFinishing).isTrue()
+        assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("That SIR play link isn't valid")
         assertThat(shadowOf(app).nextStartedService).isNull()
     }
 }

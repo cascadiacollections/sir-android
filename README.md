@@ -31,6 +31,49 @@
 - **App shortcuts** — Long-press to instantly start playback
 - **Auto-reconnect** — Exponential backoff retry on stream errors
 - **Open source licenses** — In-app OSS license viewer
+- **Automation** — Play links for routines, Tasker and home-screen shortcuts (below)
+
+## Automation
+
+Any station can be started without opening the app, e.g. the NPR hourly newscast every
+morning. Long-press a station on Listen Now, in search results, or among Library's saved
+stations, then:
+
+- **Copy automation link** copies `sir://play/<station id>`.
+- **Add to home screen** pins a shortcut that plays the station (launchers that support
+  pinning only).
+
+Opening `sir://play/<id>` plays that station with no UI. `sir://play` with no id plays the
+last selected station. (`sir://station/<id>` still opens the app on the station.) The NPR
+Newscast link is `sir://play/a5314180-7573-4b46-aafc-51ed2d5b9e71`. It is a ~5 minute file,
+not a live stream, so it plays once and stops unless Settings → "Loop finished broadcasts"
+is on.
+
+**Google Assistant routine.** Google Home app → Routines → e.g. "Good morning" → Add
+action → "Try adding your own" (custom command) → `play NPR Newscast on SIR`. This uses
+SIR's voice search, which checks your saved stations by name and then the directory. Which
+Assistant routine features are available depends on your device and on Google's rollout
+of Gemini, so this one is untested.
+
+**Tasker / MacroDroid / Automate.** Trigger at 7:00, then either:
+
+- open the URL `sir://play/<id>` (Tasker: *Net → Browse URL*), or
+- send an intent to an **activity** with action
+  `com.cascadiacollections.sir.action.PLAY_STATION` and data `sir://play/<id>` (Tasker:
+  *System → Send Intent*, Target: Activity).
+
+Android only lets a background app open an activity in limited cases, so the automation
+app needs its "Display over other apps" permission (Tasker and MacroDroid ask for it).
+
+**Samsung Modes & Routines.** Untested on a Samsung device. If your version has an action
+that opens a link, use `sir://play/<id>`. Otherwise, pin the station with **Add to home
+screen** and use that shortcut where Routines lets you pick an app shortcut.
+
+**Testing from a computer:**
+
+```bash
+adb shell am start -a android.intent.action.VIEW -d sir://play/<id>
+```
 
 ## Variants
 

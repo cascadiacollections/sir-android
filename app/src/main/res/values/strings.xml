@@ -216,6 +216,8 @@
     <string name="about_version_value" translatable="false">%1$s (%2$d) · %3$s</string>
     <string name="about_source_code">Source code</string>
     <string name="about_report_issue">Report an issue</string>
+    <string name="about_support">Support SIR</string>
+    <string name="about_support_url" translatable="false">https://github.com/sponsors/KevinTCoughlin</string>
     <string name="about_station_data">Station data from Radio Browser</string>
     <string name="about_source_code_url" translatable="false">https://github.com/cascadiacollections/sir-android</string>
     <string name="about_report_issue_url" translatable="false">https://github.com/cascadiacollections/sir-android/issues/new</string>

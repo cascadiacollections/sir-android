@@ -85,6 +85,11 @@ internal fun AboutSettingsSection(onOpenLicenses: () -> Unit) {
     )
     AboutLink(R.string.about_source_code) { context.openUrl(R.string.about_source_code_url) }
     AboutLink(R.string.about_report_issue) { context.openUrl(R.string.about_report_issue_url) }
+    // ShoutKit's "Support Holmdel" link. FOSS builds only: Google Play's payments policy
+    // restricts steering users to outside payment, and nothing here is gated on it anyway.
+    if (BuildConfig.FLAVOR == "foss") {
+        AboutLink(R.string.about_support) { context.openUrl(R.string.about_support_url) }
+    }
     AboutLink(R.string.about_station_data) { context.openUrl(R.string.about_station_data_url) }
     AboutLink(R.string.open_source_licenses, onOpenLicenses)
 }

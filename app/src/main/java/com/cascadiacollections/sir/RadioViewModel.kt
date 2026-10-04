@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Intent
 import android.content.ComponentName
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -166,7 +167,11 @@ class RadioViewModel(
 
     private fun checkMeteredNetwork() {
         val cm = getApplication<Application>().getSystemService(ConnectivityManager::class.java)
-        if (cm?.isActiveNetworkMetered == true) {
+        // isActiveNetworkMetered is true when there is no network at all, so on its own it
+        // warned about mobile data in airplane mode. Require a live connection first.
+        val connected = cm?.activeNetwork?.let { cm.getNetworkCapabilities(it) }
+            ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+        if (connected && cm.isActiveNetworkMetered) {
             _uiState.update { it.copy(showMeteredWarning = true) }
         }
     }

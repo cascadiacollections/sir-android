@@ -1,0 +1,35 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CognitiveComplexMethod:IcyMetadataParser.kt:IcyMetadataParser$internal fun fields: Map&lt;String, String&gt;?</ID>
+    <ID>CognitiveComplexMethod:IcyMetadataParser.kt:IcyMetadataParser$private fun parse: IcyTrack</ID>
+    <ID>CyclomaticComplexMethod:IcyMetadataParser.kt:IcyMetadataParser$internal fun fields: Map&lt;String, String&gt;?</ID>
+    <ID>MagicNumber:EqualizerCurves.kt:EqualizerCurves$1500</ID>
+    <ID>MagicNumber:EqualizerPreset.kt:EqualizerPreset.VOCAL$0.1f</ID>
+    <ID>MagicNumber:EqualizerPreset.kt:EqualizerPreset.VOCAL$0.3f</ID>
+    <ID>MagicNumber:EqualizerPreset.kt:EqualizerPreset.VOCAL$0.4f</ID>
+    <ID>MagicNumber:EqualizerPreset.kt:EqualizerPreset.VOCAL$0.7f</ID>
+    <ID>MagicNumber:SleepTimerDuration.kt:SleepTimerDuration.FIFTEEN$15</ID>
+    <ID>MagicNumber:SleepTimerDuration.kt:SleepTimerDuration.FORTY_FIVE$45</ID>
+    <ID>MagicNumber:SleepTimerDuration.kt:SleepTimerDuration.NINETY$90</ID>
+    <ID>MagicNumber:SleepTimerDuration.kt:SleepTimerDuration.SIXTY$60</ID>
+    <ID>MagicNumber:SleepTimerDuration.kt:SleepTimerDuration.THIRTY$30</ID>
+    <ID>MagicNumber:SleepTimerDuration.kt:SleepTimerRestore$60_000L</ID>
+    <ID>MagicNumber:StreamFailure.kt:StreamFailureClassifier$400</ID>
+    <ID>MagicNumber:StreamFailure.kt:StreamFailureClassifier$499</ID>
+    <ID>OutdatedDocumentation:EqualizerCurves.kt:EqualizerCurves$fun levelsFor: List&lt;Short&gt;</ID>
+    <ID>OutdatedDocumentation:SongTitleFilter.kt:SongTitleFilter$fun isLikelySongTitle: Boolean</ID>
+    <ID>OutdatedDocumentation:StreamMetadata.kt:StreamMetadataResolver$fun resolve: StreamMetadataUpdate</ID>
+    <ID>ReturnCount:EqualizerCurves.kt:EqualizerCurves$fun displayGainsFor: List&lt;Float&gt;</ID>
+    <ID>ReturnCount:IcyMetadataParser.kt:IcyMetadataParser$internal fun fields: Map&lt;String, String&gt;?</ID>
+    <ID>ReturnCount:IcyMetadataParser.kt:IcyMetadataParser$private fun parse: IcyTrack</ID>
+    <ID>ReturnCount:SleepTimerDuration.kt:SleepTimerRestore$fun remainingMinutes: Int?</ID>
+    <ID>ReturnCount:SongTitleFilter.kt:SongTitleFilter$fun isLikelySongTitle: Boolean</ID>
+    <ID>ReturnCount:SongTitleFilter.kt:SongTitleFilter$private fun isBareSingleWordId: Boolean</ID>
+    <ID>ReturnCount:SongTitleFilter.kt:SongTitleFilter$private fun looksLikeUrl: Boolean</ID>
+    <ID>ReturnCount:StreamMetadata.kt:StreamMetadataResolver$fun resolve: StreamMetadataUpdate</ID>
+    <ID>ReturnCount:StreamRecovery.kt:StreamRecovery$fun onFailure: RecoveryDecision</ID>
+    <ID>ReturnCount:StreamSource.kt:StreamSourceResolver$fun resolve: StreamSource</ID>
+  </CurrentIssues>
+</SmellBaseline>

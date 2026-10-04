@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CognitiveComplexMethod:WearActivity.kt:@Composable internal fun WearPlayerUi</ID>
+    <ID>MagicNumber:RadioTileService.kt:RadioTileService$12f</ID>
+    <ID>ReturnCount:WearStations.kt:WearStations$fun abbreviate: String</ID>
+    <ID>TooGenericExceptionCaught:StationSyncListenerService.kt:StationSyncListenerService.Companion$e: Exception</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LoopWithTooManyJumpStatements:RadioBrowserDirectory.kt:RadioBrowserDirectory$for</ID>
+    <ID>MagicNumber:RadioBrowserDirectory.kt:RadioBrowserDirectory$429</ID>
+    <ID>MagicNumber:RadioBrowserDirectory.kt:RadioBrowserDirectory$503</ID>
+    <ID>MagicNumber:RadioDirectories.kt:RadioDirectories$10</ID>
+    <ID>MagicNumber:RadioDirectories.kt:RadioDirectories$15</ID>
+    <ID>MagicNumber:RadioDirectories.kt:RadioDirectories$20</ID>
+    <ID>ReturnCount:RadioBrowserDirectory.kt:RadioBrowserDirectory$override suspend fun getStations: Result&lt;List&lt;Station&gt;&gt;</ID>
+    <ID>ReturnCount:SnapshotRadioDirectory.kt:SnapshotRadioDirectory$override suspend fun topStations: Result&lt;List&lt;Station&gt;&gt;</ID>
+    <ID>ReturnCount:SnapshotRadioDirectory.kt:SnapshotRadioDirectory$override suspend fun topTags: Result&lt;List&lt;Tag&gt;&gt;</ID>
+    <ID>ReturnCount:StationNameFormatter.kt:StationNameFormatter$fun normalizeFavicon: String?</ID>
+    <ID>ReturnCount:StationSearchFilters.kt:StationSearchFilters$private fun matchesBitrate: Boolean</ID>
+    <ID>ReturnCount:StationSearchFilters.kt:StationSearchFilters$private fun matchesCountry: Boolean</ID>
+    <ID>ReturnCount:StationSearchFilters.kt:StationSearchFilters$private fun matchesTag: Boolean</ID>
+    <ID>ThrowsCount:MirrorProvider.kt:RadioBrowserServerListSource$override fun serverNames: List&lt;String&gt;</ID>
+    <ID>TooManyFunctions:CachingRadioDirectory.kt:CachingRadioDirectory : RadioDirectory</ID>
+  </CurrentIssues>
+</SmellBaseline>

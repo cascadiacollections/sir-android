@@ -1,16 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 9.2.0" type="baseline" client="gradle" dependencies="false" name="AGP (9.2.0)" variant="all" version="9.2.0">
-
-    <issue
-        id="MissingPermission"
-        message="Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with `checkPermission`) or explicitly handle a potential `SecurityException`"
-        errorLine1="            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, notification)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="562"
-            column="13"/>
-    </issue>
+<issues format="6" by="lint 9.5.0-alpha08" type="baseline" client="gradle" dependencies="true" name="AGP (9.5.0-alpha08)" variant="all" version="9.5.0-alpha08">
 
     <issue
         id="InlinedApi"
@@ -19,7 +8,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
-            line="157"
+            line="237"
             column="13"/>
     </issue>
 
@@ -30,41 +19,8 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
-            line="161"
+            line="241"
             column="13"/>
-    </issue>
-
-    <issue
-        id="MissingIntentFilterForMediaSearch"
-        message="Missing `intent-filter` for action `android.media.action.MEDIA_PLAY_FROM_SEARCH`."
-        errorLine1="    &lt;application"
-        errorLine2="    ^">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="22"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `targetCellWidth` is only used in API level 31 and higher (current min is 24)"
-        errorLine1="    android:targetCellWidth=&quot;3&quot;"
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/xml/radio_widget_info.xml"
-            line="7"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="UnusedAttribute"
-        message="Attribute `targetCellHeight` is only used in API level 31 and higher (current min is 24)"
-        errorLine1="    android:targetCellHeight=&quot;1&quot;"
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/xml/radio_widget_info.xml"
-            line="8"
-            column="5"/>
     </issue>
 
     <issue
@@ -74,7 +30,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/xml/shortcuts.xml"
-            line="4"
+            line="8"
             column="9"/>
     </issue>
 
@@ -85,7 +41,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/xml/shortcuts.xml"
-            line="7"
+            line="11"
             column="9"/>
     </issue>
 
@@ -96,19 +52,19 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/xml/shortcuts.xml"
-            line="8"
+            line="12"
             column="9"/>
     </issue>
 
     <issue
         id="WrongConstant"
         message="Must be one of: SessionResult.RESULT_SUCCESS, SessionError.INFO_CANCELLED, SessionError.ERROR_UNKNOWN, SessionError.ERROR_INVALID_STATE, SessionError.ERROR_BAD_VALUE, SessionError.ERROR_PERMISSION_DENIED, SessionError.ERROR_IO, SessionError.ERROR_SESSION_DISCONNECTED, SessionError.ERROR_NOT_SUPPORTED, SessionError.ERROR_SESSION_AUTHENTICATION_EXPIRED, SessionError.ERROR_SESSION_PREMIUM_ACCOUNT_REQUIRED, SessionError.ERROR_SESSION_CONCURRENT_STREAM_LIMIT, SessionError.ERROR_SESSION_PARENTAL_CONTROL_RESTRICTED, SessionError.ERROR_SESSION_NOT_AVAILABLE_IN_REGION, SessionError.ERROR_SESSION_SKIP_LIMIT_REACHED, SessionError.ERROR_SESSION_SETUP_REQUIRED"
-        errorLine1="                            if (!SEEKBACK_ENABLED) return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))"
-        errorLine2="                                                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        errorLine1="                                    SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED)"
+        errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="281"
-            column="97"/>
+            line="500"
+            column="51"/>
     </issue>
 
     <issue
@@ -118,107 +74,107 @@
         errorLine2="                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="284"
+            line="504"
             column="78"/>
     </issue>
 
     <issue
         id="WrongConstant"
         message="Must be one of: SessionResult.RESULT_SUCCESS, SessionError.INFO_CANCELLED, SessionError.ERROR_UNKNOWN, SessionError.ERROR_INVALID_STATE, SessionError.ERROR_BAD_VALUE, SessionError.ERROR_PERMISSION_DENIED, SessionError.ERROR_IO, SessionError.ERROR_SESSION_DISCONNECTED, SessionError.ERROR_NOT_SUPPORTED, SessionError.ERROR_SESSION_AUTHENTICATION_EXPIRED, SessionError.ERROR_SESSION_PREMIUM_ACCOUNT_REQUIRED, SessionError.ERROR_SESSION_CONCURRENT_STREAM_LIMIT, SessionError.ERROR_SESSION_PARENTAL_CONTROL_RESTRICTED, SessionError.ERROR_SESSION_NOT_AVAILABLE_IN_REGION, SessionError.ERROR_SESSION_SKIP_LIMIT_REACHED, SessionError.ERROR_SESSION_SETUP_REQUIRED"
-        errorLine1="                            if (!SEEKBACK_ENABLED) return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))"
-        errorLine2="                                                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        errorLine1="                                    SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED)"
+        errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/RadioPlaybackService.kt"
-            line="293"
-            column="97"/>
+            line="515"
+            column="51"/>
     </issue>
 
     <issue
-        id="ConfigurationScreenWidthHeight"
-        message="Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize"
-        errorLine1="    val screenWidthDp = LocalConfiguration.current.screenWidthDp"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="ComposeViewModelForwarding"
+        message="Forwarding a ViewModel through multiple @Composable functions should be avoided. Consider using state hoisting.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#hoist-all-the-things for more information."
+        errorLine1="                    SirTab.BROWSE -> BrowseScreen("
+        errorLine2="                                     ^">
         <location
-            file="src/main/java/com/cascadiacollections/sir/ui/RadioUi.kt"
-            line="68"
-            column="25"/>
+            file="src/main/java/com/cascadiacollections/sir/ui/SirAppShell.kt"
+            line="177"
+            column="38"/>
     </issue>
 
     <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                            context.getString(R.string.share_now_playing, shareText))"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="ComposeViewModelForwarding"
+        message="Forwarding a ViewModel through multiple @Composable functions should be avoided. Consider using state hoisting.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#hoist-all-the-things for more information."
+        errorLine1="                    SirTab.LIBRARY -> LibraryScreen("
+        errorLine2="                                      ^">
         <location
-            file="src/main/java/com/cascadiacollections/sir/ui/RadioUi.kt"
-            line="105"
-            column="45"/>
+            file="src/main/java/com/cascadiacollections/sir/ui/SirAppShell.kt"
+            line="183"
+            column="39"/>
     </issue>
 
     <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                        context.getString(R.string.sleep_timer_off)"
-        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="ComposeViewModelInjection"
+        message="Implicit dependencies of composables should be made explicit.&#xA;Usages of viewModel to acquire a ViewModel should be done in composable default parameters, so that it is more testable and flexible.&#xA;See https://slackhq.github.io/compose-lints/rules/#viewmodels for more information."
+        errorLine1="    val viewModel: RadioViewModel = viewModel("
+        errorLine2="    ^">
         <location
-            file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="134"
-            column="41"/>
+            file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
+            line="213"
+            column="5"/>
     </issue>
 
     <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                    else context.getString(R.string.sleep_timer_set, duration.label)"
-        errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="ComposeViewModelInjection"
+        message="Implicit dependencies of composables should be made explicit.&#xA;Usages of viewModel to acquire a ViewModel should be done in composable default parameters, so that it is more testable and flexible.&#xA;See https://slackhq.github.io/compose-lints/rules/#viewmodels for more information."
+        errorLine1="    val browserViewModel: RadioBrowserViewModel = viewModel("
+        errorLine2="    ^">
         <location
-            file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="135"
-            column="42"/>
+            file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
+            line="223"
+            column="5"/>
     </issue>
 
     <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.privacy_policy_url))))"
-        errorLine2="                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields (static reference to `SettingsDataStore` which has field `owner` pointing to `Context`); this is a memory leak"
+        errorLine1="/**"
+        errorLine2="^">
         <location
-            file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="231"
-            column="80"/>
+            file="src/main/kotlin/com/cascadiacollections/sir/core/persistence/SettingsRepository.kt"
+            line="31"
+            column="1"/>
     </issue>
 
     <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                Toast.makeText(context, context.getString(R.string.custom_stream_reset), Toast.LENGTH_SHORT).show()"
-        errorLine2="                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields; this is a memory leak"
+        errorLine1="    private var owner: Context? = null"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="294"
-            column="57"/>
+            file="src/main/kotlin/com/cascadiacollections/sir/core/persistence/SettingsRepository.kt"
+            line="55"
+            column="5"/>
     </issue>
 
     <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                    Toast.makeText(context, context.getString(R.string.custom_stream_saved), Toast.LENGTH_LONG).show()"
-        errorLine2="                                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields (static reference to `TrackHistoryDataStore` which has field `owner` pointing to `Context`); this is a memory leak"
+        errorLine1="/**"
+        errorLine2="^">
         <location
-            file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="306"
-            column="61"/>
+            file="src/main/kotlin/com/cascadiacollections/sir/core/persistence/TrackHistoryRepository.kt"
+            line="17"
+            column="1"/>
     </issue>
 
     <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                Toast.makeText(context, context.getString(R.string.custom_stream_invalid), Toast.LENGTH_SHORT).show()"
-        errorLine2="                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields; this is a memory leak"
+        errorLine1="    private var owner: Context? = null"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="309"
-            column="57"/>
+            file="src/main/kotlin/com/cascadiacollections/sir/core/persistence/TrackHistoryRepository.kt"
+            line="34"
+            column="5"/>
     </issue>
 
     <issue
@@ -228,7 +184,7 @@
         errorLine2="                           ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/cascadiacollections/sir/ui/RadioUi.kt"
-            line="200"
+            line="406"
             column="28"/>
     </issue>
 
@@ -272,7 +228,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="31"
+            line="36"
             column="13"/>
     </issue>
 
@@ -294,19 +250,129 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="68"
+            line="196"
             column="13"/>
     </issue>
 
     <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.privacy_policy_url))))"
-        errorLine2="                                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="ReportShortcutUsage"
+        message="Calling this method indicates use of dynamic shortcuts, but there are no calls to methods that track shortcut usage, such as `pushDynamicShortcut` or `reportShortcutUsed`. Calling these methods is recommended, as they track shortcut usage and allow launchers to adjust which shortcuts appear based on activation history. Please see https://developer.android.com/develop/ui/views/launch/shortcuts/managing-shortcuts#track-usage"
+        errorLine1="        ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/cascadiacollections/sir/ui/SettingsSheet.kt"
-            line="231"
-            column="70"/>
+            file="src/main/java/com/cascadiacollections/sir/StationShortcuts.kt"
+            line="52"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ComposeModifierMissing"
+        message="This @Composable function emits content but doesn&apos;t have a modifier parameter.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#when-should-i-expose-modifier-parameters for more information."
+        errorLine1="fun LicensesScreen(onBack: () -> Unit) {"
+        errorLine2="    ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/cascadiacollections/sir/ui/LicensesScreen.kt"
+            line="24"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ComposeModifierMissing"
+        message="This @Composable function emits content but doesn&apos;t have a modifier parameter.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#when-should-i-expose-modifier-parameters for more information."
+        errorLine1="fun TvHomeScreen("
+        errorLine2="    ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/cascadiacollections/sir/ui/TvHomeScreen.kt"
+            line="67"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ComposeModifierWithoutDefault"
+        message="This @Composable function has a modifier parameter but it doesn&apos;t have a default value.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#modifiers-should-have-default-parameters for more information."
+        errorLine1="    modifier: Modifier,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/cascadiacollections/sir/ui/RadioUi.kt"
+            line="85"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ComposeMultipleContentEmitters"
+        message="Composable functions should only be emitting content into the composition from one source at their top level.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#do-not-emit-multiple-pieces-of-content for more information."
+        errorLine1="/**"
+        errorLine2="^">
+        <location
+            file="src/main/java/com/cascadiacollections/sir/ui/SettingsSections.kt"
+            line="29"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="ComposeMultipleContentEmitters"
+        message="Composable functions should only be emitting content into the composition from one source at their top level.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#do-not-emit-multiple-pieces-of-content for more information."
+        errorLine1="/** Settings → About, at the end of the screen. */"
+        errorLine2="^">
+        <location
+            file="src/main/java/com/cascadiacollections/sir/ui/SettingsSections.kt"
+            line="86"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="ComposeParameterOrder"
+        message="Parameters in a composable function should be ordered following this pattern: params without defaults, modifiers, params with defaults and optionally, a trailing function that might not have a default param.&#xA;Current params are: `[modifier: Modifier = Modifier, windowSizeClass: WindowSizeClass, castDeviceDetector: CastDeviceDetector? = null, castFeatureManager: CastFeatureManager? = null, settingsRepository: SettingsRepository? = null, pendingStationId: StateFlow&lt;String?> = MutableStateFlow(null), onDeepLinkConsumed: () -> Unit = {}]` but should be `[windowSizeClass: WindowSizeClass, modifier: Modifier = Modifier, castDeviceDetector: CastDeviceDetector? = null, castFeatureManager: CastFeatureManager? = null, settingsRepository: SettingsRepository? = null, pendingStationId: StateFlow&lt;String?> = MutableStateFlow(null), onDeepLinkConsumed: () -> Unit = {}]`.&#xA;See https://slackhq.github.io/compose-lints/rules/#ordering-composable-parameters-properly for more information."
+        errorLine1="fun RadioScreen("
+        errorLine2="               ^">
+        <location
+            file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
+            line="162"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="ComposePreviewPublic"
+        message="Composables annotated with @Preview that are used only for previewing the UI should not be public.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#preview-composables-should-not-be-public for more information."
+        errorLine1="@Preview(showBackground = true, name = &quot;Idle&quot;)"
+        errorLine2="^">
+        <location
+            file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
+            line="324"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="ComposePreviewPublic"
+        message="Composables annotated with @Preview that are used only for previewing the UI should not be public.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#preview-composables-should-not-be-public for more information."
+        errorLine1="@Preview(showBackground = true, name = &quot;Playing with Metadata&quot;)"
+        errorLine2="^">
+        <location
+            file="src/main/java/com/cascadiacollections/sir/MainActivity.kt"
+            line="340"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="ComposeReadOnlyComposable"
+        message="All composable functions and properties used by this declaration are marked @ReadOnlyComposable, so this declaration can be marked @ReadOnlyComposable too.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#remove-unnecessary-composable-annotations for more information."
+        errorLine1="@Composable"
+        errorLine2="~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/cascadiacollections/sir/ui/NowPlayingArtwork.kt"
+            line="123"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="ComposeRedundantComposable"
+        message="This declaration is annotated with @Composable but doesn&apos;t call any other @Composable functions or read any @Composable properties (like a CompositionLocal&apos;s current), so it doesn&apos;t use the composition and the @Composable annotation can be removed.&#xA;&#xA;See https://slackhq.github.io/compose-lints/rules/#remove-unnecessary-composable-annotations for more information."
+        errorLine1="@Composable"
+        errorLine2="~~~~~~~~~~~">
+        <location
+            file="src/foss/java/com/cascadiacollections/sir/ui/CastButton.kt"
+            line="11"
+            column="1"/>
     </issue>
 
     <issue

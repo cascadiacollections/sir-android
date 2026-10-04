@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CognitiveComplexMethod:TopTracks.kt:TopTracks$fun rank: List&lt;TopTrack&gt;</ID>
+    <ID>ComplexCondition:HeardTracks.kt:HeardTracks$front != null &amp;&amp; front.stationId == track.stationId &amp;&amp; front.title == track.title &amp;&amp; front.artist == track.artist</ID>
+    <ID>CyclomaticComplexMethod:TopTracks.kt:TopTracks$fun rank: List&lt;TopTrack&gt;</ID>
+    <ID>LoopWithTooManyJumpStatements:TopTracks.kt:TopTracks$for</ID>
+    <ID>MagicNumber:TopTracks.kt:TopTracksTimeframe$1000</ID>
+    <ID>MagicNumber:TopTracks.kt:TopTracksTimeframe$24</ID>
+    <ID>MagicNumber:TopTracks.kt:TopTracksTimeframe$60</ID>
+    <ID>MagicNumber:TopTracks.kt:TopTracksTimeframe$7L</ID>
+    <ID>MaxLineLength:FavoritesBackupCodecTest.kt:FavoritesBackupCodecTest$val text = """{"schemaVersion":1,"favorites":[{"id":"abc","name":"","streamURL":"","genre":"","sortIndex":0}]}"""</ID>
+    <ID>OutdatedDocumentation:TopTracks.kt:TopTracks$fun rank: List&lt;TopTrack&gt;</ID>
+    <ID>ReturnCount:FavoritesBackupCodec.kt:FavoritesBackupCodec$fun looksLikeBackup: Boolean</ID>
+    <ID>ReturnCount:HeardTracks.kt:HeardTracks$fun attachArtwork: List&lt;HeardTrack&gt;</ID>
+    <ID>ReturnCount:HeardTracks.kt:HeardTracks$fun record: List&lt;HeardTrack&gt;</ID>
+    <ID>ReturnCount:StationCollections.kt:StationCollections$fun findByName: Station?</ID>
+    <ID>TooManyFunctions:SettingsRepository.kt:SettingsRepository : RecentShelfStoreSavedStationRefreshStore</ID>
+  </CurrentIssues>
+</SmellBaseline>

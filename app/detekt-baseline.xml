@@ -1,0 +1,102 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>AlsoCouldBeApply:AlbumArtResolverTest.kt:AlbumArtResolverTest$also</ID>
+    <ID>CognitiveComplexMethod:BrowseScreen.kt:@Composable fun BrowseContent</ID>
+    <ID>CognitiveComplexMethod:BrowseScreen.kt:@Composable private fun GenreChips</ID>
+    <ID>CognitiveComplexMethod:BrowseScreen.kt:@Composable private fun ListenNowContent</ID>
+    <ID>CognitiveComplexMethod:BrowseScreen.kt:@Composable private fun SearchResultsList</ID>
+    <ID>CognitiveComplexMethod:LibraryScreen.kt:@Composable fun LibraryScreen</ID>
+    <ID>CognitiveComplexMethod:ListenNow.kt:@OptIn(ExperimentalFoundationApi::class) @Composable private fun StationTile</ID>
+    <ID>CognitiveComplexMethod:MainActivity.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun RadioScreen</ID>
+    <ID>CognitiveComplexMethod:MiniPlayer.kt:@Composable fun MiniPlayer</ID>
+    <ID>CognitiveComplexMethod:RadioPlaybackService.kt:RadioPlaybackService$@OptIn(UnstableApi::class) override fun onCreate</ID>
+    <ID>CognitiveComplexMethod:RadioPlaybackService.kt:RadioPlaybackService$@OptIn(UnstableApi::class) override fun onStartCommand: Int</ID>
+    <ID>CognitiveComplexMethod:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsContent</ID>
+    <ID>CognitiveComplexMethod:SirApp.kt:SirApp$override fun onCreate</ID>
+    <ID>CognitiveComplexMethod:SirAppShell.kt:@Composable fun SirAppShell</ID>
+    <ID>CognitiveComplexMethod:StationPlaylistFetcher.kt:StationPlaylistFetcher$private suspend fun fetch: String?</ID>
+    <ID>CollapsibleIfStatements:RadioPlaybackService.kt:RadioPlaybackService$if (SEEKBACK_ENABLED) { if (timeShift.seekBack(SEEK_BACK_INCREMENT)) { playbackMode = PlaybackMode.TimeShifted flushPlayer() updateCustomLayout() } }</ID>
+    <ID>CommentWrapping:RadioPlaybackService.kt:RadioPlaybackService$/* keepHistory = */</ID>
+    <ID>ComplexCondition:AlbumArtResolver.kt:AlbumArtResolver$art != null &amp;&amp; track == wanted &amp;&amp; isEnabled &amp;&amp; art != current</ID>
+    <ID>ComplexCondition:build.gradle.kts:alias != null &amp;&amp; keyPwd != null &amp;&amp; storePath != null &amp;&amp; storePwd != null</ID>
+    <ID>ComposableNestingDepth:BrowseScreen.kt:@Composable fun BrowseContent</ID>
+    <ID>ComposableNestingDepth:LibraryScreen.kt:@Composable fun LibraryScreen</ID>
+    <ID>ComposableNestingDepth:ListenNow.kt:@OptIn(ExperimentalFoundationApi::class) @Composable private fun StationTile</ID>
+    <ID>ComposableNestingDepth:MiniPlayer.kt:@Composable fun MiniPlayer</ID>
+    <ID>ComposableNestingDepth:RadioUi.kt:@Composable fun ListenScreen</ID>
+    <ID>ComposableNestingDepth:SirAppShell.kt:@Composable fun SirAppShell</ID>
+    <ID>ComposableNestingDepth:TrackHistorySheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun TrackHistorySheet</ID>
+    <ID>ComposableNestingDepth:TvHomeScreen.kt:@Composable private fun NowPlayingBanner</ID>
+    <ID>ComposableParamOrder:MainActivity.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun RadioScreen</ID>
+    <ID>CyclomaticComplexMethod:LibraryScreen.kt:@Composable fun LibraryScreen</ID>
+    <ID>CyclomaticComplexMethod:MainActivity.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun RadioScreen</ID>
+    <ID>CyclomaticComplexMethod:RadioPlaybackService.kt:RadioPlaybackService$@OptIn(UnstableApi::class) override fun onStartCommand: Int</ID>
+    <ID>CyclomaticComplexMethod:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsContent</ID>
+    <ID>CyclomaticComplexMethod:SirAppShell.kt:@Composable fun SirAppShell</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:RadioUiStateTest.kt:RadioUiStateTest$val (connected, playing, buffering, error, title, artist, timer, metered) = state</ID>
+    <ID>FunctionOnlyReturningConstant:CastFeatureManager.kt:CastFeatureManager$fun isModuleInstalled: Boolean</ID>
+    <ID>LambdaParameterEventTrailing:RadioUi.kt:onToggle: () -&gt; Unit</ID>
+    <ID>LambdaParameterInRestartableEffect:MainActivity.kt:onDeepLinkConsumed: () -&gt; Unit = {}</ID>
+    <ID>LargeClass:RadioPlaybackService.kt:RadioPlaybackService : MediaLibraryService</ID>
+    <ID>LongMethod:RadioPlaybackService.kt:RadioPlaybackService$@OptIn(UnstableApi::class) override fun onCreate</ID>
+    <ID>LongMethod:RadioPlaybackService.kt:RadioPlaybackService$@OptIn(UnstableApi::class) override fun onStartCommand: Int</ID>
+    <ID>LongMethod:RadioWidget.kt:RadioWidget$override suspend fun provideGlance</ID>
+    <ID>MagicNumber:BackgroundRefreshWorker.kt:BackgroundRefreshWorker.Companion$15</ID>
+    <ID>MagicNumber:RadioPlaybackService.kt:RadioPlaybackService$0.98f</ID>
+    <ID>MagicNumber:RadioPlaybackService.kt:RadioPlaybackService$1.02f</ID>
+    <ID>MagicNumber:RadioPlaybackService.kt:RadioPlaybackService$2_000</ID>
+    <ID>MagicNumber:RadioPlaybackService.kt:RadioPlaybackService$60_000</ID>
+    <ID>MagicNumber:RadioViewModel.kt:RadioViewModel$30_000L</ID>
+    <ID>MagicNumber:RadioViewModel.kt:RadioViewModel$60_000</ID>
+    <ID>MatchingDeclarationName:BrowseScreen.kt:BrowseScreenTestTags</ID>
+    <ID>MatchingDeclarationName:EditStationSheet.kt:EditStationSheetTestTags</ID>
+    <ID>MatchingDeclarationName:TvHomeScreen.kt:TvPopular</ID>
+    <ID>ModifierMissing:LicensesScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun LicensesScreen</ID>
+    <ID>ModifierMissing:TvHomeScreen.kt:@Composable fun TvHomeScreen</ID>
+    <ID>ModifierWithoutDefault:RadioUi.kt:modifier: Modifier</ID>
+    <ID>MultipleEmitters:SettingsSections.kt:@Composable internal fun AboutSettingsSection</ID>
+    <ID>MultipleEmitters:SettingsSections.kt:@Composable internal fun PlaybackSettingsSection</ID>
+    <ID>MutableStateAutoboxing:RadioUi.kt:mutableStateOf(0f)</ID>
+    <ID>NoWildcardImports:ExampleInstrumentedTest.kt:import org.junit.Assert.*</ID>
+    <ID>OutdatedDocumentation:NowPlayingAnnouncement.kt:NowPlayingAnnouncement.Companion$fun from: NowPlayingAnnouncement</ID>
+    <ID>OutdatedDocumentation:RecentlyHeardScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun RecentlyHeardScreen</ID>
+    <ID>ParameterNaming:BrowseScreen.kt:onToggleSaved: (Station, Boolean) -&gt; Unit</ID>
+    <ID>ParameterNaming:LibraryScreen.kt:onOpenRecentlyHeard: () -&gt; Unit = {}</ID>
+    <ID>ParameterNaming:ListenNow.kt:onToggleSaved: () -&gt; Unit</ID>
+    <ID>ParameterNaming:MainActivity.kt:onDeepLinkConsumed: () -&gt; Unit = {}</ID>
+    <ID>ParameterNaming:SettingsScreen.kt:onGainsSettled: (List&lt;Float&gt;) -&gt; Unit</ID>
+    <ID>ParameterNaming:TvHomeScreen.kt:onStationSelected: (Station) -&gt; Unit</ID>
+    <ID>PreviewPublic:MainActivity.kt:@Preview(showBackground = true, name = "Idle") @Composable fun RadioScreenPreview</ID>
+    <ID>PreviewPublic:MainActivity.kt:@Preview(showBackground = true, name = "Playing with Metadata") @Composable fun RadioScreenPlayingPreview</ID>
+    <ID>PropertyName:WearStationPublisher.kt:WearStationPublisher$/** Whether this build can sync to a watch at all. */ const val isSupported: Boolean = false</ID>
+    <ID>PropertyName:WearStationPublisher.kt:WearStationPublisher$/** Whether this build can sync to a watch at all. */ const val isSupported: Boolean = true</ID>
+    <ID>ReturnCount:AutoBrowseTree.kt:AutoBrowseTree$fun &lt;T&gt; page: List&lt;T&gt;</ID>
+    <ID>ReturnCount:AutoLibrary.kt:AutoLibrary$suspend fun children: List&lt;MediaItem&gt;?</ID>
+    <ID>ReturnCount:AutoLibrary.kt:AutoLibrary$suspend fun resolveStation: Station?</ID>
+    <ID>ReturnCount:CastDeviceDetector.kt:CastDeviceDetector$private fun isOnWifi: Boolean</ID>
+    <ID>ReturnCount:MainActivity.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun RadioScreen</ID>
+    <ID>ReturnCount:NowPlayingAnnouncement.kt:NowPlayingAnnouncement.Companion$fun from: NowPlayingAnnouncement</ID>
+    <ID>ReturnCount:RadioPlaybackService.kt:RadioPlaybackService$private fun onPausedReleaseDue</ID>
+    <ID>ReturnCount:RadioPlaybackService.kt:RadioPlaybackService$private suspend fun adoptStreamSource: MediaItem?</ID>
+    <ID>ReturnCount:RadioPlaybackService.kt:RadioPlaybackService.&lt;no name provided&gt;$override fun onCustomCommand: ListenableFuture&lt;SessionResult&gt;</ID>
+    <ID>ReturnCount:SearchViewModel.kt:SearchViewModel$fun onQueryChange</ID>
+    <ID>ReturnCount:SearchViewModel.kt:SearchViewModel$private suspend fun execute</ID>
+    <ID>ReturnCount:SpatialAudio.kt:SpatialAudio$fun isSupported: Boolean</ID>
+    <ID>ReturnCount:StationDeepLink.kt:StationDeepLink$fun stationId: String?</ID>
+    <ID>SwallowedException:AutoLibrary.kt:AutoLibrary$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AutoLibrary.kt:AutoLibrary$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:QuickPlayWidgetUpdater.kt:QuickPlayWidgetUpdater$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:RadioPlaybackService.kt:RadioPlaybackService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:RadioTileService.kt:RadioTileService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:RadioViewModel.kt:RadioViewModel$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:WearStationPublisher.kt:WearStationPublisher$e: Exception</ID>
+    <ID>TooManyFunctions:RadioBrowserViewModel.kt:RadioBrowserViewModel : ViewModel</ID>
+    <ID>ViewModelForwarding:SirAppShell.kt:BrowseScreen( viewModel = browserViewModel, shelfStore = settingsRepository, modifier = contentModifier )</ID>
+    <ID>ViewModelForwarding:SirAppShell.kt:LibraryScreen( viewModel = browserViewModel, onOpenRecentlyHeard = { showRecentlyHeard = true }, modifier = contentModifier )</ID>
+    <ID>ViewModelInjection:MainActivity.kt:val browserViewModel: RadioBrowserViewModel = viewModel( factory = RadioBrowserViewModel.Factory( directory = AppDirectory.instance, settingsRepository = repository, trackHistoryRepository = TrackHistoryRepository(context.applicationContext) ) )</ID>
+    <ID>ViewModelInjection:MainActivity.kt:val viewModel: RadioViewModel = viewModel( factory = RadioViewModel.Factory( application = context.applicationContext as Application, settingsRepository = repository ) )</ID>
+    <ID>WildcardImport:ExampleInstrumentedTest.kt:import org.junit.Assert.*</ID>
+  </CurrentIssues>
+</SmellBaseline>

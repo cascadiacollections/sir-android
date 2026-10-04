@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MagicNumber:CachingDns.kt:CachingDns$1000L</ID>
+    <ID>MagicNumber:CachingDns.kt:CachingDns$5</ID>
+    <ID>MagicNumber:CachingDns.kt:CachingDns$60</ID>
+    <ID>MagicNumber:StreamingHttpClientFactory.kt:StreamingHttpClientFactory$10</ID>
+    <ID>MagicNumber:StreamingHttpClientFactory.kt:StreamingHttpClientFactory$30</ID>
+  </CurrentIssues>
+</SmellBaseline>

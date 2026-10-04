@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>SwallowedException:SirCastPlayer.kt:SirCastPlayer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CastSessionCoordinator.kt:CastSessionCoordinator$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:SirCastPlayer.kt:SirCastPlayer$e: Exception</ID>
+  </CurrentIssues>
+</SmellBaseline>

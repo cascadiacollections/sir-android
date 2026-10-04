@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ReturnCount:CircularByteBuffer.kt:CircularByteBuffer$fun read: Int</ID>
+    <ID>TooGenericExceptionCaught:TimeShiftDataSource.kt:TimeShiftDataSource$e: Exception</ID>
+    <ID>TooManyFunctions:CircularByteBuffer.kt:CircularByteBuffer</ID>
+  </CurrentIssues>
+</SmellBaseline>

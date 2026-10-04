@@ -387,10 +387,28 @@ Android Auto, the quick-settings tile, the Glance widget and the Wear app all re
 the same core APIs as the phone UI rather than assuming the SIR stream is what is
 playing.
 
-- **Android Auto** browses `BROWSE_ROOT_ID` as the SIR stream followed by the saved
-  stations from `SettingsRepository.savedStations`. Choosing one calls `selectStation`,
-  the same persisted selection the phone UI writes, so the two surfaces stay in sync and
-  the choice survives a service restart. Unplayable stations are filtered out.
+- **Android Auto** browses a root of three browsable categories, which Auto shows as
+  tabs (ShoutKit CarPlay's "Your Stations" and "Top Stations", plus "Recently Played"):
+  *Your Stations* is the SIR stream, then saved stations in the user's order, then
+  recently played stations that are not saved (max 25 stations); *Recently Played* is the
+  recents list (max 20); *Top Stations* is `topStations(12)` through the directory chain,
+  so it is answered from the discovery snapshot offline and is an empty tab — never an
+  error — on failure. Recents hidden from the phone's shelf are hidden here too. The rules
+  (order, de-duplication, caps, paging, root-children limit) are pure functions in
+  `AutoBrowseTree`; `AutoLibrary` renders them as `MediaItem`s (artwork URI, "Genre ·
+  N kbps" subtitle, media id = station id) and sets the root extras: playable items as a
+  grid, Recently Played as a list, search supported. The root-children limit Auto sends
+  in its root hints is remembered per browser and caps the categories.
+
+  Choosing any item goes through `onAddMediaItems` (Media3's default `onSetMediaItems`
+  delegates to it), which resolves the id from saved stations, recents, Top Stations and,
+  for a radio-browser UUID found nowhere else, `getStation`. It then calls
+  `selectStation` — the same persisted selection the phone UI writes, so the surfaces
+  stay in sync, the choice survives a service restart, and recents/play reporting see
+  it. The SIR stream item (and any id that cannot be resolved) clears the selection.
+  `onSearch`/`onGetSearchResult` answer the car's search: saved stations whose name
+  matches, then the directory's name search, 20 at most. Voice "play X" still arrives
+  through `onSetMediaItems` with a search query, as before.
 - **Quick-settings tile** takes its subtitle from the media session metadata, so it
   follows a directory station and ICY title updates. It falls back to the app's station
   name when no controller is connected.

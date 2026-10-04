@@ -78,6 +78,8 @@
     <string name="station_saved">电台已保存</string>
     <string name="station_removed">电台已移除</string>
     <string name="recent_stations">最近播放</string>
+    <string name="auto_your_stations">你的电台</string>
+    <string name="auto_top_stations">热门电台</string>
     <string name="station_now_playing">正在播放</string>
     <string name="play_station">播放电台</string>
     <string name="play_default_stream">返回 SIR 直播流</string>

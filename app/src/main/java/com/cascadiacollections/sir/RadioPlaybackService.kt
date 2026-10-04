@@ -41,11 +41,13 @@ import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.DefaultMediaNotificationProvider.NotificationIdProvider
 import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.cascadiacollections.android.media3.timeshift.PlaybackMode
 import com.cascadiacollections.android.media3.timeshift.TimeShiftController
@@ -71,7 +73,6 @@ import com.cascadiacollections.sir.core.playback.StallCeiling
 import com.cascadiacollections.sir.core.playback.StreamConfig
 import com.cascadiacollections.sir.core.playback.StreamEndpoint
 import com.cascadiacollections.sir.core.playback.StreamEndpoints
-import com.cascadiacollections.sir.core.playback.StreamUrlKind
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import com.cascadiacollections.sir.core.playback.StreamMetadata
 import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
@@ -93,6 +94,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 class RadioPlaybackService : MediaLibraryService() {
 
@@ -148,6 +150,22 @@ class RadioPlaybackService : MediaLibraryService() {
     // Settings and coroutine scope
     private val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    // Android Auto's browse tree, search and id resolution.
+    private val autoLibrary: AutoLibrary by lazy {
+        AutoLibrary(
+            context = this,
+            savedStations = { settingsRepository.savedStations.first() },
+            recentStations = { settingsRepository.recentStations.first() },
+            hiddenRecentIds = { settingsRepository.hiddenRecentStationIds.first() },
+            directory = { AppDirectory.instance },
+        )
+    }
+
+    // Per-browser root-children limit from the root hints, and the last search answered,
+    // so onGetSearchResult does not repeat the request onSearch just made.
+    private val rootChildrenLimits = ConcurrentHashMap<MediaSession.ControllerInfo, Int>()
+    private val lastSearch = ConcurrentHashMap<MediaSession.ControllerInfo, Pair<String, List<MediaItem>>>()
 
     // Current stream URL (may be a directory station or a debug override). This is the
     // station's own URL, used to tell whether a selection actually changed; what the
@@ -445,30 +463,33 @@ class RadioPlaybackService : MediaLibraryService() {
                     return super.onCustomCommand(session, controller, customCommand, args)
                 }
 
-                // Android Auto browsing: single root → single playable stream item
+                // Android Auto browsing. The tree itself (Your Stations / Recently Played /
+                // Top Stations, ids, caps) lives in AutoLibrary + AutoBrowseTree.
                 override fun onGetLibraryRoot(
                     session: MediaLibrarySession,
                     browser: MediaSession.ControllerInfo,
                     params: MediaLibraryService.LibraryParams?
-                ): ListenableFuture<LibraryResult<MediaItem>> =
-                    Futures.immediateFuture(
-                        LibraryResult.ofItem(
-                            MediaItem.Builder()
-                                .setMediaId(BROWSE_ROOT_ID)
-                                .setMediaMetadata(
-                                    MediaMetadata.Builder()
-                                        .setIsBrowsable(true)
-                                        .setIsPlayable(false)
-                                        .setTitle(currentStationTitle ?: getString(R.string.station_name))
-                                        .build()
-                                )
-                                .build(),
-                            params
-                        )
-                    )
+                ): ListenableFuture<LibraryResult<MediaItem>> {
+                    // Auto announces how many root children it can show as tabs (4).
+                    // Remembered per browser: onGetChildren's params are not the root hints.
+                    params?.extras
+                        ?.getInt(MediaConstants.EXTRAS_KEY_ROOT_CHILDREN_LIMIT, 0)
+                        ?.takeIf { it > 0 }
+                        ?.let { rootChildrenLimits[browser] = it }
+                    val rootParams = MediaLibraryService.LibraryParams.Builder()
+                        .setExtras(autoLibrary.rootExtras())
+                        .setOffline(params?.isOffline ?: false)
+                        .setSuggested(params?.isSuggested ?: false)
+                        .setRecent(params?.isRecent ?: false)
+                        .build()
+                    return Futures.immediateFuture(LibraryResult.ofItem(autoLibrary.rootItem(), rootParams))
+                }
 
-                // The car browser lists the SIR stream first, then the user's saved
-                // stations, so the library is reachable without touching the phone.
+                override fun onDisconnected(session: MediaSession, controller: MediaSession.ControllerInfo) {
+                    rootChildrenLimits.remove(controller)
+                    lastSearch.remove(controller)
+                }
+
                 override fun onGetChildren(
                     session: MediaLibrarySession,
                     browser: MediaSession.ControllerInfo,
@@ -476,19 +497,12 @@ class RadioPlaybackService : MediaLibraryService() {
                     page: Int,
                     pageSize: Int,
                     params: MediaLibraryService.LibraryParams?
-                ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-                    if (parentId != BROWSE_ROOT_ID) {
-                        return Futures.immediateFuture(
-                            LibraryResult.ofItemList(ImmutableList.of(), params)
-                        )
-                    }
-                    return serviceScope.future {
-                        val stations = settingsRepository.savedStations.first()
-                        val items = ImmutableList.builder<MediaItem>()
-                            .add(buildMediaItem())
-                            .addAll(stations.filter { it.isPlayable }.map(::buildStationMediaItem))
-                            .build()
-                        LibraryResult.ofItemList(items, params)
+                ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = serviceScope.future {
+                    val children = autoLibrary.children(parentId, rootChildrenLimits[browser])
+                    if (children == null) {
+                        LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+                    } else {
+                        LibraryResult.ofItemList(AutoBrowseTree.page(children, page, pageSize), params)
                     }
                 }
 
@@ -497,29 +511,55 @@ class RadioPlaybackService : MediaLibraryService() {
                     browser: MediaSession.ControllerInfo,
                     mediaId: String
                 ): ListenableFuture<LibraryResult<MediaItem>> = serviceScope.future {
-                    val station = settingsRepository.savedStations.first()
-                        .firstOrNull { it.id == mediaId }
-                    if (station == null) {
-                        LibraryResult.ofItem(buildMediaItem(), null)
-                    } else {
-                        LibraryResult.ofItem(buildStationMediaItem(station), null)
+                    autoLibrary.item(mediaId)?.let { LibraryResult.ofItem(it, null) }
+                        ?: LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+                }
+
+                // Search in the car (typed or "search for…" by voice). Media3 expects the
+                // result count via notifySearchResultChanged, then asks for the items.
+                override fun onSearch(
+                    session: MediaLibrarySession,
+                    browser: MediaSession.ControllerInfo,
+                    query: String,
+                    params: MediaLibraryService.LibraryParams?
+                ): ListenableFuture<LibraryResult<Void>> {
+                    serviceScope.launch {
+                        val results = autoLibrary.search(query)
+                        lastSearch[browser] = query to results
+                        session.notifySearchResultChanged(browser, query, results.size, params)
                     }
+                    return Futures.immediateFuture(LibraryResult.ofVoid())
+                }
+
+                override fun onGetSearchResult(
+                    session: MediaLibrarySession,
+                    browser: MediaSession.ControllerInfo,
+                    query: String,
+                    page: Int,
+                    pageSize: Int,
+                    params: MediaLibraryService.LibraryParams?
+                ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = serviceScope.future {
+                    val results = lastSearch[browser]?.takeIf { it.first == query }?.second
+                        ?: autoLibrary.search(query)
+                    LibraryResult.ofItemList(AutoBrowseTree.page(results, page, pageSize), params)
                 }
 
                 // Selecting a station in the car goes through the same persisted
-                // selection as the phone UI, so both stay in sync and the choice
-                // survives the service being restarted.
+                // selection as the phone UI, so both stay in sync, the choice survives
+                // the service being restarted, and play reporting/recents see it.
+                // Media3's default onSetMediaItems (playFromMediaId) lands here too.
                 override fun onAddMediaItems(
                     mediaSession: MediaSession,
                     controller: MediaSession.ControllerInfo,
                     mediaItems: MutableList<MediaItem>
                 ): ListenableFuture<MutableList<MediaItem>> = serviceScope.future {
                     val requestedId = mediaItems.firstOrNull()?.mediaId
-                    val station = requestedId
-                        ?.let { id -> settingsRepository.savedStations.first().firstOrNull { it.id == id } }
+                    // Saved, recent, Top Stations, search hit, or a directory lookup.
+                    val station = requestedId?.let { autoLibrary.resolveStation(it) }
                     if (station != null) {
                         settingsRepository.selectStation(station)
                     } else if (requestedId != null) {
+                        // The SIR stream item, or an id we cannot resolve: the default stream.
                         settingsRepository.clearSelectedStation()
                     }
                     // Resolve rather than using the station directly, so the car honours
@@ -1182,31 +1222,6 @@ class RadioPlaybackService : MediaLibraryService() {
         )
         .build()
 
-    // A browse item only has to identify the station: picking it goes through
-    // onAddMediaItems, which resolves the persisted selection (and any playlist) itself.
-    private fun buildStationMediaItem(station: Station): MediaItem = MediaItem.Builder()
-        .setUri(station.streamUrl)
-        .setMimeType(
-            if (StreamEndpoints.classify(station.streamUrl, station.isHls) == StreamUrlKind.HLS) {
-                MimeTypes.APPLICATION_M3U8
-            } else {
-                null
-            }
-        )
-        .setMediaId(station.id)
-        .setMediaMetadata(
-            MediaMetadata.Builder()
-                .setTitle(station.name)
-                .setArtist(station.displayLabel)
-                .setIsPlayable(true)
-                .setIsBrowsable(false)
-                // Auto/Automotive load this URI themselves (their own image pipeline), so
-                // it's safe to pass through even though the phone UI has no image loader.
-                .setArtworkUri(station.favicon?.takeIf { it.isNotBlank() }?.let(Uri::parse))
-                .build()
-        )
-        .build()
-
     private fun resumeIfPausedByNoisy() {
         if (audioRoutePolicy.onRouteRestored()) player?.play()
     }
@@ -1453,7 +1468,6 @@ class RadioPlaybackService : MediaLibraryService() {
 
         // Media session & notification
         private const val MEDIA_SESSION_ID = "will_radio_session"
-        private const val BROWSE_ROOT_ID = "sir_root"
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
         // Feature flags

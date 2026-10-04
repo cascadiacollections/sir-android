@@ -21,7 +21,6 @@ import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -80,6 +79,7 @@ import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
 import com.cascadiacollections.sir.core.playback.StreamRecovery
 import com.cascadiacollections.sir.core.playback.StreamSource
 import com.cascadiacollections.sir.core.playback.StreamSourceResolver
+import com.cascadiacollections.sir.core.playback.VolumeRamp
 import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -88,9 +88,11 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -119,6 +121,9 @@ class RadioPlaybackService : MediaLibraryService() {
 
     // Settings → Playback → "Loop finished broadcasts" (finite media only; live streams rejoin).
     private var loopFinishedBroadcasts = false
+
+    // Settings → Spatial Audio, applied to the player now and to any player built later
+    private var spatialAudioEnabled = false
 
     // Locks to keep device active during playback
     private var playbackLocks: PlaybackLocks? = null
@@ -193,6 +198,9 @@ class RadioPlaybackService : MediaLibraryService() {
 
     // Display title for the current stream; null falls back to the bundled station name
     private var currentStationTitle: String? = null
+
+    // The running fade-in, cancelled when playback stops or a newer start begins
+    private var volumeRampJob: Job? = null
 
     // Directory id of the current stream (null for the app's own stream), for track history
     private var currentStationId: String? = null
@@ -315,6 +323,13 @@ class RadioPlaybackService : MediaLibraryService() {
         albumArt.start()
 
         serviceScope.launch {
+            settingsRepository.spatialAudioEnabled.distinctUntilChanged().collect { enabled ->
+                spatialAudioEnabled = enabled
+                player?.setAudioAttributes(SpatialAudio.audioAttributes(enabled), true)
+            }
+        }
+
+        serviceScope.launch {
             settingsRepository.loopFinishedBroadcasts.collect { enabled ->
                 loopFinishedBroadcasts = enabled
                 applyRepeatMode()
@@ -413,10 +428,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .setMediaSourceFactory(mediaSourceFactory)
             .setSeekBackIncrementMs(SEEK_BACK_INCREMENT.inWholeMilliseconds)
             .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
+                SpatialAudio.audioAttributes(spatialAudioEnabled),
                 true  // Handle audio focus automatically
             )
             .setHandleAudioBecomingNoisy(false)  // We handle this manually for more control
@@ -425,6 +437,7 @@ class RadioPlaybackService : MediaLibraryService() {
             .apply {
                 repeatMode = Player.REPEAT_MODE_OFF  // Live stream doesn't repeat
                 playWhenReady = false  // Don't auto-play on creation
+                volume = 0f  // The first start fades in like every later one (VolumeRamp)
             }
         player = exoPlayer
 
@@ -741,9 +754,11 @@ class RadioPlaybackService : MediaLibraryService() {
                     // Bluetooth — so this is the one place that sees all resumes.
                     audioRoutePolicy.onPlaybackStarted()
                     playbackLocks?.acquire()
+                    fadeIn()
                     if (SEEKBACK_ENABLED) scheduleSeekBackReveal()
                 } else {
                     playbackLocks?.release()
+                    silenceUntilNextStart()
                 }
             }
 
@@ -899,6 +914,25 @@ class RadioPlaybackService : MediaLibraryService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
         return mediaSession
+    }
+
+    /**
+     * Zeroes the player while it is not playing, so the next start — whatever route it
+     * comes from — begins silent and [fadeIn] ramps it up (ShoutKit's rejoin fade).
+     */
+    private fun silenceUntilNextStart() {
+        volumeRampJob?.cancel()
+        player?.volume = 0f
+    }
+
+    private fun fadeIn() {
+        volumeRampJob?.cancel()
+        volumeRampJob = serviceScope.launch {
+            for (step in 1..VolumeRamp.STEPS) {
+                delay(VolumeRamp.stepDelayMs)
+                player?.volume = VolumeRamp.levelAt(step)
+            }
+        }
     }
 
     override fun onDestroy() {

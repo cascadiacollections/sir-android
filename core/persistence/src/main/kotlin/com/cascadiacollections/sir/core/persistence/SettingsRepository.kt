@@ -97,6 +97,7 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
     private val loopFinishedBroadcastsKey = booleanPreferencesKey("loop_finished_broadcasts")
     private val reportPlaysToDirectoryKey = booleanPreferencesKey("report_plays_to_directory")
     private val fetchAlbumArtworkKey = booleanPreferencesKey("fetch_album_artwork")
+    private val spatialAudioKey = booleanPreferencesKey("spatial_audio")
     private val hasCompletedFirstRunKey = booleanPreferencesKey("has_completed_first_run")
     private val hiddenRecentStationIdsKey = stringSetPreferencesKey("hidden_recent_station_ids")
 
@@ -278,6 +279,17 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
     suspend fun setFetchAlbumArtwork(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[fetchAlbumArtworkKey] = enabled
+        }
+    }
+
+    /** Whether playback is spatialized on headphones that support it. Off by default, as in ShoutKit. */
+    val spatialAudioEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[spatialAudioKey] ?: false
+    }
+
+    suspend fun setSpatialAudioEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[spatialAudioKey] = enabled
         }
     }
 

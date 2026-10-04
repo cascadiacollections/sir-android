@@ -102,6 +102,12 @@ class FavoritesBackupCodecTest {
     }
 
     @Test
+    fun `a nameless entry with a blank stream url falls back to its id`() {
+        val text = """{"schemaVersion":1,"favorites":[{"id":"abc","name":"","streamURL":"","genre":"","sortIndex":0}]}"""
+        assertEquals("abc", FavoritesBackupCodec.decode(text).single().name)
+    }
+
+    @Test
     fun `round trip preserves order and mapped fields`() {
         val stations = listOf(
             Station(id = "x", name = "X", url = "https://x/s", favicon = "https://x/f", tags = "jazz"),

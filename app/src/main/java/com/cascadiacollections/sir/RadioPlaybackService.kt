@@ -996,22 +996,17 @@ class RadioPlaybackService : MediaLibraryService() {
 
     /**
      * Attaches cover art to the Recently Heard entry for the current track. The lookup
-     * finishes after the track was recorded, so this re-records it, and
-     * `HeardTracks.record` merges that consecutive repeat into the existing row.
+     * finishes after the track was recorded, so this only updates that row — and leaves
+     * history alone if it no longer matches (e.g. the station changed meanwhile).
      */
     private fun recordHeardArtwork() {
         val artworkUrl = albumArt.current?.artworkUrl ?: return
         val metadata = streamMetadata
         if (metadata.trackTitle == null && metadata.artist == null) return
-        val track = HeardTrack(
-            title = metadata.trackTitle.orEmpty(),
-            artist = metadata.artist,
-            stationId = currentStationId,
-            stationName = currentStationTitle ?: getString(R.string.station_name),
-            timestampMillis = System.currentTimeMillis(),
-            artworkUrl = artworkUrl,
-        )
-        serviceScope.launch { trackHistoryRepository.record(track) }
+        val title = metadata.trackTitle.orEmpty()
+        val artist = metadata.artist
+        val stationId = currentStationId
+        serviceScope.launch { trackHistoryRepository.attachArtwork(title, artist, stationId, artworkUrl) }
     }
 
     /**

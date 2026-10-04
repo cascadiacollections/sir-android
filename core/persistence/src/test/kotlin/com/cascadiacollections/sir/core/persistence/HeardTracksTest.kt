@@ -82,6 +82,29 @@ class HeardTracksTest {
     }
 
     @Test
+    fun `artwork attaches to the matching current hearing`() {
+        val history = HeardTracks.record(HeardTracks.record(emptyList(), track("A", at = 1)), track("B", at = 2))
+        val updated = HeardTracks.attachArtwork(history, "B", "Artist", "s1", "https://art/b")
+        assertEquals(listOf("https://art/b", null), updated.map { it.artworkUrl })
+        assertEquals(history.map { it.timestampMillis }, updated.map { it.timestampMillis })
+    }
+
+    @Test
+    fun `artwork arriving after a station switch adds no row`() {
+        val history = HeardTracks.record(emptyList(), track("A", stationId = "old", at = 1))
+        // The lookup for "A" finished after the listener switched to station "new".
+        val updated = HeardTracks.attachArtwork(history, "A", "Artist", "new", "https://art/a")
+        assertEquals(history, updated)
+    }
+
+    @Test
+    fun `artwork for a track that is no longer current is dropped`() {
+        val history = HeardTracks.record(HeardTracks.record(emptyList(), track("A", at = 1)), track("B", at = 2))
+        assertEquals(history, HeardTracks.attachArtwork(history, "A", "Artist", "s1", "https://art/a"))
+        assertEquals(emptyList<HeardTrack>(), HeardTracks.attachArtwork(emptyList(), "A", "Artist", "s1", "https://art/a"))
+    }
+
+    @Test
     fun `a consecutive repeat adopts newly found artwork and keeps it`() {
         val first = HeardTracks.record(emptyList(), track("A", at = 1))
         val withArt = HeardTracks.record(first, track("A", at = 2).copy(artworkUrl = "https://art"))

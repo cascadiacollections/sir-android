@@ -80,6 +80,29 @@ object HeardTracks {
         return (listOf(track) + current).take(limit)
     }
 
+    /**
+     * Attaches [artworkUrl] to the most recent entry, but only when that entry is the
+     * same hearing — same title, artist and station. Never adds a row.
+     *
+     * Cover art is looked up after a track is recorded and can finish after the listener
+     * has switched stations (the switch updates the station before any new metadata
+     * arrives). Recording it as a new hearing would file the old track under the new
+     * station and count it twice in Top Tracks, so an answer that no longer matches the
+     * front entry is dropped.
+     */
+    fun attachArtwork(
+        current: List<HeardTrack>,
+        title: String,
+        artist: String?,
+        stationId: String?,
+        artworkUrl: String,
+    ): List<HeardTrack> {
+        val front = current.firstOrNull() ?: return current
+        if (front.title != title || front.artist != artist || front.stationId != stationId) return current
+        if (front.artworkUrl == artworkUrl) return current
+        return listOf(front.copy(artworkUrl = artworkUrl)) + current.drop(1)
+    }
+
     private val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false

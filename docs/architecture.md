@@ -353,6 +353,7 @@ packaging detail — they partition which features exist at all.
 | `androidx.mediarouter` | yes | **no** |
 | `:cast` dynamic feature | installable on demand | not offered |
 | Chromecast row in settings | shown | **absent** |
+| Wearable Data Layer (phone → watch station sync) | yes | **no** (inert stub) |
 
 Everything else — playback, directory, persistence, Auto, tile, widget — is identical.
 
@@ -420,9 +421,43 @@ playing.
   controller future. `QuickPlayWidgetUpdater` re-renders it (debounced `updateAll`) when
   playback, the selection or the favourites change, and only runs while a widget is
   placed; the service's one hook is publishing `isPlaying` to it.
-- **Wear** is a standalone player and does not share a session with the phone, but it now
-  takes its URL from `StreamConfig.DEFAULT_STREAM_URL` in `:core:playback` instead of
-  duplicating the literal.
+- **Wear** is a standalone player and does not share a session with the phone; the SIR
+  stream comes from `StreamConfig.DEFAULT_STREAM_URL` in `:core:playback`. As in
+  ShoutKit's watch app, the phone tells the watch what it last played:
+  - *Phone → watch sync (Play flavor only).* `WearStationPublisher` (`src/play`) is started
+    from `SirApp` like the other app-scoped collectors. It runs `WatchStationSyncer`
+    (`src/main`, pure and unit-tested) over `SettingsRepository.selectedStation` and
+    `recentStations`: the pair is combined into a `WatchStationPayload`
+    (`{"last": Station?, "recents": [Station…≤10]}`), de-duplicated and debounced (1 s), and
+    each settled value is put as one urgent Data Layer `DataItem` at `/sir/stations`
+    (`DataMap` key `payload`). The wire format — path, key, cap and a total decoder that
+    turns anything unreadable into an empty payload — is `WatchStationSync` in
+    `:core:model`, shared by both ends. Phones without Play services, or without the Wear OS
+    companion (`ApiException`), simply skip the write. The FOSS flavor ships an inert stub
+    with the same API (`isSupported = false`), and `FossWearSyncPartitionTest` fails if the
+    Wearable client ever reaches its classpath.
+  - *Watch side.* `StationSyncListenerService` (a `WearableListenerService` filtered to
+    `/sir/stations`) stores the payload in `WatchStationStore` (one SharedPreferences value,
+    so the tile and complication can read it synchronously) and asks the tile and the
+    complication to re-render. `WearActivity` also pulls the current item on launch, since
+    the listener only hears changes.
+  - *UI.* Now Playing, then Stop while something plays, then a Recent Stations
+    `ScalingLazyColumn`: the SIR stream first, then the last-played station and the recents
+    (`WearStations.list`). Tapping one sends `WearPlaybackService` `ACTION_PLAY_STATION`
+    with the station; the service maps it with `WearStations.mediaItem` (resolved stream
+    URL, HLS MIME type when the directory flags it — `media3-exoplayer-hls` is on the
+    watch — and the station name as title). `ACTION_STOP` stops and leaves the foreground.
+  - *"Play last".* `PlayLastComplicationService` (SHORT_TEXT with the name abbreviated to
+    seven characters, or SMALL_IMAGE) and a "Play <station>" row on the tile both open
+    `WearActivity` with `EXTRA_PLAY_LAST`, which starts `ACTION_PLAY_LAST` — the activity,
+    being in the foreground, may start the foreground service on every API level. With
+    nothing synced yet it plays the SIR stream.
+  - *applicationId.* The Data Layer only delivers between apps with the **same package
+    name and signing key**. `:wear` therefore uses the phone's applicationId,
+    `com.cascadiacollections.sir` (it was `com.cascadiacollections.sir.wear`, which never
+    shipped); its namespace, and so its `R` class and Kotlin packages, stay `.wear`. Debug
+    builds share the local debug keystore, so sync works between debug installs; a release
+    Wear build must be signed with the phone's release key.
 
 ## Verification
 

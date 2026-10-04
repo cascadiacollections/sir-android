@@ -7,7 +7,11 @@ android {
     namespace = "com.cascadiacollections.sir.wear"
 
     defaultConfig {
-        applicationId = "com.cascadiacollections.sir.wear"
+        // The phone app's applicationId: the Wearable Data Layer only delivers between apps
+        // with the same package name and signing key, so the phone→watch station sync
+        // (StationSyncListenerService) needs the two to match. The namespace (R class,
+        // Kotlin package) stays .wear.
+        applicationId = "com.cascadiacollections.sir"
         missingDimensionStrategy("distribution", "play")
         versionCode = 1
         versionName = "1.0"
@@ -48,6 +52,14 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
     implementation(libs.media3.datasource.okhttp)
+    // Directory stations flagged HLS (`.m3u8`) chosen from the synced recents
+    implementation(libs.media3.exoplayer.hls)
+
+    // Phone → watch station sync (Wearable Data Layer) and the "Play last" complication
+    implementation(projects.core.model)
+    implementation(libs.play.services.wearable)
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.androidx.wear.watchface.complications.data.source.ktx)
 
     // Shared playback policy (stream URL, retry backoff) and OkHttp client factory
     implementation(projects.core.playback)
@@ -61,6 +73,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.compose.ui.test.manifest)

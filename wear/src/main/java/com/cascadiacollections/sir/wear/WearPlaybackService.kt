@@ -3,6 +3,7 @@ package com.cascadiacollections.sir.wear
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Handler
@@ -13,7 +14,6 @@ import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -23,9 +23,12 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.MediaStyleNotificationHelper
+import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.StreamConfig
 import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
+import com.cascadiacollections.sir.wear.sync.WatchStationStore
+import kotlinx.serialization.json.Json
 
 private const val TAG = "WearPlaybackService"
 private const val STREAM_URL = StreamConfig.DEFAULT_STREAM_URL
@@ -34,6 +37,12 @@ private const val CHANNEL_ID = "wear_radio_playback"
 private const val NOTIFICATION_ID = 2001
 private const val MAX_RETRIES = 5
 
+/**
+ * Standalone playback on the watch. Plays the SIR stream by default; [ACTION_PLAY_STATION]
+ * switches to any station (the Recent Stations list), [ACTION_PLAY_LAST] to the station
+ * last played on the phone (the "Play last" complication and tile), and [ACTION_STOP]
+ * stops and leaves the foreground.
+ */
 class WearPlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
@@ -83,7 +92,7 @@ class WearPlaybackService : MediaSessionService() {
                         }
                     }
                 })
-                setMediaItem(buildMediaItem())
+                setMediaItem(mediaItemFor(defaultStation()))
                 prepare()
             }
 
@@ -97,6 +106,28 @@ class WearPlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_STOP -> {
+                stopPlayback()
+                return START_NOT_STICKY
+            }
+            ACTION_PLAY_STATION -> {
+                enterForeground()
+                val station = intent.getStringExtra(EXTRA_STATION)?.let(::decodeStation)
+                play(station?.takeIf { it.isPlayable } ?: defaultStation())
+            }
+            ACTION_PLAY_LAST -> {
+                enterForeground()
+                play(WatchStationStore.from(this).load().last ?: defaultStation())
+            }
+            // Started by startForegroundService() to resume: honour that contract again,
+            // since a previous Stop may have left the foreground.
+            null -> enterForeground()
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         mediaSession?.run {
@@ -107,17 +138,33 @@ class WearPlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 
-    private fun buildMediaItem() = MediaItem.Builder()
-        .setUri(STREAM_URL)
-        .setMediaId(STREAM_URL)
-        .setMediaMetadata(
-            MediaMetadata.Builder()
-                .setTitle(getString(R.string.station_name))
-                .setArtist(getString(R.string.stream_description))
-                .setIsPlayable(true)
-                .build()
-        )
-        .build()
+    private fun defaultStation(): Station = WearStations.default(getString(R.string.station_name), STREAM_URL)
+
+    private fun mediaItemFor(station: Station): MediaItem =
+        WearStations.mediaItem(station, getString(R.string.stream_description))
+
+    private fun play(station: Station) {
+        val player = mediaSession?.player ?: return
+        handler.removeCallbacksAndMessages(null)
+        retryCount = 0
+        if (player.currentMediaItem?.mediaId != mediaItemFor(station).mediaId) {
+            player.setMediaItem(mediaItemFor(station))
+        }
+        player.prepare()
+        player.play()
+    }
+
+    private fun stopPlayback() {
+        handler.removeCallbacksAndMessages(null)
+        mediaSession?.player?.stop()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    private fun enterForeground() {
+        if (mediaSession == null) return
+        startForeground(NOTIFICATION_ID, buildNotification())
+    }
 
     @OptIn(UnstableApi::class)
     private fun buildNotification() = run {
@@ -137,6 +184,29 @@ class WearPlaybackService : MediaSessionService() {
             .setStyle(MediaStyleNotificationHelper.MediaStyle(session))
         NotificationAccentColor.applyTo(builder)
         builder.build()
+    }
+
+    companion object {
+        const val ACTION_PLAY_STATION = "com.cascadiacollections.sir.wear.action.PLAY_STATION"
+        const val ACTION_PLAY_LAST = "com.cascadiacollections.sir.wear.action.PLAY_LAST"
+        const val ACTION_STOP = "com.cascadiacollections.sir.wear.action.STOP"
+        const val EXTRA_STATION = "com.cascadiacollections.sir.wear.extra.STATION"
+
+        private val json = Json { ignoreUnknownKeys = true }
+
+        fun playStationIntent(context: Context, station: Station): Intent =
+            Intent(context, WearPlaybackService::class.java)
+                .setAction(ACTION_PLAY_STATION)
+                .putExtra(EXTRA_STATION, json.encodeToString(Station.serializer(), station))
+
+        fun playLastIntent(context: Context): Intent =
+            Intent(context, WearPlaybackService::class.java).setAction(ACTION_PLAY_LAST)
+
+        fun stopIntent(context: Context): Intent =
+            Intent(context, WearPlaybackService::class.java).setAction(ACTION_STOP)
+
+        internal fun decodeStation(raw: String): Station? =
+            runCatching { json.decodeFromString(Station.serializer(), raw) }.getOrNull()
     }
 
     private fun createNotificationChannel() {

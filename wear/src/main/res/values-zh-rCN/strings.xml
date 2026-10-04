@@ -5,4 +5,9 @@
     <string name="live">直播</string>
     <string name="connecting">正在连接…</string>
     <string name="stream_description">直播流</string>
+    <string name="stop">停止</string>
+    <string name="recent_stations">最近播放的电台</string>
+    <string name="now_playing">正在播放</string>
+    <string name="play_last">播放上次的电台</string>
+    <string name="play_station">播放 %1$s</string>
 </resources>

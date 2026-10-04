@@ -15,6 +15,7 @@ import androidx.wear.tiles.TileService
 import com.cascadiacollections.sir.wear.R
 import com.cascadiacollections.sir.wear.WearActivity
 import com.cascadiacollections.sir.wear.WearPlaybackService
+import com.cascadiacollections.sir.wear.sync.WatchStationStore
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -29,7 +30,9 @@ private const val RESOURCES_VERSION = "1"
  * future chained from [MediaController.Builder.buildAsync] instead of blocking on it, so the
  * calling thread is never held for the connection to complete.
  *
- * Tapping the tile opens [WearActivity], where transport controls already live.
+ * Tapping the tile opens [WearActivity], where transport controls already live. Below it,
+ * "Play <station>" plays the station last played on the phone (synced by
+ * `StationSyncListenerService`), as ShoutKit's watch app offers "Play Last".
  */
 class RadioTileService : TileService() {
 
@@ -49,32 +52,41 @@ class RadioTileService : TileService() {
             },
             MoreExecutors.directExecutor()
         )
-        val recoveredSnapshotFuture = Futures.catching(
+        val recoveredSnapshotFuture: ListenableFuture<TileSnapshot> = Futures.catching(
             snapshotFuture,
             Exception::class.java,
             { TileSnapshot(isPlaying = false, stationName = null) },
             MoreExecutors.directExecutor()
         )
 
-        return Futures.transform(recoveredSnapshotFuture, ::buildTile, MoreExecutors.directExecutor())
+        return Futures.transform(
+            recoveredSnapshotFuture,
+            { snapshot ->
+                val last = WatchStationStore.from(this).load().last
+                buildTile(snapshot, last?.name?.takeIf { it.isNotBlank() })
+            },
+            MoreExecutors.directExecutor()
+        )
     }
 
-    private fun buildTile(snapshot: TileSnapshot): TileBuilders.Tile {
-        val launchWearActivity = ModifiersBuilders.Clickable.Builder()
-            .setId("open_app")
-            .setOnClick(
-                ActionBuilders.LaunchAction.Builder()
-                    .setAndroidActivity(
-                        ActionBuilders.AndroidActivity.Builder()
-                            .setClassName(WearActivity::class.java.name)
-                            .setPackageName(packageName)
-                            .build()
-                    )
-                    .build()
+    private fun launchWearActivity(id: String, playLast: Boolean): ModifiersBuilders.Clickable {
+        val activity = ActionBuilders.AndroidActivity.Builder()
+            .setClassName(WearActivity::class.java.name)
+            .setPackageName(packageName)
+        if (playLast) {
+            activity.addKeyToExtraMapping(
+                WearActivity.EXTRA_PLAY_LAST,
+                ActionBuilders.AndroidBooleanExtra.Builder().setValue(true).build()
             )
+        }
+        return ModifiersBuilders.Clickable.Builder()
+            .setId(id)
+            .setOnClick(ActionBuilders.LaunchAction.Builder().setAndroidActivity(activity.build()).build())
             .build()
+    }
 
-        val layout = LayoutElementBuilders.Column.Builder()
+    private fun buildTile(snapshot: TileSnapshot, lastStationName: String?): TileBuilders.Tile {
+        val nowPlaying = LayoutElementBuilders.Column.Builder()
             .addContent(
                 LayoutElementBuilders.Text.Builder()
                     .setText(snapshot.stationName ?: getString(R.string.station_name))
@@ -94,16 +106,38 @@ class RadioTileService : TileService() {
             )
             .setModifiers(
                 ModifiersBuilders.Modifiers.Builder()
-                    .setClickable(launchWearActivity)
+                    .setClickable(launchWearActivity("open_app", playLast = false))
                     .build()
             )
             .build()
+
+        val layout = LayoutElementBuilders.Column.Builder().addContent(nowPlaying)
+        // With nothing synced from the phone yet there is no "last" to offer.
+        if (lastStationName != null) {
+            layout
+                .addContent(
+                    LayoutElementBuilders.Spacer.Builder()
+                        .setHeight(DimensionBuilders.dp(12f))
+                        .build()
+                )
+                .addContent(
+                    LayoutElementBuilders.Text.Builder()
+                        .setText(getString(R.string.play_station, lastStationName))
+                        .setMaxLines(1)
+                        .setModifiers(
+                            ModifiersBuilders.Modifiers.Builder()
+                                .setClickable(launchWearActivity("play_last", playLast = true))
+                                .build()
+                        )
+                        .build()
+                )
+        }
 
         val timeline = TimelineBuilders.Timeline.Builder()
             .addTimelineEntry(
                 TimelineBuilders.TimelineEntry.Builder()
                     .setLayout(
-                        LayoutElementBuilders.Layout.Builder().setRoot(layout).build()
+                        LayoutElementBuilders.Layout.Builder().setRoot(layout.build()).build()
                     )
                     .build()
             )

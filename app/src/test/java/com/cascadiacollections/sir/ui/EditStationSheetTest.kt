@@ -7,10 +7,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.ui.theme.SirTheme
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -84,8 +85,8 @@ class EditStationSheetTest {
         composeRule.onNodeWithTag(EditStationSheetTestTags.NAME_FIELD).performTextInput(" Renamed Station ")
         composeRule.onNodeWithTag(EditStationSheetTestTags.SAVE_BUTTON).performClick()
 
-        assertEquals("Renamed Station", saved?.name)
-        assertEquals(station.id, saved?.id)
+        assertThat(saved?.name).isEqualTo("Renamed Station")
+        assertThat(saved?.id).isEqualTo(station.id)
     }
 
     @Test
@@ -104,6 +105,6 @@ class EditStationSheetTest {
         composeRule.onNodeWithTag(EditStationSheetTestTags.ARTWORK_FIELD).performTextClearance()
         composeRule.onNodeWithTag(EditStationSheetTestTags.SAVE_BUTTON).performClick()
 
-        assertNull(saved?.favicon)
+        assertThat(saved?.favicon).isNull()
     }
 }

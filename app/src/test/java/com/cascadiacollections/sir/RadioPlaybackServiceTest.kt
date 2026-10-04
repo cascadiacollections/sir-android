@@ -1,8 +1,14 @@
 package com.cascadiacollections.sir
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.endsWith
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThanOrEqualTo
+import assertk.assertions.isNotEmpty
+import assertk.assertions.isNotEqualTo
+import assertk.assertions.startsWith
 import org.junit.Test
 
 class RadioPlaybackServiceTest {
@@ -10,37 +16,29 @@ class RadioPlaybackServiceTest {
     @Test
     fun `action constants follow package naming convention`() {
         val prefix = "com.cascadiacollections.sir.action."
-        assertTrue(
-            RadioPlaybackService.ACTION_SET_SLEEP_TIMER.startsWith(prefix)
-        )
-        assertTrue(
-            RadioPlaybackService.ACTION_SET_EQUALIZER.startsWith(prefix)
-        )
-        assertTrue(
-            RadioPlaybackService.ACTION_SEEK_BACK.startsWith(prefix)
-        )
-        assertTrue(
-            RadioPlaybackService.ACTION_GO_LIVE.startsWith(prefix)
-        )
+        assertThat(RadioPlaybackService.ACTION_SET_SLEEP_TIMER).startsWith(prefix)
+        assertThat(RadioPlaybackService.ACTION_SET_EQUALIZER).startsWith(prefix)
+        assertThat(RadioPlaybackService.ACTION_SEEK_BACK).startsWith(prefix)
+        assertThat(RadioPlaybackService.ACTION_GO_LIVE).startsWith(prefix)
     }
 
     @Test
     fun `extra key constants are non-empty`() {
-        assertTrue(RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES.isNotEmpty())
-        assertTrue(RadioPlaybackService.EXTRA_EQUALIZER_PRESET.isNotEmpty())
+        assertThat(RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES).isNotEmpty()
+        assertThat(RadioPlaybackService.EXTRA_EQUALIZER_PRESET).isNotEmpty()
     }
 
     @Test
     fun `CAST_MODULE_NAME matches settings gradle include`() {
-        assertEquals("cast", CastFeatureManager.CAST_MODULE_NAME)
+        assertThat(CastFeatureManager.CAST_MODULE_NAME).isEqualTo("cast")
     }
 
     @Test
     fun `action constants have descriptive suffixes`() {
-        assertTrue(RadioPlaybackService.ACTION_SET_SLEEP_TIMER.endsWith("SET_SLEEP_TIMER"))
-        assertTrue(RadioPlaybackService.ACTION_SET_EQUALIZER.endsWith("SET_EQUALIZER"))
-        assertTrue(RadioPlaybackService.ACTION_SEEK_BACK.endsWith("SEEK_BACK"))
-        assertTrue(RadioPlaybackService.ACTION_GO_LIVE.endsWith("GO_LIVE"))
+        assertThat(RadioPlaybackService.ACTION_SET_SLEEP_TIMER).endsWith("SET_SLEEP_TIMER")
+        assertThat(RadioPlaybackService.ACTION_SET_EQUALIZER).endsWith("SET_EQUALIZER")
+        assertThat(RadioPlaybackService.ACTION_SEEK_BACK).endsWith("SEEK_BACK")
+        assertThat(RadioPlaybackService.ACTION_GO_LIVE).endsWith("GO_LIVE")
     }
 
     @Test
@@ -51,15 +49,13 @@ class RadioPlaybackServiceTest {
             RadioPlaybackService.ACTION_SEEK_BACK,
             RadioPlaybackService.ACTION_GO_LIVE
         )
-        assertEquals(4, actions.size)
+        assertThat(actions).hasSize(4)
     }
 
     @Test
     fun `extra key constants are distinct`() {
-        assertNotEquals(
-            RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,
-            RadioPlaybackService.EXTRA_EQUALIZER_PRESET
-        )
+        assertThat(RadioPlaybackService.EXTRA_EQUALIZER_PRESET)
+            .isNotEqualTo(RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES)
     }
 
     @Test
@@ -74,20 +70,15 @@ class RadioPlaybackServiceTest {
             RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,
             RadioPlaybackService.EXTRA_EQUALIZER_PRESET
         )
-        assertTrue(
-            "Actions and extras must not share identical strings",
-            actions.none {
-                it in extras
-            }
-        )
+        assertThat(actions intersect extras, name = "Actions and extras must not share identical strings").isEmpty()
     }
 
     @Test
     fun `REPLAY_BUFFER_SIZE holds at least 30 seconds at 64kbps`() {
         val bytesFor30Seconds = 30 * 8_000 // 64kbps = 8KB/s
-        assertTrue(
-            "Buffer (${ RadioPlaybackService.REPLAY_BUFFER_SIZE }) must hold >= 30s ($bytesFor30Seconds bytes)",
-            RadioPlaybackService.REPLAY_BUFFER_SIZE >= bytesFor30Seconds
-        )
+        assertThat(
+            RadioPlaybackService.REPLAY_BUFFER_SIZE,
+            name = "Buffer (${ RadioPlaybackService.REPLAY_BUFFER_SIZE }) must hold >= 30s ($bytesFor30Seconds bytes)"
+        ).isGreaterThanOrEqualTo(bytesFor30Seconds)
     }
 }

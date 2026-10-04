@@ -1,5 +1,16 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFailure
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
+import assertk.assertions.isSuccess
+import assertk.assertions.prop
 import com.cascadiacollections.sir.core.model.StationQuery
 import java.io.IOException
 import java.net.ConnectException
@@ -8,10 +19,6 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.SerializationException
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RadioBrowserDirectoryTest {
@@ -58,18 +65,18 @@ class RadioBrowserDirectoryTest {
         directory(transport).search(StationQuery("  jazz  ")).getOrThrow()
 
         val url = transport.urls.single()
-        assertEquals("/json/stations/search", url.encodedPath)
-        assertEquals("jazz", url.queryParameter("name"))
-        assertEquals("clickcount", url.queryParameter("order"))
-        assertEquals("true", url.queryParameter("reverse"))
-        assertEquals("true", url.queryParameter("hidebroken"))
-        assertEquals("40", url.queryParameter("limit"))
-        assertNull(url.queryParameter("tagList"))
+        assertThat(url.encodedPath).isEqualTo("/json/stations/search")
+        assertThat(url.queryParameter("name")).isEqualTo("jazz")
+        assertThat(url.queryParameter("order")).isEqualTo("clickcount")
+        assertThat(url.queryParameter("reverse")).isEqualTo("true")
+        assertThat(url.queryParameter("hidebroken")).isEqualTo("true")
+        assertThat(url.queryParameter("limit")).isEqualTo("40")
+        assertThat(url.queryParameter("tagList")).isNull()
     }
 
     @Test
     fun `search defaults to 40 results`() {
-        assertEquals(40, StationQuery("x").effectiveLimit)
+        assertThat(StationQuery("x").effectiveLimit).isEqualTo(40)
     }
 
     @Test
@@ -78,15 +85,15 @@ class RadioBrowserDirectoryTest {
         directory(transport).topStations(5)
 
         val agent = transport.requests.single().header("User-Agent").orEmpty()
-        assertEquals(RadioBrowserDirectory.DEFAULT_USER_AGENT, agent)
-        assertTrue(agent.contains("github.com/cascadiacollections/sir-android"))
+        assertThat(agent).isEqualTo(RadioBrowserDirectory.DEFAULT_USER_AGENT)
+        assertThat(agent).contains("github.com/cascadiacollections/sir-android")
     }
 
     @Test
     fun `blank search makes no request`() = runTest {
         val transport = FakeTransport()
-        assertEquals(emptyList<Any>(), directory(transport).search(StationQuery("  ")).getOrThrow())
-        assertTrue(transport.requests.isEmpty())
+        assertThat(directory(transport).search(StationQuery("  ")).getOrThrow()).isEmpty()
+        assertThat(transport.requests).isEmpty()
     }
 
     @Test
@@ -101,10 +108,10 @@ class RadioBrowserDirectoryTest {
         directory(transport).search(StationQuery("fm"), filters).getOrThrow()
 
         val url = transport.urls.single()
-        assertEquals("64", url.queryParameter("bitrateMin"))
-        assertEquals("320", url.queryParameter("bitrateMax"))
-        assertEquals("jazz", url.queryParameter("tagList"))
-        assertEquals("GB", url.queryParameter("countrycode"))
+        assertThat(url.queryParameter("bitrateMin")).isEqualTo("64")
+        assertThat(url.queryParameter("bitrateMax")).isEqualTo("320")
+        assertThat(url.queryParameter("tagList")).isEqualTo("jazz")
+        assertThat(url.queryParameter("countrycode")).isEqualTo("GB")
     }
 
     @Test
@@ -123,7 +130,7 @@ class RadioBrowserDirectoryTest {
             .getOrThrow()
             .map { it.name }
 
-        assertEquals(listOf("Unknown Bitrate", "No Country", "Right"), names)
+        assertThat(names).containsExactly("Unknown Bitrate", "No Country", "Right")
     }
 
     @Test
@@ -135,16 +142,16 @@ class RadioBrowserDirectoryTest {
         directory.stationsByTag("Jazz", 10, StationSearchFilters(tag = "Smooth", countryCode = "us")).getOrThrow()
 
         val plain = transport.urls[0]
-        assertEquals("/json/stations/search", plain.encodedPath)
-        assertEquals("hip hop", plain.queryParameter("tagList"))
-        assertNull(plain.queryParameter("tag"))
-        assertEquals("clickcount", plain.queryParameter("order"))
-        assertEquals("true", plain.queryParameter("reverse"))
-        assertEquals("10", plain.queryParameter("limit"))
+        assertThat(plain.encodedPath).isEqualTo("/json/stations/search")
+        assertThat(plain.queryParameter("tagList")).isEqualTo("hip hop")
+        assertThat(plain.queryParameter("tag")).isNull()
+        assertThat(plain.queryParameter("order")).isEqualTo("clickcount")
+        assertThat(plain.queryParameter("reverse")).isEqualTo("true")
+        assertThat(plain.queryParameter("limit")).isEqualTo("10")
 
         val filtered = transport.urls[1]
-        assertEquals(listOf("jazz,smooth"), filtered.queryParameterValues("tagList"))
-        assertEquals("US", filtered.queryParameter("countrycode"))
+        assertThat(filtered.queryParameterValues("tagList")).containsExactly("jazz,smooth")
+        assertThat(filtered.queryParameter("countrycode")).isEqualTo("US")
     }
 
     @Test
@@ -153,8 +160,8 @@ class RadioBrowserDirectoryTest {
         directory(transport).topStations(500).getOrThrow()
 
         val url = transport.urls.single()
-        assertEquals("/json/stations/topclick", url.encodedPath)
-        assertEquals(StationQuery.MAX_LIMIT.toString(), url.queryParameter("limit"))
+        assertThat(url.encodedPath).isEqualTo("/json/stations/topclick")
+        assertThat(url.queryParameter("limit")).isEqualTo(StationQuery.MAX_LIMIT.toString())
     }
 
     // endregion
@@ -171,9 +178,9 @@ class RadioBrowserDirectoryTest {
 
         val station = directory(transport).topStations(1).getOrThrow().single()
 
-        assertEquals("Jazz FM", station.name)
-        assertEquals("https://img.example/logo.png", station.favicon)
-        assertEquals(uuid, station.id)
+        assertThat(station.name).isEqualTo("Jazz FM")
+        assertThat(station.favicon).isEqualTo("https://img.example/logo.png")
+        assertThat(station.id).isEqualTo(uuid)
     }
 
     @Test
@@ -181,7 +188,7 @@ class RadioBrowserDirectoryTest {
         val body = """[{"stationuuid":"x","name":"No URL","url":""}]"""
         val transport = FakeTransport { Reply.Http(body = body) }
 
-        assertTrue(directory(transport).topStations(5).getOrThrow().isEmpty())
+        assertThat(directory(transport).topStations(5).getOrThrow()).isEmpty()
     }
 
     // endregion
@@ -194,11 +201,11 @@ class RadioBrowserDirectoryTest {
         directory(transport).topTags().getOrThrow()
 
         val url = transport.urls.single()
-        assertEquals("/json/tags", url.encodedPath)
-        assertEquals("stationcount", url.queryParameter("order"))
-        assertEquals("true", url.queryParameter("reverse"))
-        assertEquals("true", url.queryParameter("hidebroken"))
-        assertEquals("48", url.queryParameter("limit"))
+        assertThat(url.encodedPath).isEqualTo("/json/tags")
+        assertThat(url.queryParameter("order")).isEqualTo("stationcount")
+        assertThat(url.queryParameter("reverse")).isEqualTo("true")
+        assertThat(url.queryParameter("hidebroken")).isEqualTo("true")
+        assertThat(url.queryParameter("limit")).isEqualTo("48")
     }
 
     @Test
@@ -209,8 +216,8 @@ class RadioBrowserDirectoryTest {
 
         val tags = directory(transport).topTags(10).getOrThrow()
 
-        assertEquals(listOf(Tag("pop", 5321), Tag("hip hop", 800)), tags)
-        assertEquals(listOf("Pop", "Hip Hop"), tags.map { it.displayName })
+        assertThat(tags).containsExactly(Tag("pop", 5321), Tag("hip hop", 800))
+        assertThat(tags.map { it.displayName }).containsExactly("Pop", "Hip Hop")
     }
 
     // endregion
@@ -221,13 +228,13 @@ class RadioBrowserDirectoryTest {
     fun `click is reported to the url endpoint for the station uuid`() = runTest {
         val transport = FakeTransport { Reply.Http(body = """{"ok":true}""") }
 
-        assertTrue(directory(transport).reportClick(uuid).isSuccess)
+        assertThat(directory(transport).reportClick(uuid)).isSuccess()
 
         val request = transport.requests.single()
-        assertEquals("/json/url/$uuid", request.url.encodedPath)
-        assertEquals("GET", request.method)
-        assertNull(request.url.queryParameter("limit"))
-        assertNull(request.url.queryParameter("hidebroken"))
+        assertThat(request.url.encodedPath).isEqualTo("/json/url/$uuid")
+        assertThat(request.method).isEqualTo("GET")
+        assertThat(request.url.queryParameter("limit")).isNull()
+        assertThat(request.url.queryParameter("hidebroken")).isNull()
     }
 
     @Test
@@ -236,9 +243,9 @@ class RadioBrowserDirectoryTest {
         val directory = directory(transport)
 
         listOf("imported:https://example.com/stream", "sir-default", "curated-worldwide-fm", "", "not-a-uuid")
-            .forEach { assertTrue(directory.reportClick(it).isSuccess) }
+            .forEach { assertThat(directory.reportClick(it)).isSuccess() }
 
-        assertTrue(transport.requests.isEmpty())
+        assertThat(transport.requests).isEmpty()
     }
 
     @Test
@@ -248,8 +255,8 @@ class RadioBrowserDirectoryTest {
                 if (url.host == "m1.example") failure else Reply.Http(body = "{}")
             }
 
-            assertTrue(directory(transport).reportClick(uuid).isSuccess)
-            assertEquals(listOf("m1.example", "m2.example"), transport.urls.map { it.host })
+            assertThat(directory(transport).reportClick(uuid)).isSuccess()
+            assertThat(transport.urls.map { it.host }).containsExactly("m1.example", "m2.example")
         }
     }
 
@@ -260,8 +267,8 @@ class RadioBrowserDirectoryTest {
                 if (url.host == "m1.example") failure else Reply.Http(body = "{}")
             }
 
-            assertTrue(directory(transport).reportClick(uuid).isFailure)
-            assertEquals(listOf("m1.example"), transport.urls.map { it.host })
+            assertThat(directory(transport).reportClick(uuid)).isFailure()
+            assertThat(transport.urls.map { it.host }).containsExactly("m1.example")
         }
     }
 
@@ -273,8 +280,8 @@ class RadioBrowserDirectoryTest {
         directory.getStation(uuid).getOrThrow()
         directory.getStations(listOf(uuid)).getOrThrow()
 
-        assertEquals(2, transport.urls.size)
-        transport.urls.forEach { assertNull(it.queryParameter("hidebroken")) }
+        assertThat(transport.urls).hasSize(2)
+        transport.urls.forEach { assertThat(it.queryParameter("hidebroken")).isNull() }
     }
 
     // endregion
@@ -289,8 +296,8 @@ class RadioBrowserDirectoryTest {
 
         val stations = directory(transport).topStations(5).getOrThrow()
 
-        assertEquals(1, stations.size)
-        assertEquals(listOf("m1.example", "m2.example"), transport.urls.map { it.host })
+        assertThat(stations).hasSize(1)
+        assertThat(transport.urls.map { it.host }).containsExactly("m1.example", "m2.example")
     }
 
     @Test
@@ -298,13 +305,17 @@ class RadioBrowserDirectoryTest {
         val serverError = FakeTransport { url ->
             if (url.host == "m1.example") Reply.Http(code = 503) else Reply.Http()
         }
-        assertTrue(directory(serverError).topStations(5).isSuccess)
-        assertEquals(2, serverError.requests.size)
+        assertThat(directory(serverError).topStations(5)).isSuccess()
+        assertThat(serverError.requests).hasSize(2)
 
         val clientError = FakeTransport { Reply.Http(code = 404) }
         val result = directory(clientError).topStations(5)
-        assertEquals(404, (result.exceptionOrNull() as HttpStatusException).code)
-        assertEquals(1, clientError.requests.size)
+        assertThat(result)
+            .isFailure()
+            .isInstanceOf<HttpStatusException>()
+            .prop(HttpStatusException::code)
+            .isEqualTo(404)
+        assertThat(clientError.requests).hasSize(1)
     }
 
     @Test
@@ -313,8 +324,8 @@ class RadioBrowserDirectoryTest {
 
         val result = directory(transport).topStations(5)
 
-        assertTrue(result.exceptionOrNull() is SerializationException)
-        assertEquals(1, transport.requests.size)
+        assertThat(result).isFailure().isInstanceOf<SerializationException>()
+        assertThat(transport.requests).hasSize(1)
     }
 
     @Test
@@ -323,8 +334,8 @@ class RadioBrowserDirectoryTest {
             if (url.host == "m1.example") Reply.Http(body = " ") else Reply.Http(body = "[]")
         }
 
-        assertTrue(directory(transport).topStations(5).isSuccess)
-        assertEquals(2, transport.requests.size)
+        assertThat(directory(transport).topStations(5)).isSuccess()
+        assertThat(transport.requests).hasSize(2)
     }
 
     @Test
@@ -333,13 +344,11 @@ class RadioBrowserDirectoryTest {
 
         val result = directory(transport).search(StationQuery("x"))
 
-        assertTrue(result.exceptionOrNull() is IOException)
-        assertEquals(
-            listOf("m1.example", "m2.example", "m3.example"),
-            transport.urls.map { it.host }
-        )
+        assertThat(result).isFailure().isInstanceOf<IOException>()
+        assertThat(transport.urls.map { it.host })
+            .containsExactly("m1.example", "m2.example", "m3.example")
         // 350 ms after the first failure, 700 ms after the second, none after the last.
-        assertEquals(350L + 700L, testScheduler.currentTime)
+        assertThat(testScheduler.currentTime).isEqualTo(350L + 700L)
     }
 
     @Test
@@ -348,7 +357,7 @@ class RadioBrowserDirectoryTest {
 
         directory(transport, mirrorList = listOf("https://only.example")).topStations(5)
 
-        assertEquals(3, transport.requests.size)
+        assertThat(transport.requests).hasSize(3)
     }
 
     @Test
@@ -358,7 +367,7 @@ class RadioBrowserDirectoryTest {
         directory(transport, budgetMs = 500).topStations(5)
 
         // After the first failure 350 ms fits; after the second, 350 + 700 does not.
-        assertEquals(2, transport.requests.size)
+        assertThat(transport.requests).hasSize(2)
     }
 
     @Test
@@ -371,7 +380,7 @@ class RadioBrowserDirectoryTest {
 
         directory(transport, nanoTime = { now }).topStations(5)
 
-        assertEquals(1, transport.requests.size)
+        assertThat(transport.requests).hasSize(1)
     }
 
     @Test
@@ -380,8 +389,8 @@ class RadioBrowserDirectoryTest {
 
         val result = directory(transport, mirrorList = listOf("not a url")).topStations(5)
 
-        assertTrue(result.isFailure)
-        assertFalse(transport.requests.isNotEmpty())
+        assertThat(result).isFailure()
+        assertThat(transport.requests).isEmpty()
     }
 
     // endregion

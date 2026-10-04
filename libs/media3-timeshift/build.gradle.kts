@@ -14,5 +14,6 @@ dependencies {
     api(libs.media3.datasource)
 
     testImplementation(libs.junit)
+    testImplementation(libs.assertk)
     testImplementation(libs.mockk)
 }

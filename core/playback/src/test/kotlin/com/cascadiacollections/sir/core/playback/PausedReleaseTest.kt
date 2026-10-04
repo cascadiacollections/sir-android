@@ -1,8 +1,9 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import org.junit.Test
 
 class PausedReleaseTest {
@@ -12,8 +13,8 @@ class PausedReleaseTest {
 
     @Test
     fun `the default is ten minutes`() {
-        assertEquals(600_000L, PausedRelease.DEFAULT_TIMEOUT_MS)
-        assertEquals(600_000L, release.onPaused())
+        assertThat(PausedRelease.DEFAULT_TIMEOUT_MS).isEqualTo(600_000L)
+        assertThat(release.onPaused()).isEqualTo(600_000L)
     }
 
     @Test
@@ -21,7 +22,7 @@ class PausedReleaseTest {
         release.onPaused()
         now += 599_999L
 
-        assertFalse(release.isDue())
+        assertThat(release.isDue()).isFalse()
     }
 
     @Test
@@ -29,7 +30,7 @@ class PausedReleaseTest {
         release.onPaused()
         now += 600_000L
 
-        assertTrue(release.isDue())
+        assertThat(release.isDue()).isTrue()
     }
 
     @Test
@@ -39,8 +40,8 @@ class PausedReleaseTest {
         release.onPlay()
         now += 600_000L
 
-        assertFalse(release.isDue())
-        assertFalse(release.isArmed)
+        assertThat(release.isDue()).isFalse()
+        assertThat(release.isArmed).isFalse()
     }
 
     @Test
@@ -50,9 +51,9 @@ class PausedReleaseTest {
         release.onPlay()
         now += 10_000L
 
-        assertEquals(600_000L, release.onPaused())
+        assertThat(release.onPaused()).isEqualTo(600_000L)
         now += 500_000L
-        assertFalse(release.isDue())
+        assertThat(release.isDue()).isFalse()
     }
 
     @Test
@@ -60,27 +61,27 @@ class PausedReleaseTest {
         release.onPaused()
         now += 400_000L
 
-        assertEquals(200_000L, release.onPaused())
+        assertThat(release.onPaused()).isEqualTo(200_000L)
         now += 200_000L
-        assertTrue(release.isDue())
+        assertThat(release.isDue()).isTrue()
     }
 
     @Test
     fun `a check that fires late still reports due once, until the next pause`() {
         release.onPaused()
         now += 3_600_000L
-        assertTrue(release.isDue())
+        assertThat(release.isDue()).isTrue()
 
         release.onReleased()
 
-        assertFalse(release.isDue())
-        assertFalse(release.isArmed)
+        assertThat(release.isDue()).isFalse()
+        assertThat(release.isArmed).isFalse()
     }
 
     @Test
     fun `nothing is due without a pause`() {
         now += 3_600_000L
 
-        assertFalse(release.isDue())
+        assertThat(release.isDue()).isFalse()
     }
 }

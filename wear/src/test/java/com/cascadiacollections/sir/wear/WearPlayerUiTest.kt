@@ -5,8 +5,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import assertk.assertThat
+import assertk.assertions.isTrue
 import java.util.concurrent.atomic.AtomicBoolean
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,6 +74,6 @@ class WearPlayerUiTest {
         val clicked = AtomicBoolean(false)
         setContent(onToggle = { clicked.set(true) })
         composeRule.onNodeWithContentDescription("Play").performClick()
-        assertTrue(clicked.get())
+        assertThat(clicked.get()).isTrue()
     }
 }

@@ -1,9 +1,10 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
 import com.cascadiacollections.sir.core.model.Station
 import java.util.Locale
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CuratedStationsTest {
@@ -28,7 +29,7 @@ class CuratedStationsTest {
 
     @Test
     fun `matching is case insensitive`() {
-        assertEquals(listOf(indie), CuratedStations.matching("INDIE", listOf(indie)))
+        assertThat(CuratedStations.matching("INDIE", listOf(indie))).containsExactly(indie)
     }
 
     @Test
@@ -36,22 +37,22 @@ class CuratedStationsTest {
         // Turkish lowercases 'I' to the dotless 'ı', so a locale-sensitive lowercase()
         // turned "INDIE" into "ındıe" and stopped it matching a station tagged "indie".
         withDefaultLocale("tr-TR") {
-            assertEquals(listOf(indie), CuratedStations.matching("INDIE", listOf(indie)))
+            assertThat(CuratedStations.matching("INDIE", listOf(indie))).containsExactly(indie)
         }
     }
 
     @Test
     fun `matching searches tags as well as names`() {
-        assertEquals(listOf(indie), CuratedStations.matching("rock", listOf(indie)))
+        assertThat(CuratedStations.matching("rock", listOf(indie))).containsExactly(indie)
     }
 
     @Test
     fun `blank text returns every station`() {
-        assertEquals(listOf(indie), CuratedStations.matching("   ", listOf(indie)))
+        assertThat(CuratedStations.matching("   ", listOf(indie))).containsExactly(indie)
     }
 
     @Test
     fun `non-matching text returns nothing`() {
-        assertTrue(CuratedStations.matching("classical", listOf(indie)).isEmpty())
+        assertThat(CuratedStations.matching("classical", listOf(indie))).isEmpty()
     }
 }

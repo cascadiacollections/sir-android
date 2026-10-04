@@ -1,6 +1,10 @@
 package com.cascadiacollections.sir.wear.sync
 
 import android.content.Context
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.WatchStationPayload
 import com.cascadiacollections.sir.core.model.WatchStationSync
@@ -11,8 +15,6 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,7 +39,7 @@ class WatchStationStoreTest {
 
     @Test
     fun `empty store loads an empty payload`() {
-        assertEquals(WatchStationPayload(), store.load())
+        assertThat(store.load()).isEqualTo(WatchStationPayload())
     }
 
     @Test
@@ -47,9 +49,9 @@ class WatchStationStoreTest {
 
         store.save(WatchStationSync.encode(payload))
 
-        assertEquals(payload, store.load())
+        assertThat(store.load()).isEqualTo(payload)
         // A fresh instance over the same file sees it too (tile/complication read this way).
-        assertEquals(payload, WatchStationStore.from(RuntimeEnvironment.getApplication()).load())
+        assertThat(WatchStationStore.from(RuntimeEnvironment.getApplication()).load()).isEqualTo(payload)
     }
 
     @Test
@@ -58,20 +60,20 @@ class WatchStationStoreTest {
 
         store.save("{not json")
 
-        assertNull(store.load().last)
+        assertThat(store.load().last).isNull()
     }
 
     @Test
     fun `clear forgets the payload`() {
         store.save(WatchStationSync.encode(WatchStationPayload(last = station("a"))))
         store.clear()
-        assertEquals(WatchStationPayload(), store.load())
+        assertThat(store.load()).isEqualTo(WatchStationPayload())
     }
 
     @Test
     fun `payloads emits the current value then changes`() = runBlocking {
         store.save(WatchStationSync.encode(WatchStationPayload(last = station("a"))))
-        assertEquals("a", store.payloads.first().last!!.id)
+        assertThat(store.payloads.first().last!!.id).isEqualTo("a")
 
         val collected = async { withTimeout(5_000) { store.payloads.take(2).toList() } }
         yield()
@@ -80,6 +82,6 @@ class WatchStationStoreTest {
         store.save(WatchStationSync.encode(WatchStationPayload(last = station("b"))))
         org.robolectric.shadows.ShadowLooper.idleMainLooper()
 
-        assertEquals(listOf("a", "b"), collected.await().map { it.last!!.id })
+        assertThat(collected.await().map { it.last!!.id }).containsExactly("a", "b")
     }
 }

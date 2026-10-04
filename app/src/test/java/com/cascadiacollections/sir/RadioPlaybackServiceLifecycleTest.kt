@@ -5,11 +5,12 @@ import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThanOrEqualTo
+import assertk.assertions.isNotNull
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,7 +47,7 @@ class RadioPlaybackServiceLifecycleTest {
 
     @Test
     fun `service creates successfully via Robolectric`() {
-        assertNotNull(service)
+        assertThat(service).isNotNull()
     }
 
     @Test
@@ -59,7 +60,7 @@ class RadioPlaybackServiceLifecycleTest {
     @Test
     fun `onStartCommand with null intent does not crash`() {
         val result = service.onStartCommand(null, 0, 1)
-        assertNotNull(result)
+        assertThat(result).isNotNull()
     }
 
     @Test
@@ -119,7 +120,7 @@ class RadioPlaybackServiceLifecycleTest {
             action = "com.cascadiacollections.sir.action.STOP"
         }
         val result = service.onStartCommand(intent, 0, 1)
-        assertEquals(android.app.Service.START_NOT_STICKY, result)
+        assertThat(result).isEqualTo(android.app.Service.START_NOT_STICKY)
     }
 
     @Test
@@ -160,11 +161,11 @@ class RadioPlaybackServiceLifecycleTest {
         val session = service.onGetSession(mockControllerInfo)
         // MediaSession exposes the player as Player; the session id lives on ExoPlayer.
         val exoPlayer = session?.player as? ExoPlayer
-        assertNotNull(exoPlayer)
+        assertThat(exoPlayer).isNotNull()
         // AudioManager.ERROR must be normalised to UNSET before it reaches the player, so the
         // id is never negative. It is not asserted positive because the emulated audio stack
         // has no real session to hand out.
-        assertTrue(exoPlayer!!.audioSessionId >= 0)
+        assertThat(exoPlayer!!.audioSessionId).isGreaterThanOrEqualTo(0)
     }
 
     @Test

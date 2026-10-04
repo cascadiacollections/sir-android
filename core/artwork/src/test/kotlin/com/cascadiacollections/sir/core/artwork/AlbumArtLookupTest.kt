@@ -1,10 +1,13 @@
 package com.cascadiacollections.sir.core.artwork
 
+import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AlbumArtLookupTest {
@@ -21,9 +24,9 @@ class AlbumArtLookupTest {
         val first = lookup.lookup("Artist", "Title", "US")
         val second = lookup.lookup("  artist ", "TITLE", "US")
 
-        assertEquals(AlbumArt("https://a/600x600bb.jpg", "https://music.apple.com/t"), first)
-        assertEquals(first, second)
-        assertEquals(1, transport.requests.size)
+        assertThat(first).isEqualTo(AlbumArt("https://a/600x600bb.jpg", "https://music.apple.com/t"))
+        assertThat(second).isEqualTo(first)
+        assertThat(transport.requests).hasSize(1)
     }
 
     @Test
@@ -31,10 +34,10 @@ class AlbumArtLookupTest {
         val transport = FakeTransport(Reply.Http())
         val lookup = AlbumArtLookup(transport.client)
 
-        assertNull(lookup.lookup("Artist", "Unknown", "US"))
-        assertTrue(lookup.isCached("Artist", "Unknown"))
-        assertNull(lookup.lookup("Artist", "Unknown", "US"))
-        assertEquals(1, transport.requests.size)
+        assertThat(lookup.lookup("Artist", "Unknown", "US")).isNull()
+        assertThat(lookup.isCached("Artist", "Unknown")).isTrue()
+        assertThat(lookup.lookup("Artist", "Unknown", "US")).isNull()
+        assertThat(transport.requests).hasSize(1)
     }
 
     @Test
@@ -42,20 +45,20 @@ class AlbumArtLookupTest {
         val transport = FakeTransport(Reply.Fail())
         val lookup = AlbumArtLookup(transport.client)
 
-        assertNull(lookup.lookup("A", "T", "US"))
-        assertFalse(lookup.isCached("A", "T"))
+        assertThat(lookup.lookup("A", "T", "US")).isNull()
+        assertThat(lookup.isCached("A", "T")).isFalse()
 
         transport.reply = Reply.Http(code = 503, body = "busy")
-        assertNull(lookup.lookup("A", "T", "US"))
-        assertFalse(lookup.isCached("A", "T"))
+        assertThat(lookup.lookup("A", "T", "US")).isNull()
+        assertThat(lookup.isCached("A", "T")).isFalse()
 
         transport.reply = Reply.Http(body = "<html/>")
-        assertNull(lookup.lookup("A", "T", "US"))
-        assertFalse(lookup.isCached("A", "T"))
+        assertThat(lookup.lookup("A", "T", "US")).isNull()
+        assertThat(lookup.isCached("A", "T")).isFalse()
 
         transport.reply = hit
-        assertEquals("https://a/600x600bb.jpg", lookup.lookup("A", "T", "US")?.artworkUrl)
-        assertEquals(4, transport.requests.size)
+        assertThat(lookup.lookup("A", "T", "US")?.artworkUrl).isEqualTo("https://a/600x600bb.jpg")
+        assertThat(transport.requests).hasSize(4)
     }
 
     @Test
@@ -63,9 +66,9 @@ class AlbumArtLookupTest {
         val transport = FakeTransport(hit)
         val lookup = AlbumArtLookup(transport.client)
 
-        assertNull(lookup.lookup(null, "Title", "US"))
-        assertNull(lookup.lookup("Artist", " ", "US"))
-        assertTrue(transport.requests.isEmpty())
+        assertThat(lookup.lookup(null, "Title", "US")).isNull()
+        assertThat(lookup.lookup("Artist", " ", "US")).isNull()
+        assertThat(transport.requests).isEmpty()
     }
 
     @Test
@@ -74,8 +77,8 @@ class AlbumArtLookupTest {
         AlbumArtLookup(transport.client, userAgent = "SIR-Test/1").lookup("A", "T", "de")
 
         val request = transport.requests.single()
-        assertEquals("SIR-Test/1", request.header("User-Agent"))
-        assertEquals("DE", request.url.queryParameter("country"))
+        assertThat(request.header("User-Agent")).isEqualTo("SIR-Test/1")
+        assertThat(request.url.queryParameter("country")).isEqualTo("DE")
     }
 
     @Test
@@ -87,14 +90,14 @@ class AlbumArtLookupTest {
         lookup.lookup("A", "2", "US")
         lookup.lookup("A", "3", "US")
 
-        assertFalse(lookup.isCached("A", "1"))
-        assertTrue(lookup.isCached("A", "3"))
+        assertThat(lookup.isCached("A", "1")).isFalse()
+        assertThat(lookup.isCached("A", "3")).isTrue()
     }
 
     @Test
     fun `default client is bounded to eight seconds`() {
         val client = AlbumArtLookup.defaultHttpClient()
-        assertEquals(8_000, client.callTimeoutMillis)
-        assertEquals(8_000, client.connectTimeoutMillis)
+        assertThat(client.callTimeoutMillis).isEqualTo(8_000)
+        assertThat(client.connectTimeoutMillis).isEqualTo(8_000)
     }
 }

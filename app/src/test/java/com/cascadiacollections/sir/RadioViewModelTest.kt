@@ -3,16 +3,19 @@ package com.cascadiacollections.sir
 import android.app.Application
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import assertk.assertThat
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -59,27 +62,27 @@ class RadioViewModelTest {
         val state = vm.uiState.value
         // isConnected may or may not be true depending on timing,
         // but the other fields should be default
-        assertFalse(state.isPlaying)
-        assertFalse(state.isBuffering)
-        assertFalse(state.isError)
-        assertNull(state.trackTitle)
-        assertNull(state.artist)
-        assertTrue(state.trackHistory.isEmpty())
-        assertNull(state.sleepTimerLabel)
+        assertThat(state.isPlaying).isFalse()
+        assertThat(state.isBuffering).isFalse()
+        assertThat(state.isError).isFalse()
+        assertThat(state.trackTitle).isNull()
+        assertThat(state.artist).isNull()
+        assertThat(state.trackHistory).isEmpty()
+        assertThat(state.sleepTimerLabel).isNull()
     }
 
     @Test
     fun `RadioUiState default constructor has expected values`() {
         val state = RadioUiState()
-        assertFalse(state.isConnected)
-        assertFalse(state.isPlaying)
-        assertFalse(state.isBuffering)
-        assertFalse(state.isError)
-        assertNull(state.trackTitle)
-        assertNull(state.artist)
-        assertTrue(state.trackHistory.isEmpty())
-        assertNull(state.sleepTimerLabel)
-        assertFalse(state.showMeteredWarning)
+        assertThat(state.isConnected).isFalse()
+        assertThat(state.isPlaying).isFalse()
+        assertThat(state.isBuffering).isFalse()
+        assertThat(state.isError).isFalse()
+        assertThat(state.trackTitle).isNull()
+        assertThat(state.artist).isNull()
+        assertThat(state.trackHistory).isEmpty()
+        assertThat(state.sleepTimerLabel).isNull()
+        assertThat(state.showMeteredWarning).isFalse()
     }
 
     // ---- dismissMeteredWarning ----
@@ -89,7 +92,7 @@ class RadioViewModelTest {
         val vm = createViewModel()
         // Manually set warning state then dismiss
         vm.dismissMeteredWarning()
-        assertFalse(vm.uiState.value.showMeteredWarning)
+        assertThat(vm.uiState.value.showMeteredWarning).isFalse()
     }
 
     // ---- Metered network detection ----
@@ -119,7 +122,7 @@ class RadioViewModelTest {
         installConnectivity(connectivity(metered = false))
 
         val vm = createViewModel()
-        assertFalse(vm.uiState.value.showMeteredWarning)
+        assertThat(vm.uiState.value.showMeteredWarning).isFalse()
     }
 
     @Test
@@ -127,7 +130,7 @@ class RadioViewModelTest {
         installConnectivity(connectivity(metered = true))
 
         val vm = createViewModel()
-        assertTrue(vm.uiState.value.showMeteredWarning)
+        assertThat(vm.uiState.value.showMeteredWarning).isTrue()
     }
 
     @Test
@@ -136,7 +139,7 @@ class RadioViewModelTest {
         installConnectivity(connectivity(metered = true, online = false))
 
         val vm = createViewModel()
-        assertFalse(vm.uiState.value.showMeteredWarning)
+        assertThat(vm.uiState.value.showMeteredWarning).isFalse()
     }
 
     // ---- togglePlayback with null controller ----
@@ -187,21 +190,21 @@ class RadioViewModelTest {
             showMeteredWarning = true
         )
         val copied = original.copy(isPlaying = false)
-        assertTrue(copied.isConnected)
-        assertFalse(copied.isPlaying)
-        assertFalse(copied.isBuffering)
-        assertFalse(copied.isError)
-        assertEquals("Test Song", copied.trackTitle)
-        assertEquals("Test Artist", copied.artist)
-        assertEquals("Sleep in 30m", copied.sleepTimerLabel)
-        assertTrue(copied.showMeteredWarning)
+        assertThat(copied.isConnected).isTrue()
+        assertThat(copied.isPlaying).isFalse()
+        assertThat(copied.isBuffering).isFalse()
+        assertThat(copied.isError).isFalse()
+        assertThat(copied.trackTitle).isEqualTo("Test Song")
+        assertThat(copied.artist).isEqualTo("Test Artist")
+        assertThat(copied.sleepTimerLabel).isEqualTo("Sleep in 30m")
+        assertThat(copied.showMeteredWarning).isTrue()
     }
 
     @Test
     fun `RadioUiState data class equality works correctly`() {
         val a = RadioUiState(isPlaying = true, trackTitle = "Song")
         val b = RadioUiState(isPlaying = true, trackTitle = "Song")
-        assertEquals(a, b)
+        assertThat(b).isEqualTo(a)
     }
 
     // ---- Factory ----
@@ -213,7 +216,7 @@ class RadioViewModelTest {
         val vm = factory.create(RadioViewModel::class.java).also {
             coroutineRule.registerViewModel(it)
         }
-        assertTrue(vm is RadioViewModel)
+        assertThat(vm).isInstanceOf<RadioViewModel>()
     }
 
     private suspend fun waitUntil(timeoutMillis: Long = 10_000L, condition: () -> Boolean) {

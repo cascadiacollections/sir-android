@@ -1,7 +1,8 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import org.junit.Test
 
 class StreamFailureCodesTest {
@@ -15,19 +16,19 @@ class StreamFailureCodesTest {
             StreamFailure.Transient,
             StreamFailure.Stalled
         ).forEach { failure ->
-            assertEquals(failure, StreamFailureCodes.decode(StreamFailureCodes.encode(failure)))
+            assertThat(StreamFailureCodes.decode(StreamFailureCodes.encode(failure))).isEqualTo(failure)
         }
     }
 
     @Test
     fun `the response code is not part of the wire form`() {
         val decoded = StreamFailureCodes.decode(StreamFailureCodes.encode(StreamFailure.StationUnavailable(404)))
-        assertEquals(StreamFailure.StationUnavailable(), decoded)
+        assertThat(decoded).isEqualTo(StreamFailure.StationUnavailable())
     }
 
     @Test
     fun `unknown and missing codes decode to no failure`() {
-        assertNull(StreamFailureCodes.decode(null))
-        assertNull(StreamFailureCodes.decode("from_a_newer_build"))
+        assertThat(StreamFailureCodes.decode(null)).isNull()
+        assertThat(StreamFailureCodes.decode("from_a_newer_build")).isNull()
     }
 }

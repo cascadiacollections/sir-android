@@ -1,5 +1,10 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.CoroutineStart
@@ -9,9 +14,6 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -29,13 +31,13 @@ class SettingsRepositoryReportPlaysTest {
     fun `report plays setting persists changes`() = runBlocking {
         val repo = repo()
         repo.setReportPlaysToDirectory(true)
-        assertTrue(repo.reportPlaysToDirectory.first())
+        assertThat(repo.reportPlaysToDirectory.first()).isTrue()
 
         repo.setReportPlaysToDirectory(false)
-        assertFalse(repo().reportPlaysToDirectory.first())
+        assertThat(repo().reportPlaysToDirectory.first()).isFalse()
 
         repo.setReportPlaysToDirectory(true)
-        assertTrue(repo.reportPlaysToDirectory.first())
+        assertThat(repo.reportPlaysToDirectory.first()).isTrue()
     }
 
     @Test
@@ -48,10 +50,10 @@ class SettingsRepositoryReportPlaysTest {
             withTimeout(5_000) { SettingsRepository.stationSelections.take(3).toList() }
         }
         repo.selectStation(a)
-        assertEquals(a, repo.selectedStation.first())
+        assertThat(repo.selectedStation.first()).isEqualTo(a)
         repo.selectStation(b)
         repo.selectStation(a)
 
-        assertEquals(listOf("a", "b", "a"), received.await().map { it.id })
+        assertThat(received.await().map { it.id }).containsExactly("a", "b", "a")
     }
 }

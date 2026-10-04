@@ -1,10 +1,13 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
 import java.io.IOException
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DiscoveringMirrorProviderTest {
@@ -26,10 +29,8 @@ class DiscoveringMirrorProviderTest {
         }
         val provider = DiscoveringMirrorProvider(source, shuffle = { it })
 
-        assertEquals(
-            listOf("https://de1.api.radio-browser.info", "https://fi1.api.radio-browser.info", all),
-            provider.mirrors()
-        )
+        assertThat(provider.mirrors())
+            .containsExactly("https://de1.api.radio-browser.info", "https://fi1.api.radio-browser.info", all)
     }
 
     @Test
@@ -46,7 +47,7 @@ class DiscoveringMirrorProviderTest {
         }
         val provider = DiscoveringMirrorProvider(source, shuffle = { it })
 
-        assertEquals(listOf("https://de1.api.radio-browser.info", all), provider.mirrors())
+        assertThat(provider.mirrors()).containsExactly("https://de1.api.radio-browser.info", all)
     }
 
     @Test
@@ -54,7 +55,7 @@ class DiscoveringMirrorProviderTest {
         val source = CountingSource { listOf("a.example", "b.example") }
         val provider = DiscoveringMirrorProvider(source, shuffle = { it.reversed() })
 
-        assertEquals(listOf("https://b.example", "https://a.example", all), provider.mirrors())
+        assertThat(provider.mirrors()).containsExactly("https://b.example", "https://a.example", all)
     }
 
     @Test
@@ -68,16 +69,16 @@ class DiscoveringMirrorProviderTest {
         provider.mirrors()
         now = 999
         provider.mirrors()
-        assertEquals(1, source.calls)
+        assertThat(source.calls).isEqualTo(1)
 
         now = 1_000
         provider.mirrors()
-        assertEquals(2, source.calls)
+        assertThat(source.calls).isEqualTo(2)
     }
 
     @Test
     fun `the default ttl is a day`() {
-        assertEquals(24 * 60 * 60 * 1000L, DiscoveringMirrorProvider.DEFAULT_TTL_MILLIS)
+        assertThat(DiscoveringMirrorProvider.DEFAULT_TTL_MILLIS).isEqualTo(24 * 60 * 60 * 1000L)
     }
 
     @Test
@@ -87,9 +88,9 @@ class DiscoveringMirrorProviderTest {
 
         val mirrors = provider.mirrors()
 
-        assertEquals(RotatingMirrorProvider.DEFAULT_MIRRORS.toSet(), mirrors.toSet())
-        assertEquals(all, mirrors.last())
-        assertEquals(1, mirrors.count { it == all })
+        assertThat(mirrors.toSet()).isEqualTo(RotatingMirrorProvider.DEFAULT_MIRRORS.toSet())
+        assertThat(mirrors.last()).isEqualTo(all)
+        assertThat(mirrors.count { it == all }).isEqualTo(1)
     }
 
     @Test
@@ -100,7 +101,7 @@ class DiscoveringMirrorProviderTest {
             shuffle = { it }
         )
 
-        assertEquals(listOf("https://x.example", all), provider.mirrors())
+        assertThat(provider.mirrors()).containsExactly("https://x.example", all)
     }
 
     @Test
@@ -116,22 +117,20 @@ class DiscoveringMirrorProviderTest {
 
         provider.mirrors()
         provider.mirrors()
-        assertEquals(1, source.calls)
+        assertThat(source.calls).isEqualTo(1)
 
         source.answer = { listOf("up.example") }
         now = 100
-        assertEquals(listOf("https://up.example", all), provider.mirrors())
-        assertEquals(2, source.calls)
+        assertThat(provider.mirrors()).containsExactly("https://up.example", all)
+        assertThat(source.calls).isEqualTo(2)
     }
 
     @Test
     fun `base url conversion`() {
-        assertEquals(
-            "https://nl1.api.radio-browser.info",
-            DiscoveringMirrorProvider.toBaseUrl(" nl1.api.radio-browser.info ")
-        )
-        assertNull(DiscoveringMirrorProvider.toBaseUrl("https://nl1.api.radio-browser.info"))
-        assertNull(DiscoveringMirrorProvider.toBaseUrl("host:8080"))
+        assertThat(DiscoveringMirrorProvider.toBaseUrl(" nl1.api.radio-browser.info "))
+            .isEqualTo("https://nl1.api.radio-browser.info")
+        assertThat(DiscoveringMirrorProvider.toBaseUrl("https://nl1.api.radio-browser.info")).isNull()
+        assertThat(DiscoveringMirrorProvider.toBaseUrl("host:8080")).isNull()
     }
 
     @Test
@@ -144,26 +143,24 @@ class DiscoveringMirrorProviderTest {
         }
         val source = RadioBrowserServerListSource(transport.client, userAgent = "UA/1")
 
-        assertEquals(
-            listOf("de1.api.radio-browser.info", "de1.api.radio-browser.info", "at1.api.radio-browser.info"),
-            source.serverNames()
-        )
+        assertThat(source.serverNames())
+            .containsExactly("de1.api.radio-browser.info", "de1.api.radio-browser.info", "at1.api.radio-browser.info")
         val request = transport.requests.single()
-        assertEquals("https://all.api.radio-browser.info/json/servers", request.url.toString())
-        assertEquals("UA/1", request.header("User-Agent"))
+        assertThat(request.url.toString()).isEqualTo("https://all.api.radio-browser.info/json/servers")
+        assertThat(request.header("User-Agent")).isEqualTo("UA/1")
     }
 
     @Test
     fun `server list source surfaces http and decode failures as io errors`() {
         val failing = RadioBrowserServerListSource(FakeTransport { Reply.Http(code = 500) }.client)
-        assertTrue(runCatching { failing.serverNames() }.exceptionOrNull() is HttpStatusException)
+        assertFailure { failing.serverNames() }.isInstanceOf<HttpStatusException>()
 
         val garbage = RadioBrowserServerListSource(
             FakeTransport {
                 Reply.Http(body = "<html>")
             }.client
         )
-        assertTrue(runCatching { garbage.serverNames() }.exceptionOrNull() is IOException)
+        assertFailure { garbage.serverNames() }.isInstanceOf<IOException>()
     }
 
     @Test
@@ -180,6 +177,6 @@ class DiscoveringMirrorProviderTest {
             shuffle = { it }
         )
 
-        assertEquals(listOf("https://fallback.example", all), provider.mirrors())
+        assertThat(provider.mirrors()).containsExactly("https://fallback.example", all)
     }
 }

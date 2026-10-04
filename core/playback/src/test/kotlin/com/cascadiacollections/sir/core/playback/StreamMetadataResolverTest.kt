@@ -1,9 +1,10 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import org.junit.Test
 
 class StreamMetadataResolverTest {
@@ -20,10 +21,10 @@ class StreamMetadataResolverTest {
             RawStreamMetadata(title = "Song", artist = "Band", station = "SIR FM")
         )
 
-        assertEquals("Song", update.metadata.trackTitle)
-        assertEquals("Band", update.metadata.artist)
-        assertEquals("SIR FM", update.metadata.station)
-        assertTrue(update.notifyChanged)
+        assertThat(update.metadata.trackTitle).isEqualTo("Song")
+        assertThat(update.metadata.artist).isEqualTo("Band")
+        assertThat(update.metadata.station).isEqualTo("SIR FM")
+        assertThat(update.notifyChanged).isTrue()
     }
 
     @Test
@@ -34,8 +35,8 @@ class StreamMetadataResolverTest {
             RawStreamMetadata(title = "Will Radio Stream")
         )
 
-        assertEquals("Song", update.metadata.trackTitle)
-        assertFalse(update.notifyChanged)
+        assertThat(update.metadata.trackTitle).isEqualTo("Song")
+        assertThat(update.notifyChanged).isFalse()
     }
 
     @Test
@@ -43,8 +44,8 @@ class StreamMetadataResolverTest {
         val previous = StreamMetadata(trackTitle = "Song")
         val update = resolver.resolve(previous, RawStreamMetadata(title = "   "))
 
-        assertEquals("Song", update.metadata.trackTitle)
-        assertFalse(update.notifyChanged)
+        assertThat(update.metadata.trackTitle).isEqualTo("Song")
+        assertThat(update.notifyChanged).isFalse()
     }
 
     @Test
@@ -54,8 +55,8 @@ class StreamMetadataResolverTest {
             RawStreamMetadata(title = "Song", artist = "Live Internet Radio")
         )
 
-        assertEquals("Song", update.metadata.trackTitle)
-        assertNull(update.metadata.artist)
+        assertThat(update.metadata.trackTitle).isEqualTo("Song")
+        assertThat(update.metadata.artist).isNull()
     }
 
     @Test
@@ -66,9 +67,9 @@ class StreamMetadataResolverTest {
             RawStreamMetadata(title = "Will Radio Stream", station = "New")
         )
 
-        assertEquals("New", update.metadata.station)
-        assertEquals("Song", update.metadata.trackTitle)
-        assertTrue(update.notifyChanged)
+        assertThat(update.metadata.station).isEqualTo("New")
+        assertThat(update.metadata.trackTitle).isEqualTo("Song")
+        assertThat(update.notifyChanged).isTrue()
     }
 
     @Test
@@ -76,7 +77,7 @@ class StreamMetadataResolverTest {
         val previous = StreamMetadata(station = "Old")
         val update = resolver.resolve(previous, RawStreamMetadata(title = "Song", station = ""))
 
-        assertEquals("Old", update.metadata.station)
+        assertThat(update.metadata.station).isEqualTo("Old")
     }
 
     @Test
@@ -87,7 +88,7 @@ class StreamMetadataResolverTest {
             RawStreamMetadata(title = "Song", artist = "Band", station = "SIR FM")
         )
 
-        assertFalse(update.notifyChanged)
+        assertThat(update.notifyChanged).isFalse()
     }
 
     @Test
@@ -100,8 +101,8 @@ class StreamMetadataResolverTest {
         )
 
         // Keeping "" replaced a real artist with an empty subtitle in the notification.
-        assertNull(update.metadata.artist)
-        assertEquals("Song", update.metadata.trackTitle)
+        assertThat(update.metadata.artist).isNull()
+        assertThat(update.metadata.trackTitle).isEqualTo("Song")
     }
 
     @Test
@@ -111,8 +112,8 @@ class StreamMetadataResolverTest {
 
         val second = resolver.resolve(first.metadata, raw)
 
-        assertTrue(first.notifyChanged)
-        assertFalse(second.notifyChanged)
+        assertThat(first.notifyChanged).isTrue()
+        assertThat(second.notifyChanged).isFalse()
     }
 
     @Test
@@ -123,9 +124,9 @@ class StreamMetadataResolverTest {
             RawStreamMetadata(title = "Fleetwood Mac - Dreams", station = "SIR FM")
         )
 
-        assertEquals("Dreams", update.metadata.trackTitle)
-        assertEquals("Fleetwood Mac", update.metadata.artist)
-        assertTrue(update.notifyChanged)
+        assertThat(update.metadata.trackTitle).isEqualTo("Dreams")
+        assertThat(update.metadata.artist).isEqualTo("Fleetwood Mac")
+        assertThat(update.notifyChanged).isTrue()
     }
 
     @Test
@@ -137,8 +138,8 @@ class StreamMetadataResolverTest {
             RawStreamMetadata(title = "Prince - Kiss", artist = "Live Internet Radio")
         )
 
-        assertEquals("Kiss", update.metadata.trackTitle)
-        assertEquals("Prince", update.metadata.artist)
+        assertThat(update.metadata.trackTitle).isEqualTo("Kiss")
+        assertThat(update.metadata.artist).isEqualTo("Prince")
     }
 
     @Test
@@ -147,9 +148,9 @@ class StreamMetadataResolverTest {
 
         val update = resolver.resolve(previous, RawStreamMetadata(title = "Spot Block End"))
 
-        assertEquals("Dreams", update.metadata.trackTitle)
-        assertEquals("Fleetwood Mac", update.metadata.artist)
-        assertFalse(update.notifyChanged)
+        assertThat(update.metadata.trackTitle).isEqualTo("Dreams")
+        assertThat(update.metadata.artist).isEqualTo("Fleetwood Mac")
+        assertThat(update.notifyChanged).isFalse()
     }
 
     @Test
@@ -158,8 +159,8 @@ class StreamMetadataResolverTest {
 
         val update = resolver.resolve(previous, RawStreamMetadata(title = "https://sir.example"))
 
-        assertEquals("Dreams", update.metadata.trackTitle)
-        assertFalse(update.notifyChanged)
+        assertThat(update.metadata.trackTitle).isEqualTo("Dreams")
+        assertThat(update.notifyChanged).isFalse()
     }
 
     @Test
@@ -172,8 +173,8 @@ class StreamMetadataResolverTest {
             stationName = "KEXP903FM"
         )
 
-        assertEquals("Dreams", update.metadata.trackTitle)
-        assertFalse(update.notifyChanged)
+        assertThat(update.metadata.trackTitle).isEqualTo("Dreams")
+        assertThat(update.notifyChanged).isFalse()
     }
 
     @Test
@@ -182,8 +183,8 @@ class StreamMetadataResolverTest {
 
         val update = resolver.resolve(previous, RawStreamMetadata(title = "SIR FM - Will Radio Stream"))
 
-        assertEquals("Dreams", update.metadata.trackTitle)
-        assertFalse(update.notifyChanged)
+        assertThat(update.metadata.trackTitle).isEqualTo("Dreams")
+        assertThat(update.notifyChanged).isFalse()
     }
 
     @Test
@@ -195,8 +196,8 @@ class StreamMetadataResolverTest {
             RawStreamMetadata(title = "Spot Block End", station = "New")
         )
 
-        assertEquals("New", update.metadata.station)
-        assertEquals("Dreams", update.metadata.trackTitle)
-        assertTrue(update.notifyChanged)
+        assertThat(update.metadata.station).isEqualTo("New")
+        assertThat(update.metadata.trackTitle).isEqualTo("Dreams")
+        assertThat(update.notifyChanged).isTrue()
     }
 }

@@ -1,11 +1,13 @@
 package com.cascadiacollections.sir.core.persistence
 
+import assertk.assertThat
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.QuickPlaySelection.TapAction
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class QuickPlaySelectionTest {
@@ -18,55 +20,57 @@ class QuickPlaySelectionTest {
 
     @Test
     fun `defaults to the first saved station when nothing is pinned`() {
-        assertEquals(a, QuickPlaySelection.resolveStation(listOf(a, b), pinnedId = null))
+        assertThat(QuickPlaySelection.resolveStation(listOf(a, b), pinnedId = null)).isEqualTo(a)
     }
 
     @Test
     fun `uses the pinned station when it is still saved`() {
-        assertEquals(b, QuickPlaySelection.resolveStation(listOf(a, b), pinnedId = "b"))
+        assertThat(QuickPlaySelection.resolveStation(listOf(a, b), pinnedId = "b")).isEqualTo(b)
     }
 
     @Test
     fun `falls back to the first saved station once the pinned one is unsaved`() {
-        assertEquals(a, QuickPlaySelection.resolveStation(listOf(a), pinnedId = "b"))
+        assertThat(QuickPlaySelection.resolveStation(listOf(a), pinnedId = "b")).isEqualTo(a)
     }
 
     @Test
     fun `resolves to null without favourites`() {
-        assertNull(QuickPlaySelection.resolveStation(emptyList(), pinnedId = "b"))
+        assertThat(QuickPlaySelection.resolveStation(emptyList(), pinnedId = "b")).isNull()
     }
 
     @Test
     fun `tapping a station that is not current selects and plays it`() {
-        assertEquals(TapAction.SelectAndPlay(b), QuickPlaySelection.tapAction(b, selected = a, isPlaying = true))
-        assertEquals(TapAction.SelectAndPlay(b), QuickPlaySelection.tapAction(b, selected = null, isPlaying = false))
+        assertThat(QuickPlaySelection.tapAction(b, selected = a, isPlaying = true))
+            .isEqualTo(TapAction.SelectAndPlay(b))
+        assertThat(QuickPlaySelection.tapAction(b, selected = null, isPlaying = false))
+            .isEqualTo(TapAction.SelectAndPlay(b))
     }
 
     @Test
     fun `tapping the current station toggles playback`() {
-        assertEquals(TapAction.Pause, QuickPlaySelection.tapAction(a, selected = a, isPlaying = true))
-        assertEquals(TapAction.Play, QuickPlaySelection.tapAction(a, selected = a, isPlaying = false))
+        assertThat(QuickPlaySelection.tapAction(a, selected = a, isPlaying = true)).isEqualTo(TapAction.Pause)
+        assertThat(QuickPlaySelection.tapAction(a, selected = a, isPlaying = false)).isEqualTo(TapAction.Play)
     }
 
     @Test
     fun `without favourites the button toggles whatever is selected`() {
-        assertEquals(TapAction.Pause, QuickPlaySelection.tapAction(null, selected = null, isPlaying = true))
-        assertEquals(TapAction.Play, QuickPlaySelection.tapAction(null, selected = a, isPlaying = false))
+        assertThat(QuickPlaySelection.tapAction(null, selected = null, isPlaying = true)).isEqualTo(TapAction.Pause)
+        assertThat(QuickPlaySelection.tapAction(null, selected = a, isPlaying = false)).isEqualTo(TapAction.Play)
     }
 
     @Test
     fun `pause is shown only while the widget's own station plays`() {
-        assertTrue(QuickPlaySelection.showsPause(a, selected = a, isPlaying = true))
-        assertFalse(QuickPlaySelection.showsPause(a, selected = b, isPlaying = true))
-        assertFalse(QuickPlaySelection.showsPause(a, selected = a, isPlaying = false))
-        assertTrue(QuickPlaySelection.showsPause(null, selected = b, isPlaying = true))
+        assertThat(QuickPlaySelection.showsPause(a, selected = a, isPlaying = true)).isTrue()
+        assertThat(QuickPlaySelection.showsPause(a, selected = b, isPlaying = true)).isFalse()
+        assertThat(QuickPlaySelection.showsPause(a, selected = a, isPlaying = false)).isFalse()
+        assertThat(QuickPlaySelection.showsPause(null, selected = b, isPlaying = true)).isTrue()
     }
 
     @Test
     fun `initials take the first letter of up to two words`() {
-        assertEquals("RP", QuickPlaySelection.initials("Radio Paradise"))
-        assertEquals("SF", QuickPlaySelection.initials("soma_fm groove salad"))
-        assertEquals("K", QuickPlaySelection.initials("KEXP"))
-        assertEquals("", QuickPlaySelection.initials("  "))
+        assertThat(QuickPlaySelection.initials("Radio Paradise")).isEqualTo("RP")
+        assertThat(QuickPlaySelection.initials("soma_fm groove salad")).isEqualTo("SF")
+        assertThat(QuickPlaySelection.initials("KEXP")).isEqualTo("K")
+        assertThat(QuickPlaySelection.initials("  ")).isEmpty()
     }
 }

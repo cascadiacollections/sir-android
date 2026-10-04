@@ -1,8 +1,14 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.each
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
+import assertk.assertions.isLessThanOrEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import org.junit.Test
 
 class RetryBackoffTest {
@@ -11,8 +17,8 @@ class RetryBackoffTest {
     fun `the default schedule is ShoutKit's three reconnects at 2, 4 and 8 seconds`() {
         val backoff = RetryBackoff()
 
-        assertEquals(listOf(2_000L, 4_000L, 8_000L), backoff.drain())
-        assertNull(backoff.nextDelayMs())
+        assertThat(backoff.drain()).containsExactly(2_000L, 4_000L, 8_000L)
+        assertThat(backoff.nextDelayMs()).isNull()
     }
 
     @Test
@@ -20,8 +26,8 @@ class RetryBackoffTest {
         val backoff = RetryBackoff(maxRetries = 5, maxDelayMs = 30_000L)
 
         // 2s, 4s, 8s, 16s, then 32s capped to the 30s ceiling.
-        assertEquals(listOf(2_000L, 4_000L, 8_000L, 16_000L, 30_000L), backoff.drain())
-        assertNull(backoff.nextDelayMs())
+        assertThat(backoff.drain()).containsExactly(2_000L, 4_000L, 8_000L, 16_000L, 30_000L)
+        assertThat(backoff.nextDelayMs()).isNull()
     }
 
     @Test
@@ -31,8 +37,8 @@ class RetryBackoffTest {
 
         backoff.reset()
 
-        assertEquals(0, backoff.attempt)
-        assertEquals(2_000L, backoff.nextDelayMs())
+        assertThat(backoff.attempt).isEqualTo(0)
+        assertThat(backoff.nextDelayMs()).isEqualTo(2_000L)
     }
 
     @Test
@@ -43,14 +49,15 @@ class RetryBackoffTest {
         // the multiplication outright and went negative, which the cap did not catch.
         val delays = RetryBackoff(maxRetries = 70, maxDelayMs = 30_000L).drain()
 
-        assertEquals(70, delays.size)
-        assertTrue("no delay may be negative", delays.all { it > 0 })
-        assertTrue("no delay may exceed the cap", delays.all { it <= 30_000L })
-        assertTrue(
-            "delays must never decrease",
-            delays.zipWithNext().all { (previous, next) -> next >= previous }
-        )
-        assertTrue("the cap must be reached", delays.last() == 30_000L)
+        assertThat(delays).hasSize(70)
+        assertThat(delays, name = "no delay may be negative").each { it.isGreaterThan(0L) }
+        assertThat(delays, name = "no delay may exceed the cap")
+            .each { it.isLessThanOrEqualTo(30_000L) }
+        assertThat(
+            delays.zipWithNext().all { (previous, next) -> next >= previous },
+            name = "delays must never decrease"
+        ).isTrue()
+        assertThat(delays.last(), name = "the cap must be reached").isEqualTo(30_000L)
     }
 
     @Test
@@ -61,27 +68,27 @@ class RetryBackoffTest {
             maxDelayMs = Long.MAX_VALUE
         ).drain()
 
-        assertTrue(delays.all { it > 0 })
-        assertTrue(delays.zipWithNext().all { (previous, next) -> next >= previous })
+        assertThat(delays).each { it.isGreaterThan(0L) }
+        assertThat(delays.zipWithNext().all { (previous, next) -> next >= previous }).isTrue()
     }
 
     @Test
     fun `attempt label never reports more attempts than the budget allows`() {
         val backoff = RetryBackoff(maxRetries = 5)
-        assertEquals("1/5", backoff.attemptLabel)
+        assertThat(backoff.attemptLabel).isEqualTo("1/5")
 
         backoff.drain()
 
         // Logged once more after the retries are spent; "6/5" would be nonsense.
-        assertEquals("5/5", backoff.attemptLabel)
+        assertThat(backoff.attemptLabel).isEqualTo("5/5")
     }
 
     @Test
     fun `a zero retry budget yields no delays`() {
         val backoff = RetryBackoff(maxRetries = 0)
 
-        assertNull(backoff.nextDelayMs())
-        assertEquals("0/0", backoff.attemptLabel)
+        assertThat(backoff.nextDelayMs()).isNull()
+        assertThat(backoff.attemptLabel).isEqualTo("0/0")
     }
 
     /** Pulls delays until the budget is exhausted. */

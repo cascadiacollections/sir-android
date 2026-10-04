@@ -1,5 +1,12 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
@@ -7,8 +14,6 @@ import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import java.io.IOException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -47,11 +52,11 @@ class SettingsRepositoryStationsTest {
     @Test
     fun `saved stations start empty and persist additions`() = runBlocking {
         val repo = repo()
-        assertEquals(emptyList<Station>(), repo.savedStations.first())
+        assertThat(repo.savedStations.first()).isEmpty()
 
         repo.saveStation(station("a"))
 
-        assertEquals(listOf("a"), repo.savedStations.first().map { it.id })
+        assertThat(repo.savedStations.first().map { it.id }).containsExactly("a")
     }
 
     @Test
@@ -61,8 +66,8 @@ class SettingsRepositoryStationsTest {
         repo.saveStation(station("a").copy(bitrate = 320))
 
         val saved = repo.savedStations.first()
-        assertEquals(1, saved.size)
-        assertEquals(320, saved.single().bitrate)
+        assertThat(saved).hasSize(1)
+        assertThat(saved.single().bitrate).isEqualTo(320)
     }
 
     @Test
@@ -71,7 +76,7 @@ class SettingsRepositoryStationsTest {
         repo.saveStation(station("a"))
         repo.removeStation("a")
 
-        assertEquals(emptyList<Station>(), repo.savedStations.first())
+        assertThat(repo.savedStations.first()).isEmpty()
     }
 
     @Test
@@ -79,8 +84,8 @@ class SettingsRepositoryStationsTest {
         val repo = repo()
         repo.selectStation(station("a"))
 
-        assertEquals("a", repo.selectedStation.first()?.id)
-        assertEquals(listOf("a"), repo.recentStations.first().map { it.id })
+        assertThat(repo.selectedStation.first()?.id).isEqualTo("a")
+        assertThat(repo.recentStations.first().map { it.id }).containsExactly("a")
     }
 
     @Test
@@ -90,7 +95,7 @@ class SettingsRepositoryStationsTest {
         repo.selectStation(station("b"))
         repo.selectStation(station("a"))
 
-        assertEquals(listOf("a", "b"), repo.recentStations.first().map { it.id })
+        assertThat(repo.recentStations.first().map { it.id }).containsExactly("a", "b")
     }
 
     @Test
@@ -102,7 +107,8 @@ class SettingsRepositoryStationsTest {
         repo.selectStation(station("rank-a"))
         repo.selectStation(station("rank-b"))
 
-        assertEquals(listOf("rank-b", "rank-a"), repo.mostPlayedSavedStations.first().map { it.id })
+        assertThat(repo.mostPlayedSavedStations.first().map { it.id })
+            .containsExactly("rank-b", "rank-a")
     }
 
     @Test
@@ -112,7 +118,7 @@ class SettingsRepositoryStationsTest {
         repo.saveStation(station("saved"))
         repo.selectStation(station("saved"))
 
-        assertEquals(listOf("saved"), repo.mostPlayedSavedStations.first().map { it.id })
+        assertThat(repo.mostPlayedSavedStations.first().map { it.id }).containsExactly("saved")
     }
 
     @Test
@@ -125,14 +131,15 @@ class SettingsRepositoryStationsTest {
         repo.removeStation("a")
         repo.saveStation(station("a"))
 
-        assertEquals(listOf("a", "b"), repo.mostPlayedSavedStations.first().map { it.id }.sorted())
+        assertThat(repo.mostPlayedSavedStations.first().map { it.id }.sorted())
+            .containsExactly("a", "b")
     }
 
     @Test
     fun `connection prewarming is disabled by default`() = runBlocking {
         val repo = repo()
 
-        assertEquals(false, repo.connectionPrewarmingEnabled.first())
+        assertThat(repo.connectionPrewarmingEnabled.first()).isFalse()
     }
 
     @Test
@@ -141,7 +148,7 @@ class SettingsRepositoryStationsTest {
         repo.selectStation(station("a"))
         repo.clearSelectedStation()
 
-        assertNull(repo.selectedStation.first())
+        assertThat(repo.selectedStation.first()).isNull()
     }
 
     @Test
@@ -151,8 +158,8 @@ class SettingsRepositoryStationsTest {
         repo.selectStation(station("a"))
         repo.clearRecentStations()
 
-        assertEquals(emptyList<Station>(), repo.recentStations.first())
-        assertEquals(listOf("a"), repo.savedStations.first().map { it.id })
+        assertThat(repo.recentStations.first()).isEmpty()
+        assertThat(repo.savedStations.first().map { it.id }).containsExactly("a")
     }
 }
 
@@ -186,8 +193,8 @@ class RadioBrowserViewModelTest {
 
         vm.search()
 
-        assertEquals("Enter a search query", vm.uiState.value.error)
-        assertEquals(emptyList<Station>(), vm.uiState.value.searchResults)
+        assertThat(vm.uiState.value.error).isEqualTo("Enter a search query")
+        assertThat(vm.uiState.value.searchResults).isEmpty()
     }
 
     @Test
@@ -198,9 +205,9 @@ class RadioBrowserViewModelTest {
         vm.search()
 
         val state = vm.uiState.value
-        assertEquals(listOf("a"), state.searchResults.map { it.id })
-        assertEquals(false, state.isLoading)
-        assertNull(state.error)
+        assertThat(state.searchResults.map { it.id }).containsExactly("a")
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.error).isNull()
     }
 
     @Test
@@ -210,7 +217,7 @@ class RadioBrowserViewModelTest {
         vm.updateSearchQuery("nothing")
         vm.search()
 
-        assertEquals("No stations found", vm.uiState.value.error)
+        assertThat(vm.uiState.value.error).isEqualTo("No stations found")
     }
 
     @Test
@@ -220,7 +227,7 @@ class RadioBrowserViewModelTest {
         vm.updateSearchQuery("a")
         vm.search()
 
-        assertEquals("offline", vm.uiState.value.error)
+        assertThat(vm.uiState.value.error).isEqualTo("offline")
     }
 
     @Test
@@ -229,6 +236,6 @@ class RadioBrowserViewModelTest {
 
         vm.playStation(Station(id = "broken", name = "Broken"))
 
-        assertNull(vm.uiState.value.selectedStationId)
+        assertThat(vm.uiState.value.selectedStationId).isNull()
     }
 }

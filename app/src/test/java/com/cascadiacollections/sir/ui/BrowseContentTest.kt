@@ -12,14 +12,16 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import assertk.assertThat
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.SearchPhase
 import com.cascadiacollections.sir.SearchUiState
 import com.cascadiacollections.sir.core.directory.StationSearchFilters
 import com.cascadiacollections.sir.core.directory.Tag
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.ui.theme.SirTheme
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -68,7 +70,7 @@ class BrowseContentTest {
         composeRule.onNodeWithText("Recently Played").assertDoesNotExist()
         composeRule.onNodeWithText("Station A").assertIsDisplayed()
         composeRule.onNodeWithText("Hip Hop").assertIsNotSelected().performClick()
-        assertEquals(Tag("hip hop"), selectedGenre)
+        assertThat(selectedGenre).isEqualTo(Tag("hip hop"))
     }
 
     @Test
@@ -105,10 +107,8 @@ class BrowseContentTest {
         composeRule.onNodeWithTag(BrowseScreenTestTags.FILTER_TAG_FIELD).performTextInput("jazz")
         composeRule.onNodeWithTag(BrowseScreenTestTags.FILTER_DONE).performClick()
 
-        assertEquals(
-            StationSearchFilters(bitrateMinKbps = 128, tag = "jazz", countryCode = "US"),
-            appliedFilters
-        )
+        assertThat(appliedFilters)
+            .isEqualTo(StationSearchFilters(bitrateMinKbps = 128, tag = "jazz", countryCode = "US"))
     }
 
     @Test
@@ -124,7 +124,7 @@ class BrowseContentTest {
         composeRule.onNodeWithText("No matching stations").assertIsDisplayed()
         composeRule.onNodeWithText("Filters: min 320 kbps").assertIsDisplayed()
         composeRule.onNodeWithText("Clear filters").performClick()
-        assertEquals(StationSearchFilters.NONE, appliedFilters)
+        assertThat(appliedFilters).isEqualTo(StationSearchFilters.NONE)
     }
 
     @Test
@@ -133,21 +133,21 @@ class BrowseContentTest {
 
         composeRule.onNodeWithText("Search unavailable").assertIsDisplayed()
         composeRule.onNodeWithText("Retry").performClick()
-        assertTrue(retried)
+        assertThat(retried).isTrue()
     }
 
     @Test
     fun `row subtitle is the first genre and bitrate`() {
         val kbps = { n: Int -> "$n kbps" }
-        assertEquals("Hip Hop · 128 kbps", Station(tags = "hip hop,rap", bitrate = 128).browseSubtitle(kbps))
-        assertEquals("Jazz", Station(tags = "jazz", bitrate = 0).browseSubtitle(kbps))
-        assertEquals("64 kbps", Station(bitrate = 64).browseSubtitle(kbps))
-        assertEquals("", Station().browseSubtitle(kbps))
+        assertThat(Station(tags = "hip hop,rap", bitrate = 128).browseSubtitle(kbps)).isEqualTo("Hip Hop · 128 kbps")
+        assertThat(Station(tags = "jazz", bitrate = 0).browseSubtitle(kbps)).isEqualTo("Jazz")
+        assertThat(Station(bitrate = 64).browseSubtitle(kbps)).isEqualTo("64 kbps")
+        assertThat(Station().browseSubtitle(kbps)).isEmpty()
     }
 
     @Test
     fun `country codes keep two letters, upper-cased`() {
-        assertEquals("US", sanitizeCountryCode("u1s-a"))
-        assertEquals("", sanitizeCountryCode("12"))
+        assertThat(sanitizeCountryCode("u1s-a")).isEqualTo("US")
+        assertThat(sanitizeCountryCode("12")).isEmpty()
     }
 }

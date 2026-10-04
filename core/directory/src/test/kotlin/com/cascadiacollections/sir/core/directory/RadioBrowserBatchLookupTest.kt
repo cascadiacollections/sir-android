@@ -1,12 +1,15 @@
 package com.cascadiacollections.sir.core.directory
 
-import com.cascadiacollections.sir.core.model.Station
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFailure
 import java.io.IOException
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** `getStations(ids)`: the batched `byuuid` lookup behind the saved-station refresh. */
@@ -39,10 +42,10 @@ class RadioBrowserBatchLookupTest {
         val stations = directory(transport).getStations(ids).getOrThrow()
 
         val url = transport.urls.single()
-        assertEquals("/json/stations/byuuid", url.encodedPath)
-        assertEquals(ids.joinToString(","), url.queryParameter("uuids"))
-        assertEquals(ids, stations.map { it.id })
-        assertEquals("https://r.example/${uuid(1)}", stations.first().urlResolved)
+        assertThat(url.encodedPath).isEqualTo("/json/stations/byuuid")
+        assertThat(url.queryParameter("uuids")).isEqualTo(ids.joinToString(","))
+        assertThat(stations.map { it.id }).isEqualTo(ids)
+        assertThat(stations.first().urlResolved).isEqualTo("https://r.example/${uuid(1)}")
     }
 
     @Test
@@ -52,27 +55,20 @@ class RadioBrowserBatchLookupTest {
 
         val stations = directory(transport).getStations(ids).getOrThrow()
 
-        assertEquals(
-            listOf(100, 100, 50),
-            transport.urls.map {
-                it.queryParameter("uuids")!!.split(',').size
-            }
-        )
-        assertEquals(ids, stations.map { it.id })
+        assertThat(transport.urls.map { it.queryParameter("uuids")!!.split(',').size })
+            .containsExactly(100, 100, 50)
+        assertThat(stations.map { it.id }).isEqualTo(ids)
     }
 
     @Test
     fun `skips non radio-browser ids and duplicates without a request`() = runTest {
         val transport = echo()
 
-        assertEquals(
-            emptyList<Station>(),
-            directory(transport).getStations(listOf("sir-default", "imported:x")).getOrThrow()
-        )
-        assertTrue(transport.urls.isEmpty())
+        assertThat(directory(transport).getStations(listOf("sir-default", "imported:x")).getOrThrow()).isEmpty()
+        assertThat(transport.urls).isEmpty()
 
         directory(transport).getStations(listOf(uuid(1), "curated-1", uuid(1))).getOrThrow()
-        assertEquals(uuid(1), transport.urls.single().queryParameter("uuids"))
+        assertThat(transport.urls.single().queryParameter("uuids")).isEqualTo(uuid(1))
     }
 
     @Test
@@ -83,7 +79,7 @@ class RadioBrowserBatchLookupTest {
             if (calls == 2) Reply.Fail(IOException("offline")) else Reply.Http(body = "[]")
         }
 
-        assertTrue(directory(transport).getStations((1..150).map(::uuid)).isFailure)
+        assertThat(directory(transport).getStations((1..150).map(::uuid))).isFailure()
     }
 
     @Test
@@ -91,8 +87,8 @@ class RadioBrowserBatchLookupTest {
         val transport = FakeTransport { Reply.Fail(IOException("offline")) }
         val chain = CuratedFallbackDirectory(CachingRadioDirectory(directory(transport)))
 
-        assertTrue(chain.getStations(listOf(uuid(1))).isFailure)
-        assertTrue(chain.getStations(listOf(uuid(1))).isFailure)
-        assertEquals(2, transport.urls.size)
+        assertThat(chain.getStations(listOf(uuid(1)))).isFailure()
+        assertThat(chain.getStations(listOf(uuid(1)))).isFailure()
+        assertThat(transport.urls).hasSize(2)
     }
 }

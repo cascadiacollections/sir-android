@@ -1,8 +1,11 @@
 package com.cascadiacollections.sir.core.persistence
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isSameInstanceAs
 import com.cascadiacollections.sir.core.model.Station
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
 import org.junit.Test
 
 class SavedStationRefreshTest {
@@ -36,10 +39,9 @@ class SavedStationRefreshTest {
     fun `refreshes the stream description when the url is unchanged`() {
         val result = SavedStationRefresh.merge(listOf(saved), listOf(fetched))
 
-        assertEquals(1, result.updated)
-        assertEquals(
-            saved.copy(urlResolved = "https://new.example/stream.m3u8", hls = 1, bitrate = 128, codec = "AAC"),
-            result.stations.single()
+        assertThat(result.updated).isEqualTo(1)
+        assertThat(result.stations.single()).isEqualTo(
+            saved.copy(urlResolved = "https://new.example/stream.m3u8", hls = 1, bitrate = 128, codec = "AAC")
         )
     }
 
@@ -47,11 +49,11 @@ class SavedStationRefreshTest {
     fun `never overwrites the name, url, artwork or other fields`() {
         val station = SavedStationRefresh.merge(listOf(saved), listOf(fetched)).stations.single()
 
-        assertEquals("My Jazz", station.name)
-        assertEquals("https://a.example/listen.pls", station.url)
-        assertEquals("https://a.example/icon.png", station.favicon)
-        assertEquals("GB", station.countryCode)
-        assertEquals("jazz", station.tags)
+        assertThat(station.name).isEqualTo("My Jazz")
+        assertThat(station.url).isEqualTo("https://a.example/listen.pls")
+        assertThat(station.favicon).isEqualTo("https://a.example/icon.png")
+        assertThat(station.countryCode).isEqualTo("GB")
+        assertThat(station.tags).isEqualTo("jazz")
     }
 
     @Test
@@ -60,9 +62,9 @@ class SavedStationRefreshTest {
 
         val result = SavedStationRefresh.merge(listOf(edited), listOf(fetched))
 
-        assertEquals(0, result.updated)
-        assertEquals(edited, result.stations.single())
-        assertEquals("https://mine.example/stream", result.stations.single().streamUrl)
+        assertThat(result.updated).isEqualTo(0)
+        assertThat(result.stations.single()).isEqualTo(edited)
+        assertThat(result.stations.single().streamUrl).isEqualTo("https://mine.example/stream")
     }
 
     @Test
@@ -72,17 +74,15 @@ class SavedStationRefreshTest {
 
         val result = SavedStationRefresh.merge(listOf(noArt, blankArt), listOf(fetched, fetched.copy(id = "b")))
 
-        assertEquals(
-            listOf("https://cdn.example/new.png", "https://cdn.example/new.png"),
-            result.stations.map { it.favicon }
-        )
+        assertThat(result.stations.map { it.favicon })
+            .containsExactly("https://cdn.example/new.png", "https://cdn.example/new.png")
     }
 
     @Test
     fun `a blank directory favicon never clears saved artwork`() {
         val result = SavedStationRefresh.merge(listOf(saved.copy(favicon = null)), listOf(fetched.copy(favicon = "")))
 
-        assertEquals(null, result.stations.single().favicon)
+        assertThat(result.stations.single().favicon).isNull()
     }
 
     @Test
@@ -92,10 +92,10 @@ class SavedStationRefreshTest {
 
         val result = SavedStationRefresh.merge(listOf(other, saved, third), listOf(fetched))
 
-        assertEquals(listOf("imported:x", "a", "c"), result.stations.map { it.id })
-        assertSame(other, result.stations[0])
-        assertSame(third, result.stations[2])
-        assertEquals(1, result.updated)
+        assertThat(result.stations.map { it.id }).containsExactly("imported:x", "a", "c")
+        assertThat(result.stations[0]).isSameInstanceAs(other)
+        assertThat(result.stations[2]).isSameInstanceAs(third)
+        assertThat(result.updated).isEqualTo(1)
     }
 
     @Test
@@ -105,20 +105,20 @@ class SavedStationRefreshTest {
 
         val result = SavedStationRefresh.merge(list, listOf(fetched))
 
-        assertEquals(0, result.updated)
-        assertSame(list, result.stations)
+        assertThat(result.updated).isEqualTo(0)
+        assertThat(result.stations).isSameInstanceAs(list)
     }
 
     @Test
     fun `an unplayable directory entry does not blank the stream`() {
         val result = SavedStationRefresh.merge(listOf(saved), listOf(fetched.copy(urlResolved = "", url = "")))
 
-        assertEquals(saved, result.stations.single())
+        assertThat(result.stations.single()).isEqualTo(saved)
     }
 
     @Test
     fun `empty inputs are a no-op`() {
-        assertEquals(0, SavedStationRefresh.merge(emptyList(), listOf(fetched)).updated)
-        assertEquals(listOf(saved), SavedStationRefresh.merge(listOf(saved), emptyList()).stations)
+        assertThat(SavedStationRefresh.merge(emptyList(), listOf(fetched)).updated).isEqualTo(0)
+        assertThat(SavedStationRefresh.merge(listOf(saved), emptyList()).stations).containsExactly(saved)
     }
 }

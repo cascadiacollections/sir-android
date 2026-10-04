@@ -1,5 +1,9 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.google.android.gms.tasks.Task as GmsTask
 import com.google.android.play.core.splitinstall.SplitInstallManager
 import com.google.android.play.core.splitinstall.SplitInstallManagerFactory
@@ -13,9 +17,6 @@ import io.mockk.slot
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,27 +56,27 @@ class CastFeatureManagerTest {
     @Test
     fun `initial state is NotInstalled when module not installed`() {
         val manager = createManager()
-        assertEquals(CastModuleState.NotInstalled, manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.NotInstalled)
     }
 
     @Test
     fun `initial state is Installed when module already installed`() {
         every { mockSplitInstallManager.installedModules } returns setOf("cast")
         val manager = createManager()
-        assertEquals(CastModuleState.Installed, manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installed)
     }
 
     @Test
     fun `isModuleInstalled returns false when not installed`() {
         val manager = createManager()
-        assertFalse(manager.isModuleInstalled())
+        assertThat(manager.isModuleInstalled()).isFalse()
     }
 
     @Test
     fun `isModuleInstalled returns true when installed`() {
         every { mockSplitInstallManager.installedModules } returns setOf("cast")
         val manager = createManager()
-        assertTrue(manager.isModuleInstalled())
+        assertThat(manager.isModuleInstalled()).isTrue()
     }
 
     @Test
@@ -83,7 +84,7 @@ class CastFeatureManagerTest {
         every { mockSplitInstallManager.installedModules } returns setOf("cast")
         val manager = createManager()
         manager.installCastModule()
-        assertEquals(CastModuleState.Installed, manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installed)
     }
 
     @Test
@@ -93,7 +94,7 @@ class CastFeatureManagerTest {
 
         val manager = createManager()
         manager.installCastModule()
-        assertEquals(CastModuleState.Installing(0f), manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installing(0f))
     }
 
     @Test
@@ -103,7 +104,7 @@ class CastFeatureManagerTest {
 
         val manager = createManager()
         manager.installCastModule()
-        assertEquals(CastModuleState.Installing(0f), manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installing(0f))
 
         // Call again — should not change state or call startInstall again
         manager.installCastModule()
@@ -118,7 +119,7 @@ class CastFeatureManagerTest {
         val manager = createManager()
         manager.retry()
         // After retry, should be in Installing state
-        assertEquals(CastModuleState.Installing(0f), manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installing(0f))
     }
 
     @Test
@@ -130,6 +131,6 @@ class CastFeatureManagerTest {
 
     @Test
     fun `CAST_MODULE_NAME is cast`() {
-        assertEquals("cast", CastFeatureManager.CAST_MODULE_NAME)
+        assertThat(CastFeatureManager.CAST_MODULE_NAME).isEqualTo("cast")
     }
 }

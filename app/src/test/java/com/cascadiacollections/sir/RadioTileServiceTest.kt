@@ -1,7 +1,8 @@
 package com.cascadiacollections.sir
 
 import android.content.Intent
-import org.junit.Assert.assertNotNull
+import assertk.assertThat
+import assertk.assertions.isNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -24,7 +25,7 @@ class RadioTileServiceTest {
     @Test
     fun `service can be instantiated`() {
         val service = RadioTileService()
-        assertNotNull(service)
+        assertThat(service).isNotNull()
     }
 
     @Test
@@ -53,7 +54,7 @@ class RadioTileServiceTest {
 
         val shadow = shadowOf(RuntimeEnvironment.getApplication())
         val startedService = shadow.nextStartedService
-        assertNotNull("Service should have been started", startedService)
+        assertThat(startedService, name = "Service should have been started").isNotNull()
     }
 
     @Test
@@ -74,6 +75,6 @@ class RadioTileServiceTest {
         }
 
         val actionPlayIntent = intents.find { it.action == RadioPlaybackService.ACTION_PLAY }
-        assertNotNull("Should send ACTION_PLAY intent", actionPlayIntent)
+        assertThat(actionPlayIntent, name = "Should send ACTION_PLAY intent").isNotNull()
     }
 }

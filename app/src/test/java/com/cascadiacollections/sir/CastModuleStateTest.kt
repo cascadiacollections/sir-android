@@ -1,30 +1,32 @@
 package com.cascadiacollections.sir
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertSame
+import assertk.assertThat
+import assertk.assertions.isCloseTo
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotEqualTo
+import assertk.assertions.isSameInstanceAs
 import org.junit.Test
 
 class CastModuleStateTest {
 
     @Test
     fun `NotInstalled is a singleton`() {
-        assertSame(CastModuleState.NotInstalled, CastModuleState.NotInstalled)
+        assertThat(CastModuleState.NotInstalled).isSameInstanceAs(CastModuleState.NotInstalled)
     }
 
     @Test
     fun `Installed is a singleton`() {
-        assertSame(CastModuleState.Installed, CastModuleState.Installed)
+        assertThat(CastModuleState.Installed).isSameInstanceAs(CastModuleState.Installed)
     }
 
     @Test
     fun `Installing carries progress and supports data class equality`() {
-        assertEquals(CastModuleState.Installing(0.5f), CastModuleState.Installing(0.5f))
+        assertThat(CastModuleState.Installing(0.5f)).isEqualTo(CastModuleState.Installing(0.5f))
     }
 
     @Test
     fun `Installing with different progress values are not equal`() {
-        assertNotEquals(CastModuleState.Installing(0.3f), CastModuleState.Installing(0.7f))
+        assertThat(CastModuleState.Installing(0.7f)).isNotEqualTo(CastModuleState.Installing(0.3f))
     }
 
     @Test
@@ -33,18 +35,18 @@ class CastModuleStateTest {
         val half = CastModuleState.Installing(0.5f)
         val full = CastModuleState.Installing(1f)
 
-        assertEquals(0f, zero.progress, 0f)
-        assertEquals(0.5f, half.progress, 0f)
-        assertEquals(1f, full.progress, 0f)
+        assertThat(zero.progress).isCloseTo(0f, 0f)
+        assertThat(half.progress).isCloseTo(0.5f, 0f)
+        assertThat(full.progress).isCloseTo(1f, 0f)
     }
 
     @Test
     fun `Failed carries errorCode and supports data class equality`() {
-        assertEquals(CastModuleState.Failed(42), CastModuleState.Failed(42))
+        assertThat(CastModuleState.Failed(42)).isEqualTo(CastModuleState.Failed(42))
     }
 
     @Test
     fun `Failed with different error codes are not equal`() {
-        assertNotEquals(CastModuleState.Failed(1), CastModuleState.Failed(2))
+        assertThat(CastModuleState.Failed(2)).isNotEqualTo(CastModuleState.Failed(1))
     }
 }

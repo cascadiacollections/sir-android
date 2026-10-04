@@ -1,7 +1,10 @@
 package com.cascadiacollections.sir.wear
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
+import assertk.assertions.isTrue
+import assertk.assertions.startsWith
 import org.junit.Test
 
 class WearPlaybackServiceTest {
@@ -14,8 +17,8 @@ class WearPlaybackServiceTest {
         val field = fileClass.getDeclaredField("STREAM_URL")
         field.isAccessible = true
         val url = field.get(null) as String
-        assertTrue("Stream URL should use HTTPS", url.startsWith("https://"))
-        assertTrue("Stream URL should not be blank", url.isNotBlank())
+        assertThat(url, name = "Stream URL should use HTTPS").startsWith("https://")
+        assertThat(url.isNotBlank(), name = "Stream URL should not be blank").isTrue()
     }
 
     @Test
@@ -23,7 +26,7 @@ class WearPlaybackServiceTest {
         val field = fileClass.getDeclaredField("SESSION_ID")
         field.isAccessible = true
         val id = field.get(null) as String
-        assertTrue(id.isNotBlank())
+        assertThat(id.isNotBlank()).isTrue()
     }
 
     @Test
@@ -31,7 +34,7 @@ class WearPlaybackServiceTest {
         val field = fileClass.getDeclaredField("CHANNEL_ID")
         field.isAccessible = true
         val id = field.get(null) as String
-        assertTrue(id.isNotBlank())
+        assertThat(id.isNotBlank()).isTrue()
     }
 
     @Test
@@ -39,7 +42,7 @@ class WearPlaybackServiceTest {
         val field = fileClass.getDeclaredField("NOTIFICATION_ID")
         field.isAccessible = true
         val id = field.getInt(null)
-        assertTrue("Notification ID should be positive", id > 0)
+        assertThat(id, name = "Notification ID should be positive").isGreaterThan(0)
     }
 
     @Test
@@ -47,9 +50,6 @@ class WearPlaybackServiceTest {
         val field = fileClass.getDeclaredField("STREAM_URL")
         field.isAccessible = true
         val url = field.get(null) as String
-        assertEquals(
-            "https://broadcast.shoutcheap.com/proxy/willradio/stream",
-            url
-        )
+        assertThat(url).isEqualTo("https://broadcast.shoutcheap.com/proxy/willradio/stream")
     }
 }

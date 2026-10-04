@@ -1,7 +1,10 @@
 package com.cascadiacollections.sir.core.persistence
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.containsOnly
+import assertk.assertions.isEmpty
 import com.cascadiacollections.sir.core.model.Station
-import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class RecentShelfTest {
@@ -12,45 +15,39 @@ class RecentShelfTest {
 
     @Test
     fun `the shelf is the newest five recents`() {
-        assertEquals(
-            listOf("a", "b", "c", "d", "e"),
-            StationCollections.recentShelf(recents, emptySet()).map {
-                it.id
-            }
-        )
+        assertThat(StationCollections.recentShelf(recents, emptySet()).map { it.id })
+            .containsExactly("a", "b", "c", "d", "e")
     }
 
     @Test
     fun `a hidden station leaves a gap that is not refilled`() {
         val shelf = StationCollections.recentShelf(recents, setOf("b"))
 
-        assertEquals(listOf("a", "c", "d", "e"), shelf.map { it.id })
+        assertThat(shelf.map { it.id }).containsExactly("a", "c", "d", "e")
     }
 
     @Test
     fun `hiding a station outside the window changes nothing`() {
-        assertEquals(
-            listOf("a", "b", "c", "d", "e"),
-            StationCollections.recentShelf(recents, setOf("g")).map { it.id }
-        )
+        assertThat(StationCollections.recentShelf(recents, setOf("g")).map { it.id })
+            .containsExactly("a", "b", "c", "d", "e")
     }
 
     @Test
     fun `everything hidden gives an empty shelf`() {
-        assertEquals(emptyList<Station>(), StationCollections.recentShelf(recents.take(2), setOf("a", "b")))
+        assertThat(StationCollections.recentShelf(recents.take(2), setOf("a", "b"))).isEmpty()
     }
 
     @Test
     fun `playing a station again un-hides it`() {
         val hidden = StationCollections.hiddenAfterPlay(setOf("a", "c"), recents, station("c"))
 
-        assertEquals(setOf("a"), hidden)
+        assertThat(hidden).containsOnly("a")
     }
 
     @Test
     fun `hidden ids that fell out of the recents are pruned`() {
         val hidden = StationCollections.hiddenAfterPlay(setOf("a", "gone"), recents, station("z"))
 
-        assertEquals(setOf("a"), hidden)
+        assertThat(hidden).containsOnly("a")
     }
 }

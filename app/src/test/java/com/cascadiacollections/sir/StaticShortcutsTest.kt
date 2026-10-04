@@ -1,7 +1,8 @@
 package com.cascadiacollections.sir
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.isEqualTo
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -52,43 +53,33 @@ class StaticShortcutsTest {
 
     @Test
     fun `static shortcut count matches what StationShortcuts reserves`() {
-        assertEquals(
-            StationShortcuts.STATIC_SHORTCUT_COUNT,
-            entries().count {
-                it.tag == "shortcut"
-            }
-        )
+        assertThat(entries().count { it.tag == "shortcut" })
+            .isEqualTo(StationShortcuts.STATIC_SHORTCUT_COUNT)
     }
 
     @Test
     fun `whats playing and favorite shortcuts target the headless activities`() {
         val shortcuts = entries().filter { it.tag == "shortcut" }.associateBy { it.name }
 
-        assertEquals(NowPlayingAnnounceActivity::class.java.name, shortcuts.getValue("whats_playing").targetClass)
-        assertEquals(NowPlayingAnnounceActivity.ACTION_WHATS_PLAYING, shortcuts.getValue("whats_playing").action)
-        assertEquals(
-            FavoriteCurrentStationActivity::class.java.name,
-            shortcuts.getValue("favorite_current").targetClass
-        )
-        assertEquals(
-            FavoriteCurrentStationActivity.ACTION_FAVORITE_CURRENT,
-            shortcuts.getValue("favorite_current").action
-        )
+        assertThat(shortcuts.getValue("whats_playing").targetClass)
+            .isEqualTo(NowPlayingAnnounceActivity::class.java.name)
+        assertThat(shortcuts.getValue("whats_playing").action)
+            .isEqualTo(NowPlayingAnnounceActivity.ACTION_WHATS_PLAYING)
+        assertThat(shortcuts.getValue("favorite_current").targetClass)
+            .isEqualTo(FavoriteCurrentStationActivity::class.java.name)
+        assertThat(shortcuts.getValue("favorite_current").action)
+            .isEqualTo(FavoriteCurrentStationActivity.ACTION_FAVORITE_CURRENT)
     }
 
     @Test
     fun `assistant capabilities cover play, whats playing and favorite`() {
         val capabilities = entries().filter { it.tag == "capability" }.associateBy { it.name }
 
-        assertTrue("actions.intent.PLAY_MEDIA" in capabilities)
-        assertEquals(
-            NowPlayingAnnounceActivity::class.java.name,
-            capabilities.getValue("custom.actions.intent.WHATS_PLAYING").targetClass
-        )
-        assertEquals(
-            FavoriteCurrentStationActivity::class.java.name,
-            capabilities.getValue("custom.actions.intent.FAVORITE_CURRENT_STATION").targetClass
-        )
+        assertThat(capabilities.keys).contains("actions.intent.PLAY_MEDIA")
+        assertThat(capabilities.getValue("custom.actions.intent.WHATS_PLAYING").targetClass)
+            .isEqualTo(NowPlayingAnnounceActivity::class.java.name)
+        assertThat(capabilities.getValue("custom.actions.intent.FAVORITE_CURRENT_STATION").targetClass)
+            .isEqualTo(FavoriteCurrentStationActivity::class.java.name)
     }
 
     private companion object {

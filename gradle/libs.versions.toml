@@ -33,6 +33,7 @@ benchmarkMacro = "1.5.0"
 robolectric = "4.17"
 mockk = "1.14.11"
 turbine = "1.2.1"
+assertk = "0.28.1"
 uiautomator = "2.4.0"
 wearCompose = "1.7.0"
 androidxAnnotation = "1.11.0"
@@ -117,6 +118,7 @@ androidx-annotation = { group = "androidx.annotation", name = "annotation", vers
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+assertk = { group = "com.willowtreeapps.assertk", name = "assertk", version.ref = "assertk" }
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacro" }
 androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 detekt-rules-ktlint-wrapper = { group = "dev.detekt", name = "detekt-rules-ktlint-wrapper", version.ref = "detekt" }

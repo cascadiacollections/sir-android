@@ -1,9 +1,11 @@
 package com.cascadiacollections.sir
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import org.junit.Test
 
 class RadioUiStateTest {
@@ -11,15 +13,15 @@ class RadioUiStateTest {
     @Test
     fun `default RadioUiState has expected initial values`() {
         val state = RadioUiState()
-        assertFalse(state.isConnected)
-        assertFalse(state.isPlaying)
-        assertFalse(state.isBuffering)
-        assertFalse(state.isError)
-        assertNull(state.trackTitle)
-        assertNull(state.artist)
-        assertNull(state.sleepTimerLabel)
-        assertFalse(state.showMeteredWarning)
-        assertTrue(state.trackHistory.isEmpty())
+        assertThat(state.isConnected).isFalse()
+        assertThat(state.isPlaying).isFalse()
+        assertThat(state.isBuffering).isFalse()
+        assertThat(state.isError).isFalse()
+        assertThat(state.trackTitle).isNull()
+        assertThat(state.artist).isNull()
+        assertThat(state.sleepTimerLabel).isNull()
+        assertThat(state.showMeteredWarning).isFalse()
+        assertThat(state.trackHistory).isEmpty()
     }
 
     @Test
@@ -31,18 +33,18 @@ class RadioUiStateTest {
             artist = "Artist"
         )
         val copied = original.copy(isPlaying = false)
-        assertTrue(copied.isConnected)
-        assertFalse(copied.isPlaying)
-        assertEquals("Song", copied.trackTitle)
-        assertEquals("Artist", copied.artist)
+        assertThat(copied.isConnected).isTrue()
+        assertThat(copied.isPlaying).isFalse()
+        assertThat(copied.trackTitle).isEqualTo("Song")
+        assertThat(copied.artist).isEqualTo("Artist")
     }
 
     @Test
     fun `data class equality works correctly`() {
         val a = RadioUiState(isPlaying = true, trackTitle = "Song")
         val b = RadioUiState(isPlaying = true, trackTitle = "Song")
-        assertEquals(a, b)
-        assertEquals(a.hashCode(), b.hashCode())
+        assertThat(b).isEqualTo(a)
+        assertThat(b.hashCode()).isEqualTo(a.hashCode())
     }
 
     @Test
@@ -58,13 +60,13 @@ class RadioUiStateTest {
             showMeteredWarning = true
         )
         val (connected, playing, buffering, error, title, artist, timer, metered) = state
-        assertTrue(connected)
-        assertTrue(playing)
-        assertFalse(buffering)
-        assertFalse(error)
-        assertEquals("Title", title)
-        assertEquals("Artist", artist)
-        assertEquals("30m", timer)
-        assertTrue(metered)
+        assertThat(connected).isTrue()
+        assertThat(playing).isTrue()
+        assertThat(buffering).isFalse()
+        assertThat(error).isFalse()
+        assertThat(title).isEqualTo("Title")
+        assertThat(artist).isEqualTo("Artist")
+        assertThat(timer).isEqualTo("30m")
+        assertThat(metered).isTrue()
     }
 }

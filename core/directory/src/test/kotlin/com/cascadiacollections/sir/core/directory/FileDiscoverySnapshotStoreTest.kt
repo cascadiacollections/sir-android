@@ -1,11 +1,13 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.cascadiacollections.sir.core.model.Station
 import java.io.File
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -33,7 +35,7 @@ class FileDiscoverySnapshotStoreTest {
         val file = File(temp.root, "a/b/snapshot.json")
         store(file).write(snapshot)
 
-        assertEquals(snapshot, store(file).read())
+        assertThat(store(file).read()).isEqualTo(snapshot)
     }
 
     @Test
@@ -42,13 +44,13 @@ class FileDiscoverySnapshotStoreTest {
         store(file).write(snapshot)
         store(file).write(snapshot.copy(topTags = null))
 
-        assertEquals(listOf("snapshot.json"), temp.root.list()!!.toList())
-        assertNull(store(file).read()?.topTags)
+        assertThat(temp.root.list()!!.toList()).containsExactly("snapshot.json")
+        assertThat(store(file).read()?.topTags).isNull()
     }
 
     @Test
     fun `a missing file reads as absent`() = runTest {
-        assertNull(store(File(temp.root, "none.json")).read())
+        assertThat(store(File(temp.root, "none.json")).read()).isNull()
     }
 
     @Test
@@ -56,7 +58,7 @@ class FileDiscoverySnapshotStoreTest {
         val file = temp.newFile(
             "snapshot.json"
         ).apply { writeText("""{"schemaVersion":1,"topStations":{"limit":"x"""") }
-        assertNull(store(file).read())
+        assertThat(store(file).read()).isNull()
     }
 
     @Test
@@ -64,11 +66,11 @@ class FileDiscoverySnapshotStoreTest {
         val file = File(temp.root, "snapshot.json")
         store(file).write(snapshot.copy(schemaVersion = DiscoverySnapshot.SCHEMA_VERSION + 1))
 
-        assertNull(store(file).read())
+        assertThat(store(file).read()).isNull()
     }
 
     @Test
     fun `a directory in the way reads as absent`() = runTest {
-        assertNull(store(temp.newFolder("snapshot.json")).read())
+        assertThat(store(temp.newFolder("snapshot.json")).read()).isNull()
     }
 }

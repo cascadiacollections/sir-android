@@ -1,5 +1,13 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.artwork.AlbumArt
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -7,10 +15,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -42,8 +46,8 @@ class AlbumArtResolverTest {
         resolver.onTrackChanged("Artist", "Title")
         answer("Artist", "Title", ART)
 
-        assertEquals(ART, resolver.current)
-        assertEquals(1, changes)
+        assertThat(resolver.current).isEqualTo(ART)
+        assertThat(changes).isEqualTo(1)
     }
 
     @Test
@@ -51,8 +55,8 @@ class AlbumArtResolverTest {
         resolver.onTrackChanged("Artist", "Title")
         answer("Artist", "Title", ART)
 
-        assertTrue(resolver.onTrackChanged("Other", "Song"))
-        assertNull(resolver.current)
+        assertThat(resolver.onTrackChanged("Other", "Song")).isTrue()
+        assertThat(resolver.current).isNull()
     }
 
     @Test
@@ -61,15 +65,15 @@ class AlbumArtResolverTest {
         resolver.onTrackChanged("Other", "Song")
         answer("Artist", "Title", ART)
 
-        assertNull(resolver.current)
-        assertEquals(0, changes)
+        assertThat(resolver.current).isNull()
+        assertThat(changes).isEqualTo(0)
     }
 
     @Test
     fun `the same track again does not look up twice`() {
         resolver.onTrackChanged("Artist", "Title")
-        assertFalse(resolver.onTrackChanged("Artist", "Title"))
-        assertEquals(1, requests.size)
+        assertThat(resolver.onTrackChanged("Artist", "Title")).isFalse()
+        assertThat(requests).hasSize(1)
     }
 
     @Test
@@ -79,11 +83,11 @@ class AlbumArtResolverTest {
 
         enabled.value = false
         scope.runCurrent()
-        assertNull(resolver.current)
-        assertEquals(2, changes)
+        assertThat(resolver.current).isNull()
+        assertThat(changes).isEqualTo(2)
 
         resolver.onTrackChanged("Other", "Song")
-        assertEquals(listOf("Artist" to "Title"), requests)
+        assertThat(requests).containsExactly("Artist" to "Title")
     }
 
     @Test
@@ -91,18 +95,18 @@ class AlbumArtResolverTest {
         enabled.value = false
         scope.runCurrent()
         resolver.onTrackChanged("Artist", "Title")
-        assertTrue(requests.isEmpty())
+        assertThat(requests).isEmpty()
 
         enabled.value = true
         scope.runCurrent()
         answer("Artist", "Title", ART)
-        assertEquals(ART, resolver.current)
+        assertThat(resolver.current).isEqualTo(ART)
     }
 
     @Test
     fun `a track without an artist is not looked up`() {
         resolver.onTrackChanged(null, "Station jingle")
-        assertTrue(requests.isEmpty())
+        assertThat(requests).isEmpty()
     }
 
     private companion object {

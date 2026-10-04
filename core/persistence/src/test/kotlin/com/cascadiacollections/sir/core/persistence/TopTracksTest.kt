@@ -1,8 +1,11 @@
 package com.cascadiacollections.sir.core.persistence
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
 import java.util.TimeZone
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TopTracksTest {
@@ -23,7 +26,8 @@ class TopTracksTest {
     fun `ranks by play count, including tracks heard once as ShoutKit does`() {
         val history = listOf(heard("A"), heard("B"), heard("A"), heard("C"), heard("B"), heard("A"))
         val top = rank(history)
-        assertEquals(listOf("A" to 3, "B" to 2, "C" to 1), top.map { it.title to it.playCount })
+        assertThat(top.map { it.title to it.playCount })
+            .containsExactly("A" to 3, "B" to 2, "C" to 1)
     }
 
     @Test
@@ -33,7 +37,7 @@ class TopTracksTest {
             heard("A", at = now - 2).copy(artworkUrl = "https://art/new"),
             heard("A", at = now - 1)
         )
-        assertEquals("https://art/new", rank(history).single().artworkUrl)
+        assertThat(rank(history).single().artworkUrl).isEqualTo("https://art/new")
     }
 
     @Test
@@ -44,7 +48,7 @@ class TopTracksTest {
             heard("B", at = now - 5),
             heard("B", at = now - 8)
         )
-        assertEquals(listOf("B", "A"), rank(history).map { it.title })
+        assertThat(rank(history).map { it.title }).containsExactly("B", "A")
     }
 
     @Test
@@ -52,23 +56,23 @@ class TopTracksTest {
         val top = rank(
             listOf(heard("song", artist = "band", at = now - 2), heard("Song", artist = "Band", at = now - 1))
         )
-        assertEquals(1, top.size)
-        assertEquals("Song", top.single().title)
-        assertEquals("Band", top.single().artist)
-        assertEquals(now - 1, top.single().lastHeardMillis)
+        assertThat(top).hasSize(1)
+        assertThat(top.single().title).isEqualTo("Song")
+        assertThat(top.single().artist).isEqualTo("Band")
+        assertThat(top.single().lastHeardMillis).isEqualTo(now - 1)
     }
 
     @Test
     fun `tracks without an artist are not counted`() {
-        assertTrue(rank(listOf(heard("A", artist = null), heard("A", artist = null))).isEmpty())
+        assertThat(rank(listOf(heard("A", artist = null), heard("A", artist = null)))).isEmpty()
     }
 
     @Test
     fun `week only counts the last seven days`() {
         val history =
             listOf(heard("A", at = now - 8 * day), heard("A", at = now - 1 * day), heard("A", at = now))
-        assertEquals(2, rank(history, TopTracksTimeframe.WEEK).single().playCount)
-        assertEquals(3, rank(history, TopTracksTimeframe.ALL_TIME).single().playCount)
+        assertThat(rank(history, TopTracksTimeframe.WEEK).single().playCount).isEqualTo(2)
+        assertThat(rank(history, TopTracksTimeframe.ALL_TIME).single().playCount).isEqualTo(3)
     }
 
     @Test
@@ -82,17 +86,17 @@ class TopTracksTest {
             heard("B", at = now)
         )
         val top = rank(history, TopTracksTimeframe.MONTH)
-        assertEquals(listOf("A" to 2, "B" to 1), top.map { it.title to it.playCount })
+        assertThat(top.map { it.title to it.playCount }).containsExactly("A" to 2, "B" to 1)
     }
 
     @Test
     fun `caps the ranking at twenty`() {
         val history = (0 until 30).flatMap { i -> listOf(heard("T$i"), heard("T$i")) }
-        assertEquals(TopTracks.LIMIT, rank(history).size)
+        assertThat(rank(history)).hasSize(TopTracks.LIMIT)
     }
 
     @Test
     fun `an empty history ranks nothing`() {
-        assertTrue(rank(emptyList()).isEmpty())
+        assertThat(rank(emptyList())).isEmpty()
     }
 }

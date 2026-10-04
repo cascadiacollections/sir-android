@@ -1,11 +1,14 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNotEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.model.Station
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StationSearchFiltersTest {
@@ -15,8 +18,8 @@ class StationSearchFiltersTest {
 
     @Test
     fun `none is inactive and sends nothing`() {
-        assertFalse(StationSearchFilters.NONE.isActive)
-        assertTrue(StationSearchFilters.NONE.queryParameters().isEmpty())
+        assertThat(StationSearchFilters.NONE.isActive).isFalse()
+        assertThat(StationSearchFilters.NONE.queryParameters()).isEmpty()
     }
 
     @Test
@@ -24,84 +27,77 @@ class StationSearchFiltersTest {
         val filters =
             StationSearchFilters(bitrateMinKbps = 0, bitrateMaxKbps = -1, tag = "  ", countryCode = " de ")
 
-        assertNull(filters.bitrateMinKbps)
-        assertNull(filters.bitrateMaxKbps)
-        assertNull(filters.tag)
-        assertEquals("DE", filters.countryCode)
+        assertThat(filters.bitrateMinKbps).isNull()
+        assertThat(filters.bitrateMaxKbps).isNull()
+        assertThat(filters.tag).isNull()
+        assertThat(filters.countryCode).isEqualTo("DE")
     }
 
     @Test
     fun `an inverted bitrate range is widened`() {
         val filters = StationSearchFilters(bitrateMinKbps = 192, bitrateMaxKbps = 64)
 
-        assertEquals(192, filters.bitrateMaxKbps)
+        assertThat(filters.bitrateMaxKbps).isEqualTo(192)
     }
 
     @Test
     fun `query parameters use radio-browser names`() {
         val filters = StationSearchFilters(64, 256, "Smooth Jazz", "us")
 
-        assertEquals(
-            listOf("bitrateMin" to "64", "bitrateMax" to "256", "tagList" to "smooth jazz", "countrycode" to "US"),
-            filters.queryParameters()
+        assertThat(filters.queryParameters()).containsExactly(
+            "bitrateMin" to "64",
+            "bitrateMax" to "256",
+            "tagList" to "smooth jazz",
+            "countrycode" to "US"
         )
-        assertEquals(
-            listOf("bitrateMin" to "64", "bitrateMax" to "256", "countrycode" to "US"),
-            filters.queryParameters(includeTag = false)
-        )
+        assertThat(filters.queryParameters(includeTag = false))
+            .containsExactly("bitrateMin" to "64", "bitrateMax" to "256", "countrycode" to "US")
     }
 
     @Test
     fun `bitrate bounds are inclusive and unknown bitrate matches`() {
         val filters = StationSearchFilters(bitrateMinKbps = 64, bitrateMaxKbps = 128)
 
-        assertTrue(filters.matches(station(bitrate = 64)))
-        assertTrue(filters.matches(station(bitrate = 128)))
-        assertTrue(filters.matches(station(bitrate = 0)))
-        assertFalse(filters.matches(station(bitrate = 32)))
-        assertFalse(filters.matches(station(bitrate = 320)))
+        assertThat(filters.matches(station(bitrate = 64))).isTrue()
+        assertThat(filters.matches(station(bitrate = 128))).isTrue()
+        assertThat(filters.matches(station(bitrate = 0))).isTrue()
+        assertThat(filters.matches(station(bitrate = 32))).isFalse()
+        assertThat(filters.matches(station(bitrate = 320))).isFalse()
     }
 
     @Test
     fun `country matches case-insensitively and missing country matches`() {
         val filters = StationSearchFilters(countryCode = "gb")
 
-        assertTrue(filters.matches(station(country = "gb")))
-        assertTrue(filters.matches(station(country = "")))
-        assertFalse(filters.matches(station(country = "US")))
+        assertThat(filters.matches(station(country = "gb"))).isTrue()
+        assertThat(filters.matches(station(country = ""))).isTrue()
+        assertThat(filters.matches(station(country = "US"))).isFalse()
     }
 
     @Test
     fun `tag matches by containment and missing tags match`() {
         val filters = StationSearchFilters(tag = "JAZZ")
 
-        assertTrue(filters.matches(station(tags = "smooth jazz")))
-        assertTrue(filters.matches(station(tags = "")))
-        assertFalse(filters.matches(station(tags = "rock,metal")))
+        assertThat(filters.matches(station(tags = "smooth jazz"))).isTrue()
+        assertThat(filters.matches(station(tags = ""))).isTrue()
+        assertThat(filters.matches(station(tags = "rock,metal"))).isFalse()
     }
 
     @Test
     fun `applyTo keeps order and is a no-op when inactive`() {
         val stations = listOf(station(bitrate = 32), station(bitrate = 128))
 
-        assertEquals(stations, StationSearchFilters.NONE.applyTo(stations))
-        assertEquals(listOf(stations[1]), StationSearchFilters(bitrateMinKbps = 64).applyTo(stations))
+        assertThat(StationSearchFilters.NONE.applyTo(stations)).isEqualTo(stations)
+        assertThat(StationSearchFilters(bitrateMinKbps = 64).applyTo(stations)).containsExactly(stations[1])
     }
 
     @Test
     fun `equal filters share a cache key and different ones do not`() {
-        assertEquals(
-            StationSearchFilters(tag = "Jazz", countryCode = "gb"),
-            StationSearchFilters(tag = "jazz ", countryCode = "GB")
-        )
-        assertEquals(
-            StationSearchFilters(tag = "Jazz").cacheKey,
-            StationSearchFilters(tag = "jazz").cacheKey
-        )
-        assertNotEquals(
-            StationSearchFilters(bitrateMinKbps = 64).cacheKey,
-            StationSearchFilters(bitrateMaxKbps = 64).cacheKey
-        )
-        assertNotEquals(StationSearchFilters.NONE.cacheKey, StationSearchFilters(countryCode = "US").cacheKey)
+        assertThat(StationSearchFilters(tag = "jazz ", countryCode = "GB"))
+            .isEqualTo(StationSearchFilters(tag = "Jazz", countryCode = "gb"))
+        assertThat(StationSearchFilters(tag = "jazz").cacheKey).isEqualTo(StationSearchFilters(tag = "Jazz").cacheKey)
+        assertThat(StationSearchFilters(bitrateMaxKbps = 64).cacheKey)
+            .isNotEqualTo(StationSearchFilters(bitrateMinKbps = 64).cacheKey)
+        assertThat(StationSearchFilters(countryCode = "US").cacheKey).isNotEqualTo(StationSearchFilters.NONE.cacheKey)
     }
 }

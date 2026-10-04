@@ -1,7 +1,10 @@
 package com.cascadiacollections.sir.core.persistence
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
 import com.cascadiacollections.sir.core.model.Station
-import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class StationCollectionsOrderingTest {
@@ -12,42 +15,34 @@ class StationCollectionsOrderingTest {
 
     @Test
     fun `moving down shifts the stations in between up`() {
-        assertEquals(
-            listOf("b", "c", "a", "d"),
-            StationCollections.moveFavorite(abcd, 0, 2).map {
-                it.id
-            }
-        )
+        assertThat(StationCollections.moveFavorite(abcd, 0, 2).map { it.id })
+            .containsExactly("b", "c", "a", "d")
     }
 
     @Test
     fun `moving up shifts the stations in between down`() {
-        assertEquals(
-            listOf("d", "a", "b", "c"),
-            StationCollections.moveFavorite(abcd, 3, 0).map {
-                it.id
-            }
-        )
+        assertThat(StationCollections.moveFavorite(abcd, 3, 0).map { it.id })
+            .containsExactly("d", "a", "b", "c")
     }
 
     @Test
     fun `out of range or no-op moves leave the list unchanged`() {
-        assertEquals(abcd, StationCollections.moveFavorite(abcd, -1, 2))
-        assertEquals(abcd, StationCollections.moveFavorite(abcd, 0, 4))
-        assertEquals(abcd, StationCollections.moveFavorite(abcd, 1, 1))
-        assertEquals(emptyList<Station>(), StationCollections.moveFavorite(emptyList(), 0, 0))
+        assertThat(StationCollections.moveFavorite(abcd, -1, 2)).isEqualTo(abcd)
+        assertThat(StationCollections.moveFavorite(abcd, 0, 4)).isEqualTo(abcd)
+        assertThat(StationCollections.moveFavorite(abcd, 1, 1)).isEqualTo(abcd)
+        assertThat(StationCollections.moveFavorite(emptyList(), 0, 0)).isEmpty()
     }
 
     @Test
     fun `reorder follows the given id order`() {
         val result = StationCollections.reorderFavorites(abcd, listOf("c", "a", "d", "b"))
-        assertEquals(listOf("c", "a", "d", "b"), result.map { it.id })
+        assertThat(result.map { it.id }).containsExactly("c", "a", "d", "b")
     }
 
     @Test
     fun `reorder never drops a station missing from the order and ignores unknown ids`() {
         val result = StationCollections.reorderFavorites(abcd, listOf("d", "zzz", "b", "d"))
-        assertEquals(listOf("d", "b", "a", "c"), result.map { it.id })
+        assertThat(result.map { it.id }).containsExactly("d", "b", "a", "c")
     }
 
     @Test
@@ -56,16 +51,16 @@ class StationCollectionsOrderingTest {
             listOf(station("a"), station("b")),
             listOf(station("b").copy(name = "renamed"), station("c"), station("d"), station("c"))
         )
-        assertEquals(listOf("a", "b", "c", "d"), result.stations.map { it.id })
-        assertEquals("b", result.stations[1].name)
-        assertEquals(2, result.added)
-        assertEquals(2, result.skipped)
+        assertThat(result.stations.map { it.id }).containsExactly("a", "b", "c", "d")
+        assertThat(result.stations[1].name).isEqualTo("b")
+        assertThat(result.added).isEqualTo(2)
+        assertThat(result.skipped).isEqualTo(2)
     }
 
     @Test
     fun `adding a favorite after a reorder still appends`() {
         val reordered = StationCollections.moveFavorite(abcd, 3, 0)
         val result = StationCollections.addFavorite(reordered, station("e"))
-        assertEquals(listOf("d", "a", "b", "c", "e"), result.map { it.id })
+        assertThat(result.map { it.id }).containsExactly("d", "a", "b", "c", "e")
     }
 }

@@ -15,11 +15,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import assertk.assertThat
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.RadioUiState
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import com.cascadiacollections.sir.ui.theme.SirTheme
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -233,7 +234,7 @@ class RadioUiTest {
             .assertIsEnabled()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Saved to favorites"))
             .performClick()
-        assertTrue(toggled)
+        assertThat(toggled).isTrue()
     }
 
     @Test
@@ -321,6 +322,6 @@ class RadioUiTest {
             }
         }
         composeRule.onNodeWithContentDescription("Play").performClick()
-        assertTrue(toggled)
+        assertThat(toggled).isTrue()
     }
 }

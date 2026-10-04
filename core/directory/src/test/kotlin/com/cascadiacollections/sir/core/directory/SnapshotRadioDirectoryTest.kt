@@ -1,5 +1,13 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFailure
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
 import java.io.File
@@ -12,9 +20,6 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -95,13 +100,13 @@ class SnapshotRadioDirectoryTest {
         val store = InMemoryStore(snapshotAt(now - 5 * hour))
         val dir = directory(store)
 
-        assertEquals(listOf(station("saved")), dir.topStations(24).getOrThrow())
-        assertEquals(listOf(Tag("saved", 1)), dir.topTags(48).getOrThrow())
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("saved"))
+        assertThat(dir.topTags(48).getOrThrow()).containsExactly(Tag("saved", 1))
         advanceUntilIdle()
 
-        assertTrue(network.topCalls.isEmpty())
-        assertTrue(network.tagCalls.isEmpty())
-        assertEquals(0, store.writes)
+        assertThat(network.topCalls).isEmpty()
+        assertThat(network.tagCalls).isEmpty()
+        assertThat(store.writes).isEqualTo(0)
     }
 
     @Test
@@ -113,26 +118,23 @@ class SnapshotRadioDirectoryTest {
             dir.discoveryUpdates.toList(updates)
         }
 
-        assertEquals(listOf(station("saved")), dir.topStations(24).getOrThrow())
-        assertEquals(listOf(Tag("saved", 1)), dir.topTags(48).getOrThrow())
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("saved"))
+        assertThat(dir.topTags(48).getOrThrow()).containsExactly(Tag("saved", 1))
         advanceUntilIdle()
 
-        assertEquals(listOf(24 to false), network.topCalls)
-        assertEquals(listOf(48 to false), network.tagCalls)
-        assertEquals(listOf(station("live")), store.snapshot?.topStations?.stations)
-        assertEquals(now, store.snapshot?.topStations?.savedAtMillis)
-        assertEquals(listOf(Tag("live", 3)), store.snapshot?.topTags?.tags)
-        assertEquals(
-            listOf(
-                DiscoveryUpdate.TopStations(24, listOf(station("live"))),
-                DiscoveryUpdate.TopTags(48, listOf(Tag("live", 3)))
-            ),
-            updates
+        assertThat(network.topCalls).containsExactly(24 to false)
+        assertThat(network.tagCalls).containsExactly(48 to false)
+        assertThat(store.snapshot?.topStations?.stations).isNotNull().containsExactly(station("live"))
+        assertThat(store.snapshot?.topStations?.savedAtMillis).isEqualTo(now)
+        assertThat(store.snapshot?.topTags?.tags).isNotNull().containsExactly(Tag("live", 3))
+        assertThat(updates).containsExactly(
+            DiscoveryUpdate.TopStations(24, listOf(station("live"))),
+            DiscoveryUpdate.TopTags(48, listOf(Tag("live", 3)))
         )
         // Now fresh: the next call needs no request.
-        assertEquals(listOf(station("live")), dir.topStations(24).getOrThrow())
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("live"))
         advanceUntilIdle()
-        assertEquals(1, network.topCalls.size)
+        assertThat(network.topCalls).hasSize(1)
     }
 
     @Test
@@ -142,11 +144,11 @@ class SnapshotRadioDirectoryTest {
         network.top = Result.failure(IOException("offline"))
         val dir = directory(store)
 
-        assertEquals(listOf(station("saved")), dir.topStations(24).getOrThrow())
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("saved"))
         advanceUntilIdle()
 
-        assertEquals(stale, store.snapshot)
-        assertEquals(0, store.writes)
+        assertThat(store.snapshot).isEqualTo(stale)
+        assertThat(store.writes).isEqualTo(0)
     }
 
     @Test
@@ -156,7 +158,7 @@ class SnapshotRadioDirectoryTest {
         repeat(3) { dir.topStations(24) }
         advanceUntilIdle()
 
-        assertEquals(1, network.topCalls.size)
+        assertThat(network.topCalls).hasSize(1)
     }
 
     @Test
@@ -164,13 +166,13 @@ class SnapshotRadioDirectoryTest {
         val store = InMemoryStore(snapshotAt(now - 1 * hour))
         val dir = directory(store)
 
-        assertEquals(listOf(station("live")), dir.topStations(24, forceRefresh = true).getOrThrow())
-        assertEquals(listOf(Tag("live", 3)), dir.topTags(48, forceRefresh = true).getOrThrow())
+        assertThat(dir.topStations(24, forceRefresh = true).getOrThrow()).containsExactly(station("live"))
+        assertThat(dir.topTags(48, forceRefresh = true).getOrThrow()).containsExactly(Tag("live", 3))
 
-        assertEquals(listOf(24 to true), network.topCalls)
-        assertEquals(listOf(48 to true), network.tagCalls)
-        assertEquals(listOf(station("live")), store.snapshot?.topStations?.stations)
-        assertEquals(listOf(Tag("live", 3)), store.snapshot?.topTags?.tags)
+        assertThat(network.topCalls).containsExactly(24 to true)
+        assertThat(network.tagCalls).containsExactly(48 to true)
+        assertThat(store.snapshot?.topStations?.stations).isNotNull().containsExactly(station("live"))
+        assertThat(store.snapshot?.topTags?.tags).isNotNull().containsExactly(Tag("live", 3))
     }
 
     @Test
@@ -180,10 +182,10 @@ class SnapshotRadioDirectoryTest {
         network.top = Result.failure(IOException("offline"))
         val dir = directory(store)
 
-        assertTrue(dir.topStations(24, forceRefresh = true).isFailure)
-        assertEquals(original, store.snapshot)
+        assertThat(dir.topStations(24, forceRefresh = true)).isFailure()
+        assertThat(store.snapshot).isEqualTo(original)
         // The kept snapshot still answers ordinary calls.
-        assertEquals(listOf(station("saved")), dir.topStations(24).getOrThrow())
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("saved"))
     }
 
     @Test
@@ -191,10 +193,11 @@ class SnapshotRadioDirectoryTest {
         val store = InMemoryStore()
         val dir = directory(store)
 
-        assertEquals(listOf(station("live")), dir.topStations(24).getOrThrow())
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("live"))
 
-        assertEquals(listOf(24 to false), network.topCalls)
-        assertEquals(DiscoverySnapshot.StationsSection(24, now, listOf(station("live"))), store.snapshot?.topStations)
+        assertThat(network.topCalls).containsExactly(24 to false)
+        assertThat(store.snapshot?.topStations)
+            .isEqualTo(DiscoverySnapshot.StationsSection(24, now, listOf(station("live"))))
     }
 
     @Test
@@ -202,8 +205,8 @@ class SnapshotRadioDirectoryTest {
         val store = InMemoryStore()
         network.top = Result.failure(IOException("offline"))
 
-        assertTrue(directory(store).topStations(24).isFailure)
-        assertNull(store.snapshot)
+        assertThat(directory(store).topStations(24)).isFailure()
+        assertThat(store.snapshot).isNull()
     }
 
     @Test
@@ -211,8 +214,8 @@ class SnapshotRadioDirectoryTest {
         val store = InMemoryStore()
         network.top = Result.success(emptyList())
 
-        assertEquals(emptyList<Station>(), directory(store).topStations(24).getOrThrow())
-        assertEquals(0, store.writes)
+        assertThat(directory(store).topStations(24).getOrThrow()).isEmpty()
+        assertThat(store.writes).isEqualTo(0)
     }
 
     @Test
@@ -220,22 +223,22 @@ class SnapshotRadioDirectoryTest {
         val store = InMemoryStore(snapshotAt(now - 1 * hour, limit = 24, tagLimit = 48))
         val dir = directory(store)
 
-        assertEquals(listOf(station("live")), dir.topStations(10).getOrThrow())
-        assertEquals(listOf(Tag("live", 3)), dir.topTags(20).getOrThrow())
+        assertThat(dir.topStations(10).getOrThrow()).containsExactly(station("live"))
+        assertThat(dir.topTags(20).getOrThrow()).containsExactly(Tag("live", 3))
 
-        assertEquals(listOf(10 to false), network.topCalls)
-        assertEquals(listOf(20 to false), network.tagCalls)
-        assertEquals(10, store.snapshot?.topStations?.limit)
+        assertThat(network.topCalls).containsExactly(10 to false)
+        assertThat(network.tagCalls).containsExactly(20 to false)
+        assertThat(store.snapshot?.topStations?.limit).isEqualTo(10)
     }
 
     @Test
     fun `a clock that went backwards counts as stale`() = runTest {
         val dir = directory(InMemoryStore(snapshotAt(now + 1 * hour)))
 
-        assertEquals(listOf(station("saved")), dir.topStations(24).getOrThrow())
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("saved"))
         advanceUntilIdle()
 
-        assertEquals(1, network.topCalls.size)
+        assertThat(network.topCalls).hasSize(1)
     }
 
     @Test
@@ -243,11 +246,11 @@ class SnapshotRadioDirectoryTest {
         val store = InMemoryStore().apply { failWrites = true }
         val dir = directory(store)
 
-        assertEquals(listOf(station("live")), dir.topStations(24).getOrThrow())
-        assertEquals(listOf(station("live")), dir.topStations(24).getOrThrow())
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("live"))
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("live"))
 
-        assertEquals(1, network.topCalls.size)
-        assertNull(store.snapshot)
+        assertThat(network.topCalls).hasSize(1)
+        assertThat(store.snapshot).isNull()
     }
 
     @Test
@@ -261,10 +264,10 @@ class SnapshotRadioDirectoryTest {
             dir.getStations(listOf("a"))
         }
 
-        assertEquals(2, network.searches)
-        assertEquals(2, network.genreBrowses)
-        assertEquals(2, network.lookups)
-        assertEquals(0, store.writes)
+        assertThat(network.searches).isEqualTo(2)
+        assertThat(network.genreBrowses).isEqualTo(2)
+        assertThat(network.lookups).isEqualTo(2)
+        assertThat(store.writes).isEqualTo(0)
     }
 
     @Test
@@ -273,12 +276,12 @@ class SnapshotRadioDirectoryTest {
         val dir =
             directory(FileDiscoverySnapshotStore(file, ioDispatcher = UnconfinedTestDispatcher(testScheduler)))
 
-        assertEquals(listOf(station("live")), dir.topStations(24).getOrThrow())
+        assertThat(dir.topStations(24).getOrThrow()).containsExactly(station("live"))
 
-        assertEquals(listOf(24 to false), network.topCalls)
+        assertThat(network.topCalls).containsExactly(24 to false)
         // ...and replaced by a good one.
         val reread = FileDiscoverySnapshotStore(file, UnconfinedTestDispatcher(testScheduler)).read()
-        assertEquals(listOf(station("live")), reread?.topStations?.stations)
+        assertThat(reread?.topStations?.stations).isNotNull().containsExactly(station("live"))
     }
 
     @Test
@@ -291,9 +294,9 @@ class SnapshotRadioDirectoryTest {
         val coldStart = directory(FileDiscoverySnapshotStore(file, io))
         network.top = Result.failure(IOException("offline"))
 
-        assertEquals(listOf(station("live")), coldStart.topStations(24).getOrThrow())
+        assertThat(coldStart.topStations(24).getOrThrow()).containsExactly(station("live"))
         runCurrent()
-        assertEquals(1, network.topCalls.size)
+        assertThat(network.topCalls).hasSize(1)
     }
 
     private companion object {

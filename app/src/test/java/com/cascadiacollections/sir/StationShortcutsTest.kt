@@ -1,9 +1,13 @@
 package com.cascadiacollections.sir
 
 import android.content.pm.ShortcutManager
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.containsOnly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isLessThanOrEqualTo
 import com.cascadiacollections.sir.core.model.Station
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -30,7 +34,7 @@ class StationShortcutsTest {
 
         StationShortcuts.update(context, listOf(station("a"), station("b")))
 
-        assertEquals(setOf("station-a", "station-b"), dynamicShortcutIds().toSet())
+        assertThat(dynamicShortcutIds().toSet()).containsOnly("station-a", "station-b")
     }
 
     @Test
@@ -39,7 +43,7 @@ class StationShortcutsTest {
 
         StationShortcuts.update(context, listOf(station("a"), Station(id = "b", name = "No URL")))
 
-        assertEquals(listOf("station-a"), dynamicShortcutIds())
+        assertThat(dynamicShortcutIds()).containsExactly("station-a")
     }
 
     @Test
@@ -49,7 +53,7 @@ class StationShortcutsTest {
 
         StationShortcuts.update(context, listOf(station("c")))
 
-        assertEquals(listOf("station-c"), dynamicShortcutIds())
+        assertThat(dynamicShortcutIds()).containsExactly("station-c")
     }
 
     @Test
@@ -59,7 +63,7 @@ class StationShortcutsTest {
 
         StationShortcuts.update(context, emptyList())
 
-        assertTrue(dynamicShortcutIds().isEmpty())
+        assertThat(dynamicShortcutIds()).isEmpty()
     }
 
     @Test
@@ -70,7 +74,7 @@ class StationShortcutsTest {
         StationShortcuts.update(context, manyStations)
 
         val maxCount = context.getSystemService(ShortcutManager::class.java).maxShortcutCountPerActivity
-        assertTrue(dynamicShortcutIds().size <= maxCount)
+        assertThat(dynamicShortcutIds().size).isLessThanOrEqualTo(maxCount)
     }
 
     @Test
@@ -78,12 +82,12 @@ class StationShortcutsTest {
         val context = RuntimeEnvironment.getApplication()
         val manager = context.getSystemService(ShortcutManager::class.java)
         StationShortcuts.update(context, listOf(station("a")))
-        assertEquals(listOf("station-a"), dynamicShortcutIds())
+        assertThat(dynamicShortcutIds()).containsExactly("station-a")
 
         shadowOf(manager).setMaxShortcutCountPerActivity(0)
         StationShortcuts.update(context, listOf(station("b")))
 
-        assertTrue(dynamicShortcutIds().isEmpty())
+        assertThat(dynamicShortcutIds()).isEmpty()
     }
 
     @Test
@@ -95,7 +99,7 @@ class StationShortcutsTest {
 
         val manager = context.getSystemService(ShortcutManager::class.java)
         val shortcut = manager.dynamicShortcuts.single()
-        assertEquals(reservedId, shortcut.intent?.data?.lastPathSegment)
+        assertThat(shortcut.intent?.data?.lastPathSegment).isEqualTo(reservedId)
     }
 
     @Test
@@ -107,7 +111,7 @@ class StationShortcutsTest {
             listOf(station("a"), station(id = "b", name = "   "))
         )
 
-        assertEquals(listOf("station-a"), dynamicShortcutIds())
+        assertThat(dynamicShortcutIds()).containsExactly("station-a")
     }
 
     @Test
@@ -118,9 +122,9 @@ class StationShortcutsTest {
         StationShortcuts.update(context, listOf(station("a"), station("b"), station("c")))
 
         val ranks = manager.dynamicShortcuts.associate { it.id to it.rank }
-        assertEquals(0, ranks.getValue("station-a"))
-        assertEquals(1, ranks.getValue("station-b"))
-        assertEquals(2, ranks.getValue("station-c"))
+        assertThat(ranks.getValue("station-a")).isEqualTo(0)
+        assertThat(ranks.getValue("station-b")).isEqualTo(1)
+        assertThat(ranks.getValue("station-c")).isEqualTo(2)
     }
 
     @Test
@@ -132,12 +136,8 @@ class StationShortcutsTest {
         StationShortcuts.update(context, (1..10).map { station("s$it") })
 
         // 5 slots, 3 taken by "Play", "What's playing?" and "Favorite this station".
-        assertEquals(
-            listOf("station-s1", "station-s2"),
-            manager.dynamicShortcuts.sortedBy {
-                it.rank
-            }.map { it.id }
-        )
+        assertThat(manager.dynamicShortcuts.sortedBy { it.rank }.map { it.id })
+            .containsExactly("station-s1", "station-s2")
     }
 
     @Test
@@ -148,14 +148,14 @@ class StationShortcutsTest {
 
         StationShortcuts.update(context, listOf(station("a")))
 
-        assertTrue(dynamicShortcutIds().isEmpty())
+        assertThat(dynamicShortcutIds()).isEmpty()
     }
 
     @Test
     fun `dynamic capacity never goes negative`() {
-        assertEquals(0, StationShortcuts.dynamicCapacity(0))
-        assertEquals(0, StationShortcuts.dynamicCapacity(2))
-        assertEquals(1, StationShortcuts.dynamicCapacity(4))
-        assertEquals(2, StationShortcuts.dynamicCapacity(5))
+        assertThat(StationShortcuts.dynamicCapacity(0)).isEqualTo(0)
+        assertThat(StationShortcuts.dynamicCapacity(2)).isEqualTo(0)
+        assertThat(StationShortcuts.dynamicCapacity(4)).isEqualTo(1)
+        assertThat(StationShortcuts.dynamicCapacity(5)).isEqualTo(2)
     }
 }

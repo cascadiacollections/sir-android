@@ -1,7 +1,8 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import org.junit.Test
 
 class AudioRoutePolicyTest {
@@ -9,36 +10,36 @@ class AudioRoutePolicyTest {
     @Test
     fun `noisy while playing pauses`() {
         val policy = AudioRoutePolicy()
-        assertTrue(policy.onBecomingNoisy(isPlaying = true))
-        assertTrue(policy.pausedByRouteLoss)
+        assertThat(policy.onBecomingNoisy(isPlaying = true)).isTrue()
+        assertThat(policy.pausedByRouteLoss).isTrue()
     }
 
     @Test
     fun `noisy while already paused does nothing`() {
         val policy = AudioRoutePolicy()
-        assertFalse(policy.onBecomingNoisy(isPlaying = false))
-        assertFalse(policy.pausedByRouteLoss)
+        assertThat(policy.onBecomingNoisy(isPlaying = false)).isFalse()
+        assertThat(policy.pausedByRouteLoss).isFalse()
     }
 
     @Test
     fun `route restored resumes only what we paused`() {
         val policy = AudioRoutePolicy()
         policy.onBecomingNoisy(isPlaying = true)
-        assertTrue(policy.onRouteRestored())
-        assertFalse(policy.pausedByRouteLoss)
+        assertThat(policy.onRouteRestored()).isTrue()
+        assertThat(policy.pausedByRouteLoss).isFalse()
     }
 
     @Test
     fun `route restored without a route loss does not resume`() {
-        assertFalse(AudioRoutePolicy().onRouteRestored())
+        assertThat(AudioRoutePolicy().onRouteRestored()).isFalse()
     }
 
     @Test
     fun `route restored twice only resumes once`() {
         val policy = AudioRoutePolicy()
         policy.onBecomingNoisy(isPlaying = true)
-        assertTrue(policy.onRouteRestored())
-        assertFalse(policy.onRouteRestored())
+        assertThat(policy.onRouteRestored()).isTrue()
+        assertThat(policy.onRouteRestored()).isFalse()
     }
 
     @Test
@@ -46,7 +47,7 @@ class AudioRoutePolicyTest {
         val policy = AudioRoutePolicy()
         policy.onBecomingNoisy(isPlaying = true)
         policy.onPlaybackStateChangedByUser()
-        assertFalse(policy.onRouteRestored())
+        assertThat(policy.onRouteRestored()).isFalse()
     }
 
     @Test
@@ -54,8 +55,8 @@ class AudioRoutePolicyTest {
         val policy = AudioRoutePolicy()
         policy.onBecomingNoisy(isPlaying = true)
         policy.onPlaybackStarted()
-        assertFalse(policy.pausedByRouteLoss)
-        assertFalse(policy.onRouteRestored())
+        assertThat(policy.pausedByRouteLoss).isFalse()
+        assertThat(policy.onRouteRestored()).isFalse()
     }
 
     /**
@@ -67,16 +68,16 @@ class AudioRoutePolicyTest {
         val policy = AudioRoutePolicy()
 
         // Headphones pulled while playing — we own this pause.
-        assertTrue(policy.onBecomingNoisy(isPlaying = true))
+        assertThat(policy.onBecomingNoisy(isPlaying = true)).isTrue()
 
         // User presses play again and listens on the speaker.
         policy.onPlaybackStarted()
 
         // User pauses on purpose. The claim is already gone, so nothing to release.
-        assertFalse(policy.pausedByRouteLoss)
+        assertThat(policy.pausedByRouteLoss).isFalse()
 
         // Headphones plugged back in hours later.
-        assertFalse(policy.onRouteRestored())
+        assertThat(policy.onRouteRestored()).isFalse()
     }
 
     @Test
@@ -86,7 +87,7 @@ class AudioRoutePolicyTest {
         policy.onPlaybackStarted()
 
         // A second disconnect is a fresh claim, not a permanently spent one.
-        assertTrue(policy.onBecomingNoisy(isPlaying = true))
-        assertTrue(policy.onRouteRestored())
+        assertThat(policy.onBecomingNoisy(isPlaying = true)).isTrue()
+        assertThat(policy.onRouteRestored()).isTrue()
     }
 }

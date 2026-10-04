@@ -1,12 +1,15 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isCloseTo
+import assertk.assertions.isEqualTo
 import com.cascadiacollections.sir.core.playback.VolumeRamp
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -30,11 +33,11 @@ class VolumeFaderTest {
         val halfway = volumes.last()
         finishRamp()
 
-        assertEquals(0f, volumes.first(), 0f)
-        assertEquals(VolumeRamp.STEPS + 1, volumes.size)
-        assertEquals(0.5f, halfway, 0.08f)
-        assertEquals(1f, volumes.last(), 0f)
-        assertEquals(volumes, volumes.sorted())
+        assertThat(volumes.first()).isEqualTo(0f)
+        assertThat(volumes).hasSize(VolumeRamp.STEPS + 1)
+        assertThat(halfway).isCloseTo(0.5f, 0.08f)
+        assertThat(volumes.last()).isEqualTo(1f)
+        assertThat(volumes).isEqualTo(volumes.sorted())
     }
 
     @Test
@@ -47,7 +50,7 @@ class VolumeFaderTest {
         fader.silence()
         finishRamp()
 
-        assertEquals(0f, volumes.last(), 0f)
+        assertThat(volumes.last()).isEqualTo(0f)
     }
 
     @Test
@@ -63,8 +66,8 @@ class VolumeFaderTest {
         finishRamp()
 
         // Exactly one full ramp after the restart, starting from the first step again.
-        assertEquals(VolumeRamp.STEPS, volumes.size - before)
-        assertEquals(VolumeRamp.levelAt(1), volumes[before], 0f)
-        assertEquals(1f, volumes.last(), 0f)
+        assertThat(volumes.size - before).isEqualTo(VolumeRamp.STEPS)
+        assertThat(volumes[before]).isEqualTo(VolumeRamp.levelAt(1))
+        assertThat(volumes.last()).isEqualTo(1f)
     }
 }

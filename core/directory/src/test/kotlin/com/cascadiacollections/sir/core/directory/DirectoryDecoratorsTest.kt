@@ -1,12 +1,18 @@
 package com.cascadiacollections.sir.core.directory
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFailure
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isSameInstanceAs
+import assertk.assertions.isSuccess
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
 import java.io.IOException
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Records every call so decorator pass-through and caching can be asserted. */
@@ -57,7 +63,7 @@ class DirectoryDecoratorsTest {
 
         repeat(3) { cache.reportClick(uuid) }
 
-        assertEquals(listOf(uuid, uuid, uuid), spy.clicks)
+        assertThat(spy.clicks).containsExactly(uuid, uuid, uuid)
     }
 
     @Test
@@ -65,8 +71,8 @@ class DirectoryDecoratorsTest {
         val spy = SpyDirectory().apply { click = Result.failure(IOException("down")) }
         val directory = CuratedFallbackDirectory(CachingRadioDirectory(spy))
 
-        assertTrue(directory.reportClick(uuid).exceptionOrNull() is IOException)
-        assertEquals(listOf(uuid), spy.clicks)
+        assertThat(directory.reportClick(uuid)).isFailure().isInstanceOf<IOException>()
+        assertThat(spy.clicks).containsExactly(uuid)
     }
 
     @Test
@@ -77,7 +83,7 @@ class DirectoryDecoratorsTest {
         directory.reportClick(uuid)
         directory.reportClick(uuid)
 
-        assertEquals(2, spy.clicks.size)
+        assertThat(spy.clicks).hasSize(2)
     }
 
     @Test
@@ -89,11 +95,11 @@ class DirectoryDecoratorsTest {
         cache.topTags()
         now = CachingRadioDirectory.DEFAULT_TAG_TTL_MILLIS
         cache.topTags()
-        assertEquals(1, spy.tagCalls)
+        assertThat(spy.tagCalls).isEqualTo(1)
 
         now += 1
         cache.topTags()
-        assertEquals(2, spy.tagCalls)
+        assertThat(spy.tagCalls).isEqualTo(2)
     }
 
     @Test
@@ -101,10 +107,10 @@ class DirectoryDecoratorsTest {
         val spy = SpyDirectory().apply { tags = Result.failure(IOException("x")) }
         val cache = CachingRadioDirectory(spy, clock = { 0L })
 
-        assertTrue(cache.topTags().isFailure)
+        assertThat(cache.topTags()).isFailure()
         spy.tags = Result.success(listOf(Tag("rock", 2)))
-        assertEquals(listOf(Tag("rock", 2)), cache.topTags().getOrThrow())
-        assertEquals(2, spy.tagCalls)
+        assertThat(cache.topTags().getOrThrow()).containsExactly(Tag("rock", 2))
+        assertThat(spy.tagCalls).isEqualTo(2)
     }
 
     @Test
@@ -116,7 +122,7 @@ class DirectoryDecoratorsTest {
         cache.invalidate()
         cache.topTags()
 
-        assertEquals(2, spy.tagCalls)
+        assertThat(spy.tagCalls).isEqualTo(2)
     }
 
     @Test
@@ -132,8 +138,8 @@ class DirectoryDecoratorsTest {
         cache.stationsByTag("jazz", 10, gb)
         cache.stationsByTag("JAZZ", 10, gb)
 
-        assertEquals(listOf(StationSearchFilters.NONE, gb), spy.searchFilters)
-        assertEquals(listOf(StationSearchFilters.NONE, gb), spy.tagFilters)
+        assertThat(spy.searchFilters).containsExactly(StationSearchFilters.NONE, gb)
+        assertThat(spy.tagFilters).containsExactly(StationSearchFilters.NONE, gb)
     }
 
     @Test
@@ -143,7 +149,7 @@ class DirectoryDecoratorsTest {
 
         spy.search("jazz", filters = filters)
 
-        assertSame(filters, spy.searchFilters.single())
+        assertThat(spy.searchFilters.single()).isSameInstanceAs(filters)
     }
 
     @Test
@@ -151,15 +157,15 @@ class DirectoryDecoratorsTest {
         val spy = SpyDirectory().apply { tags = Result.failure(IOException("offline")) }
         val directory = CuratedFallbackDirectory(spy)
 
-        assertEquals(Tag.CURATED, directory.topTags().getOrThrow())
-        assertEquals(Tag.CURATED.take(5), directory.topTags(5).getOrThrow())
+        assertThat(directory.topTags().getOrThrow()).isEqualTo(Tag.CURATED)
+        assertThat(directory.topTags(5).getOrThrow()).isEqualTo(Tag.CURATED.take(5))
     }
 
     @Test
     fun `successful tags pass through the fallback`() = runTest {
         val directory = CuratedFallbackDirectory(SpyDirectory())
 
-        assertEquals(listOf(Tag("pop", 1)), directory.topTags().getOrThrow())
+        assertThat(directory.topTags().getOrThrow()).containsExactly(Tag("pop", 1))
     }
 
     @Test
@@ -172,18 +178,10 @@ class DirectoryDecoratorsTest {
         val directory = CuratedFallbackDirectory(spy, curated = curated)
         val gb = StationSearchFilters(countryCode = "GB")
 
-        assertEquals(
-            listOf("a"),
-            directory.search(StationQuery("jazz"), gb).getOrThrow().map {
-                it.id
-            }
-        )
-        assertEquals(
-            listOf("a"),
-            directory.stationsByTag("jazz", 10, gb).getOrThrow().map {
-                it.id
-            }
-        )
+        assertThat(directory.search(StationQuery("jazz"), gb).getOrThrow().map { it.id })
+            .containsExactly("a")
+        assertThat(directory.stationsByTag("jazz", 10, gb).getOrThrow().map { it.id })
+            .containsExactly("a")
     }
 
     @Test
@@ -201,15 +199,12 @@ class DirectoryDecoratorsTest {
         }
         val filters = StationSearchFilters(bitrateMinKbps = 128)
 
-        assertEquals(
-            listOf("hi"),
-            plain.search(StationQuery("x"), filters).getOrThrow().map {
-                it.id
-            }
-        )
-        assertEquals(listOf("hi"), plain.stationsByTag("x", 10, filters).getOrThrow().map { it.id })
-        assertTrue(plain.reportClick(uuid).isSuccess)
-        assertTrue(plain.topTags().getOrThrow().isEmpty())
+        assertThat(plain.search(StationQuery("x"), filters).getOrThrow().map { it.id })
+            .containsExactly("hi")
+        assertThat(plain.stationsByTag("x", 10, filters).getOrThrow().map { it.id })
+            .containsExactly("hi")
+        assertThat(plain.reportClick(uuid)).isSuccess()
+        assertThat(plain.topTags().getOrThrow()).isEmpty()
     }
 
     @Test
@@ -221,15 +216,15 @@ class DirectoryDecoratorsTest {
 
         cache.topStations(24)
         cache.topStations(24)
-        assertEquals(1, spy.topCalls)
+        assertThat(spy.topCalls).isEqualTo(1)
 
         spy.stations = Result.success(new)
-        assertEquals(new, cache.topStations(24, forceRefresh = true).getOrThrow())
-        assertEquals(2, spy.topCalls)
+        assertThat(cache.topStations(24, forceRefresh = true).getOrThrow()).isEqualTo(new)
+        assertThat(spy.topCalls).isEqualTo(2)
 
         // The refreshed answer is what the next ordinary call is served from.
-        assertEquals(new, cache.topStations(24).getOrThrow())
-        assertEquals(2, spy.topCalls)
+        assertThat(cache.topStations(24).getOrThrow()).isEqualTo(new)
+        assertThat(spy.topCalls).isEqualTo(2)
     }
 
     @Test
@@ -240,8 +235,8 @@ class DirectoryDecoratorsTest {
         cache.topStations(24)
 
         spy.stations = Result.failure(IOException("offline"))
-        assertTrue(cache.topStations(24, forceRefresh = true).isFailure)
-        assertEquals(old, cache.topStations(24).getOrThrow())
+        assertThat(cache.topStations(24, forceRefresh = true)).isFailure()
+        assertThat(cache.topStations(24).getOrThrow()).isEqualTo(old)
     }
 
     @Test
@@ -253,7 +248,7 @@ class DirectoryDecoratorsTest {
         cache.topTags(10)
         cache.topTags(10, forceRefresh = true)
 
-        assertEquals(2, spy.tagCalls)
+        assertThat(spy.tagCalls).isEqualTo(2)
     }
 
     @Test
@@ -265,11 +260,11 @@ class DirectoryDecoratorsTest {
         val curated = listOf(Station(id = "c", name = "Curated", url = "https://c"))
         val directory = CuratedFallbackDirectory(CachingRadioDirectory(spy), curated = curated)
 
-        assertEquals(curated, directory.topStations(24).getOrThrow())
-        assertEquals(curated, directory.topStations(24, forceRefresh = false).getOrThrow())
-        assertTrue(directory.topStations(24, forceRefresh = true).exceptionOrNull() is IOException)
-        assertTrue(directory.topTags(10).isSuccess)
-        assertTrue(directory.topTags(10, forceRefresh = true).exceptionOrNull() is IOException)
+        assertThat(directory.topStations(24).getOrThrow()).isEqualTo(curated)
+        assertThat(directory.topStations(24, forceRefresh = false).getOrThrow()).isEqualTo(curated)
+        assertThat(directory.topStations(24, forceRefresh = true)).isFailure().isInstanceOf<IOException>()
+        assertThat(directory.topTags(10)).isSuccess()
+        assertThat(directory.topTags(10, forceRefresh = true)).isFailure().isInstanceOf<IOException>()
     }
 
     @Test
@@ -286,7 +281,7 @@ class DirectoryDecoratorsTest {
         plain.topStations(5, forceRefresh = true)
         plain.topTags(5, forceRefresh = true)
 
-        assertEquals(1, spy.topCalls)
-        assertEquals(1, spy.tagCalls)
+        assertThat(spy.topCalls).isEqualTo(1)
+        assertThat(spy.tagCalls).isEqualTo(1)
     }
 }

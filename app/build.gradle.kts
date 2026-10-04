@@ -274,6 +274,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
 
     testImplementation(libs.junit)
+    testImplementation(libs.assertk)
     // FakeImageLoaderEngine, to deterministically test StationRow's onError fallback
     testImplementation(libs.coil.test)
     testImplementation(libs.robolectric)
@@ -285,6 +286,7 @@ dependencies {
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.compose.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.assertk)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

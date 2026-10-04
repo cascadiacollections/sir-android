@@ -1,12 +1,15 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.persistence.HeardTrack
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import com.cascadiacollections.sir.core.persistence.TrackHistoryRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,14 +40,14 @@ class TrackHistoryRepositoryTest {
         repo.record(heard("B", 3))
 
         val tracks = repo.tracks.first()
-        assertEquals(listOf("B", "A"), tracks.map { it.title })
-        assertEquals(3L, tracks.first().timestampMillis)
+        assertThat(tracks.map { it.title }).containsExactly("B", "A")
+        assertThat(tracks.first().timestampMillis).isEqualTo(3L)
     }
 
     @Test
     fun `history survives a new repository instance`() = runBlocking {
         repo().record(heard("A", 1))
-        assertEquals(listOf("A"), repo().tracks.first().map { it.title })
+        assertThat(repo().tracks.first().map { it.title }).containsExactly("A")
     }
 
     @Test
@@ -52,7 +55,7 @@ class TrackHistoryRepositoryTest {
         val repo = repo()
         repo.record(heard("A", 1))
         repo.clear()
-        assertTrue(repo.tracks.first().isEmpty())
+        assertThat(repo.tracks.first()).isEmpty()
     }
 
     @Test
@@ -62,7 +65,7 @@ class TrackHistoryRepositoryTest {
         repo().record(heard("A", 1))
 
         // Both stores are live on the same Application without contending for one file.
-        assertTrue(settings.recentStations.first().isEmpty())
-        assertTrue(app.filesDir.resolve("datastore/track_history.preferences_pb").exists())
+        assertThat(settings.recentStations.first()).isEmpty()
+        assertThat(app.filesDir.resolve("datastore/track_history.preferences_pb").exists()).isTrue()
     }
 }

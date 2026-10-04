@@ -1,8 +1,9 @@
 package com.cascadiacollections.sir.core.playback
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import org.junit.Test
 
 class StallCeilingTest {
@@ -11,7 +12,7 @@ class StallCeilingTest {
     fun `a token is current immediately after arming`() {
         val ceiling = StallCeiling()
 
-        assertTrue(ceiling.isCurrent(ceiling.arm()))
+        assertThat(ceiling.isCurrent(ceiling.arm())).isTrue()
     }
 
     @Test
@@ -21,7 +22,7 @@ class StallCeilingTest {
 
         ceiling.clear()
 
-        assertFalse(ceiling.isCurrent(token))
+        assertThat(ceiling.isCurrent(token)).isFalse()
     }
 
     @Test
@@ -31,8 +32,8 @@ class StallCeilingTest {
 
         val second = ceiling.arm()
 
-        assertFalse(ceiling.isCurrent(first))
-        assertTrue(ceiling.isCurrent(second))
+        assertThat(ceiling.isCurrent(first)).isFalse()
+        assertThat(ceiling.isCurrent(second)).isTrue()
     }
 
     @Test
@@ -42,16 +43,16 @@ class StallCeilingTest {
         ceiling.clear()
         val token = ceiling.arm()
 
-        assertTrue(ceiling.isCurrent(token))
+        assertThat(ceiling.isCurrent(token)).isTrue()
     }
 
     @Test
     fun `the default timeout is ShoutKit's 30 seconds`() {
-        assertEquals(30_000L, StallCeiling().timeoutDelayMs)
+        assertThat(StallCeiling().timeoutDelayMs).isEqualTo(30_000L)
     }
 
     @Test
     fun `a custom timeout is honored`() {
-        assertEquals(5_000L, StallCeiling(timeoutMs = 5_000L).timeoutDelayMs)
+        assertThat(StallCeiling(timeoutMs = 5_000L).timeoutDelayMs).isEqualTo(5_000L)
     }
 }

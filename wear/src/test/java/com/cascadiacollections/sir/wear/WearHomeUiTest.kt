@@ -7,9 +7,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.model.Station
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -69,7 +71,7 @@ class WearHomeUiTest {
         setContent(onPlayStation = { played += it })
         scrollTo("KEXP")
         composeRule.onNodeWithText("KEXP").performClick()
-        assertEquals(listOf(kexp), played)
+        assertThat(played).containsExactly(kexp)
     }
 
     @Test
@@ -82,7 +84,7 @@ class WearHomeUiTest {
     @Test
     fun `stop is offered only while playing`() {
         setContent(isPlaying = false)
-        assertEquals(0, composeRule.onAllNodes(hasText("Stop")).fetchSemanticsNodes().size)
+        assertThat(composeRule.onAllNodes(hasText("Stop")).fetchSemanticsNodes()).isEmpty()
     }
 
     @Test
@@ -91,6 +93,6 @@ class WearHomeUiTest {
         setContent(isPlaying = true, onStop = { stopped = true })
         scrollTo("Stop")
         composeRule.onNodeWithText("Stop").performClick()
-        assertTrue(stopped)
+        assertThat(stopped).isTrue()
     }
 }

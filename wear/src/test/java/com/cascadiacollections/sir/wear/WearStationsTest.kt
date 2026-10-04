@@ -1,11 +1,13 @@
 package com.cascadiacollections.sir.wear
 
 import androidx.media3.common.MimeTypes
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.endsWith
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.WatchStationPayload
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,31 +30,31 @@ class WearStationsTest {
 
         val item = WearStations.mediaItem(station, "Live stream")
 
-        assertEquals("https://cdn.example.com/a", item.localConfiguration!!.uri.toString())
-        assertEquals("a", item.mediaId)
-        assertEquals("Station a", item.mediaMetadata.title.toString())
-        assertEquals("Live stream", item.mediaMetadata.artist.toString())
-        assertEquals("https://example.com/a.png", item.mediaMetadata.artworkUri.toString())
-        assertNull(item.localConfiguration!!.mimeType)
+        assertThat(item.localConfiguration!!.uri.toString()).isEqualTo("https://cdn.example.com/a")
+        assertThat(item.mediaId).isEqualTo("a")
+        assertThat(item.mediaMetadata.title.toString()).isEqualTo("Station a")
+        assertThat(item.mediaMetadata.artist.toString()).isEqualTo("Live stream")
+        assertThat(item.mediaMetadata.artworkUri.toString()).isEqualTo("https://example.com/a.png")
+        assertThat(item.localConfiguration!!.mimeType).isNull()
     }
 
     @Test
     fun `HLS stations get the HLS MIME type`() {
         val item = WearStations.mediaItem(station("h").copy(hls = 1), "Live stream")
-        assertEquals(MimeTypes.APPLICATION_M3U8, item.localConfiguration!!.mimeType)
+        assertThat(item.localConfiguration!!.mimeType).isEqualTo(MimeTypes.APPLICATION_M3U8)
     }
 
     @Test
     fun `station without an id is keyed by its stream URL`() {
         val item = WearStations.mediaItem(Station(name = "Custom", url = "https://custom.example/s"), "Live stream")
-        assertEquals("https://custom.example/s", item.mediaId)
+        assertThat(item.mediaId).isEqualTo("https://custom.example/s")
     }
 
     @Test
     fun `default station plays the SIR stream`() {
         val item = WearStations.mediaItem(default, "Live stream")
-        assertEquals(WearStations.DEFAULT_STATION_ID, item.mediaId)
-        assertEquals("https://sir.example/stream", item.localConfiguration!!.uri.toString())
+        assertThat(item.mediaId).isEqualTo(WearStations.DEFAULT_STATION_ID)
+        assertThat(item.localConfiguration!!.uri.toString()).isEqualTo("https://sir.example/stream")
     }
 
     @Test
@@ -64,21 +66,21 @@ class WearStationsTest {
 
         val ids = WearStations.list(default, payload).map { it.id }
 
-        assertEquals(listOf("sir", "b", "a"), ids)
+        assertThat(ids).containsExactly("sir", "b", "a")
     }
 
     @Test
     fun `list with nothing synced is just the SIR stream`() {
-        assertEquals(listOf(default), WearStations.list(default, WatchStationPayload()))
+        assertThat(WearStations.list(default, WatchStationPayload())).containsExactly(default)
     }
 
     @Test
     fun `abbreviate keeps short names and shortens long ones`() {
-        assertEquals("SIR", WearStations.abbreviate("SIR"))
-        assertEquals("KEXP", WearStations.abbreviate("KEXP 90.3 FM Seattle"))
+        assertThat(WearStations.abbreviate("SIR")).isEqualTo("SIR")
+        assertThat(WearStations.abbreviate("KEXP 90.3 FM Seattle")).isEqualTo("KEXP")
         val long = WearStations.abbreviate("Radiodiffusion")
-        assertEquals(WearStations.SHORT_TEXT_MAX, long.length)
-        assertTrue(long.endsWith("…"))
+        assertThat(long.length).isEqualTo(WearStations.SHORT_TEXT_MAX)
+        assertThat(long).endsWith("…")
     }
 
     @Test
@@ -88,7 +90,7 @@ class WearStationsTest {
             org.robolectric.RuntimeEnvironment.getApplication(),
             station
         ).getStringExtra(WearPlaybackService.EXTRA_STATION)!!
-        assertEquals(station, WearPlaybackService.decodeStation(encoded))
-        assertNull(WearPlaybackService.decodeStation("garbage"))
+        assertThat(WearPlaybackService.decodeStation(encoded)).isEqualTo(station)
+        assertThat(WearPlaybackService.decodeStation("garbage")).isNull()
     }
 }

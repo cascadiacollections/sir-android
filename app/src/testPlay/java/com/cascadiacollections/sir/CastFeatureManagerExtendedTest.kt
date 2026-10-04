@@ -1,5 +1,8 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import com.google.android.gms.tasks.Task as GmsTask
 import com.google.android.play.core.splitinstall.SplitInstallManager
 import com.google.android.play.core.splitinstall.SplitInstallManagerFactory
@@ -14,8 +17,6 @@ import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkStatic
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -79,7 +80,7 @@ class CastFeatureManagerExtendedTest {
 
         // sessionId defaults to 0 in CastFeatureManager; the addOnSuccessListener
         // callback is not invoked in this test, so we match on the default value.
-        assertTrue(listenerSlot.isCaptured)
+        assertThat(listenerSlot.isCaptured).isTrue()
         val state = mockState(
             sessionId = 0,
             status = SplitInstallSessionStatus.DOWNLOADING,
@@ -87,26 +88,26 @@ class CastFeatureManagerExtendedTest {
             totalBytes = 100
         )
         listenerSlot.captured.onStateUpdate(state)
-        assertEquals(CastModuleState.Installing(0.5f), manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installing(0.5f))
     }
 
     @Test
     fun `listener INSTALLED state transitions to Installed`() {
         val manager = createManager()
-        assertTrue(listenerSlot.isCaptured)
+        assertThat(listenerSlot.isCaptured).isTrue()
 
         val state = mockState(
             sessionId = 0,
             status = SplitInstallSessionStatus.INSTALLED
         )
         listenerSlot.captured.onStateUpdate(state)
-        assertEquals(CastModuleState.Installed, manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installed)
     }
 
     @Test
     fun `listener FAILED state transitions to Failed with error code`() {
         val manager = createManager()
-        assertTrue(listenerSlot.isCaptured)
+        assertThat(listenerSlot.isCaptured).isTrue()
 
         val state = mockState(
             sessionId = 0,
@@ -114,33 +115,33 @@ class CastFeatureManagerExtendedTest {
             errorCode = 42
         )
         listenerSlot.captured.onStateUpdate(state)
-        assertEquals(CastModuleState.Failed(42), manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Failed(42))
     }
 
     @Test
     fun `listener CANCELED state transitions to NotInstalled`() {
         val manager = createManager()
-        assertTrue(listenerSlot.isCaptured)
+        assertThat(listenerSlot.isCaptured).isTrue()
 
         val state = mockState(
             sessionId = 0,
             status = SplitInstallSessionStatus.CANCELED
         )
         listenerSlot.captured.onStateUpdate(state)
-        assertEquals(CastModuleState.NotInstalled, manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.NotInstalled)
     }
 
     @Test
     fun `listener INSTALLING state sets progress to 1`() {
         val manager = createManager()
-        assertTrue(listenerSlot.isCaptured)
+        assertThat(listenerSlot.isCaptured).isTrue()
 
         val state = mockState(
             sessionId = 0,
             status = SplitInstallSessionStatus.INSTALLING
         )
         listenerSlot.captured.onStateUpdate(state)
-        assertEquals(CastModuleState.Installing(1f), manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installing(1f))
     }
 
     @Test
@@ -159,13 +160,13 @@ class CastFeatureManagerExtendedTest {
         listenerSlot.captured.onStateUpdate(state)
 
         // State should still be Installing(0f), not Installed
-        assertEquals(CastModuleState.Installing(0f), manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installing(0f))
     }
 
     @Test
     fun `listener PENDING state with 0 total bytes sets 0 progress`() {
         val manager = createManager()
-        assertTrue(listenerSlot.isCaptured)
+        assertThat(listenerSlot.isCaptured).isTrue()
 
         val state = mockState(
             sessionId = 0,
@@ -174,6 +175,6 @@ class CastFeatureManagerExtendedTest {
             totalBytes = 0
         )
         listenerSlot.captured.onStateUpdate(state)
-        assertEquals(CastModuleState.Installing(0f), manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Installing(0f))
     }
 }

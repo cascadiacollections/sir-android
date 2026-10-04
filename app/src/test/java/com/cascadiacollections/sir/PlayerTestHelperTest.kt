@@ -1,10 +1,11 @@
 package com.cascadiacollections.sir
 
 import androidx.media3.common.Player
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
 import org.junit.Test
 
 /**
@@ -15,10 +16,10 @@ class PlayerTestHelperTest {
     @Test
     fun `createMockPlayer defaults are correct`() {
         val player = PlayerTestHelper.createMockPlayer()
-        assertFalse(player.isPlaying)
-        assertFalse(player.playWhenReady)
-        assertEquals(Player.STATE_IDLE, player.playbackState)
-        assertNotNull(player.mediaMetadata)
+        assertThat(player.isPlaying).isFalse()
+        assertThat(player.playWhenReady).isFalse()
+        assertThat(player.playbackState).isEqualTo(Player.STATE_IDLE)
+        assertThat(player.mediaMetadata).isNotNull()
     }
 
     @Test
@@ -28,9 +29,9 @@ class PlayerTestHelperTest {
             playWhenReady = true,
             playbackState = Player.STATE_READY
         )
-        assertTrue(player.isPlaying)
-        assertTrue(player.playWhenReady)
-        assertEquals(Player.STATE_READY, player.playbackState)
+        assertThat(player.isPlaying).isTrue()
+        assertThat(player.playWhenReady).isTrue()
+        assertThat(player.playbackState).isEqualTo(Player.STATE_READY)
     }
 
     @Test
@@ -38,7 +39,7 @@ class PlayerTestHelperTest {
         val player = PlayerTestHelper.createMockPlayer(
             playbackState = Player.STATE_BUFFERING
         )
-        assertEquals(Player.STATE_BUFFERING, player.playbackState)
+        assertThat(player.playbackState).isEqualTo(Player.STATE_BUFFERING)
     }
 
     @Test
@@ -46,6 +47,6 @@ class PlayerTestHelperTest {
         val player = PlayerTestHelper.createMockPlayer(
             playbackState = Player.STATE_ENDED
         )
-        assertEquals(Player.STATE_ENDED, player.playbackState)
+        assertThat(player.playbackState).isEqualTo(Player.STATE_ENDED)
     }
 }

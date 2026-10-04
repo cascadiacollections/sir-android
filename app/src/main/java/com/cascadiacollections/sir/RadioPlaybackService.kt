@@ -201,6 +201,7 @@ class RadioPlaybackService : MediaLibraryService() {
     private val albumArt by lazy {
         AlbumArtResolver(serviceScope, settingsRepository.fetchAlbumArtwork, AppAlbumArt::lookup) {
             publishResolvedMetadata()
+            recordHeardArtwork()
         }
     }
 
@@ -946,14 +947,35 @@ class RadioPlaybackService : MediaLibraryService() {
      * `HeardTracks.record`.
      */
     private fun recordHeardTrack(previous: StreamMetadata, next: StreamMetadata, stationName: String) {
-        val title = next.trackTitle ?: return
-        if (title == previous.trackTitle && next.artist == previous.artist) return
+        // As in ShoutKit, an artist alone is enough; the row reads "Unknown Track".
+        if (next.trackTitle == null && next.artist == null) return
+        if (next.trackTitle == previous.trackTitle && next.artist == previous.artist) return
         val track = HeardTrack(
-            title = title,
+            title = next.trackTitle.orEmpty(),
             artist = next.artist,
             stationId = currentStationId,
             stationName = stationName,
             timestampMillis = System.currentTimeMillis(),
+        )
+        serviceScope.launch { trackHistoryRepository.record(track) }
+    }
+
+    /**
+     * Attaches cover art to the Recently Heard entry for the current track. The lookup
+     * finishes after the track was recorded, so this re-records it, and
+     * `HeardTracks.record` merges that consecutive repeat into the existing row.
+     */
+    private fun recordHeardArtwork() {
+        val artworkUrl = albumArt.current?.artworkUrl ?: return
+        val metadata = streamMetadata
+        if (metadata.trackTitle == null && metadata.artist == null) return
+        val track = HeardTrack(
+            title = metadata.trackTitle.orEmpty(),
+            artist = metadata.artist,
+            stationId = currentStationId,
+            stationName = currentStationTitle ?: getString(R.string.station_name),
+            timestampMillis = System.currentTimeMillis(),
+            artworkUrl = artworkUrl,
         )
         serviceScope.launch { trackHistoryRepository.record(track) }
     }

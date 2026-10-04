@@ -11,8 +11,11 @@ import com.cascadiacollections.sir.core.model.Station
  */
 object StationCollections {
 
-    /** How many recently played stations are retained. */
-    const val RECENTS_LIMIT: Int = 20
+    /** How many recently played stations are retained — ShoutKit's `recentsLimit`. */
+    const val RECENTS_LIMIT: Int = 25
+
+    /** How many recents the Library lists — ShoutKit's `recentDisplayLimit`. */
+    const val RECENT_LIBRARY_LIMIT: Int = 15
 
     /** How many recent stations the Browse tab's Recently Played shelf shows (ShoutKit's five). */
     const val RECENT_SHELF_LIMIT: Int = 5
@@ -107,6 +110,10 @@ object StationCollections {
         if (!station.isPlayable) return current
         return (listOf(station) + current.filterNot { it.id == station.id }).take(limit)
     }
+
+    /** Removes one station from the recently played list. */
+    fun removeRecent(current: List<Station>, stationId: String): List<Station> =
+        current.filterNot { it.id == stationId }
 
     /**
      * The Recently Played shelf: the newest [limit] recents minus the ones the user hid.

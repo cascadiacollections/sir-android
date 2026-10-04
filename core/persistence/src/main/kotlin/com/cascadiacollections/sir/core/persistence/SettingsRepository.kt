@@ -423,6 +423,15 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
         context.dataStore.edit { preferences -> preferences.remove(selectedStationKey) }
     }
 
+    /** Removes one station from the recently played list (and its shelf-hidden flag). */
+    suspend fun removeRecentStation(stationId: String) {
+        context.dataStore.edit { preferences ->
+            val recents = StationCollections.removeRecent(StationCodec.decode(preferences[recentStationsKey]), stationId)
+            preferences[recentStationsKey] = StationCodec.encode(recents)
+            preferences.putHiddenRecentIds(preferences[hiddenRecentStationIdsKey].orEmpty() - stationId)
+        }
+    }
+
     /**
      * Clears the recently played list, e.g. from the privacy settings.
      */

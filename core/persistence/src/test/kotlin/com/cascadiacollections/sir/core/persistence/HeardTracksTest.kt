@@ -70,8 +70,24 @@ class HeardTracksTest {
     }
 
     @Test
-    fun `blank titles are not recorded`() {
-        assertTrue(HeardTracks.record(emptyList(), track("  ")).isEmpty())
+    fun `a track with neither title nor artist is not recorded`() {
+        assertTrue(HeardTracks.record(emptyList(), track("  ", artist = null)).isEmpty())
+        assertTrue(HeardTracks.record(emptyList(), track("", artist = " ")).isEmpty())
+    }
+
+    @Test
+    fun `an artist alone is recorded, as in ShoutKit`() {
+        val recorded = HeardTracks.record(emptyList(), track("", artist = "Band")).single()
+        assertEquals("Band", recorded.copyText)
+    }
+
+    @Test
+    fun `a consecutive repeat adopts newly found artwork and keeps it`() {
+        val first = HeardTracks.record(emptyList(), track("A", at = 1))
+        val withArt = HeardTracks.record(first, track("A", at = 2).copy(artworkUrl = "https://art"))
+        assertEquals(listOf("https://art"), withArt.map { it.artworkUrl })
+        val again = HeardTracks.record(withArt, track("A", at = 3))
+        assertEquals(listOf("https://art"), again.map { it.artworkUrl })
     }
 
     @Test

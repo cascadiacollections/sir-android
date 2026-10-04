@@ -124,7 +124,8 @@ fun RecentlyHeardScreen(
                                 )
                             }
                         },
-                        headlineContent = { Text(track.title) },
+                        leadingContent = { TrackArtwork(track.artworkUrl) },
+                        headlineContent = { Text(track.title.ifBlank { stringResource(R.string.unknown_track) }) },
                         supportingContent = {
                             Text(
                                 listOfNotNull(

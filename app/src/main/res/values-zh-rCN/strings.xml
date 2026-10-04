@@ -84,6 +84,8 @@
     <string name="play_station">播放电台</string>
     <string name="play_default_stream">返回 SIR 直播流</string>
     <string name="clear_recent_stations">清除播放记录</string>
+    <string name="remove_from_recents">从最近播放中移除</string>
+    <string name="unknown_track">未知曲目</string>
     <string name="clear_search">清除搜索内容</string>
     <string name="save_station">保存电台</string>
     <string name="remove_station">移除电台</string>

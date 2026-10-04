@@ -12,14 +12,19 @@ import kotlinx.serialization.json.Json
  */
 @Serializable
 data class HeardTrack(
-    val title: String,
+    /** Blank when the stream named only the artist; shown as "Unknown Track", as in ShoutKit. */
+    val title: String = "",
     val artist: String? = null,
     val stationId: String? = null,
     val stationName: String = "",
     val timestampMillis: Long = 0L,
+    /** Cover art found for the track (iTunes Search), when the lookup is enabled and found some. */
+    val artworkUrl: String? = null,
 ) {
-    /** "Title — Artist", or just the title when the artist is unknown. */
-    val copyText: String get() = listOfNotNull(title, artist).joinToString(" — ")
+    /** "Title — Artist", or whichever of the two is known. */
+    val copyText: String
+        get() = listOfNotNull(title.takeIf { it.isNotBlank() }, artist?.takeIf { it.isNotBlank() })
+            .joinToString(" — ")
 }
 
 /**
@@ -48,6 +53,9 @@ object HeardTracks {
      *
      * The same track heard again after something else played is a new entry: that is a
      * genuine second play, and it is what Top Tracks counts.
+     *
+     * Like ShoutKit, a track needs a title *or* an artist, and a merge adopts newly found
+     * artwork — cover art is looked up after the track starts, so it arrives as a repeat.
      */
     fun record(
         current: List<HeardTrack>,
@@ -55,7 +63,7 @@ object HeardTracks {
         limit: Int = LIMIT,
     ): List<HeardTrack> {
         require(limit > 0) { "limit must be positive" }
-        if (track.title.isBlank()) return current
+        if (track.title.isBlank() && track.artist.isNullOrBlank()) return current
         val front = current.firstOrNull()
         if (front != null &&
             front.stationId == track.stationId &&
@@ -65,6 +73,7 @@ object HeardTracks {
             val merged = front.copy(
                 stationName = track.stationName,
                 timestampMillis = maxOf(front.timestampMillis, track.timestampMillis),
+                artworkUrl = track.artworkUrl ?: front.artworkUrl,
             )
             return listOf(merged) + current.drop(1).take(limit - 1)
         }

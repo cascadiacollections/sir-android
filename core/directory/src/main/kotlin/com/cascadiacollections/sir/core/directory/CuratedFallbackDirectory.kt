@@ -16,8 +16,7 @@ class CuratedFallbackDirectory(
     private val curatedTags: List<Tag> = Tag.CURATED
 ) : RadioDirectory {
 
-    override suspend fun search(query: StationQuery): Result<List<Station>> =
-        search(query, StationSearchFilters.NONE)
+    override suspend fun search(query: StationQuery): Result<List<Station>> = search(query, StationSearchFilters.NONE)
 
     override suspend fun search(query: StationQuery, filters: StationSearchFilters): Result<List<Station>> =
         delegate.search(query, filters).orCurated {
@@ -37,20 +36,15 @@ class CuratedFallbackDirectory(
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
         stationsByTag(tag, limit, StationSearchFilters.NONE)
 
-    override suspend fun stationsByTag(
-        tag: String,
-        limit: Int,
-        filters: StationSearchFilters
-    ): Result<List<Station>> =
+    override suspend fun stationsByTag(tag: String, limit: Int, filters: StationSearchFilters): Result<List<Station>> =
         delegate.stationsByTag(tag, limit, filters).orCurated {
             filters.applyTo(CuratedStations.matching(tag, curated)).take(limit)
         }
 
     /** The genre list is never empty: a failure falls back to the bundled genres. */
-    override suspend fun topTags(limit: Int): Result<List<Tag>> =
-        delegate.topTags(limit).recoverCatching { error ->
-            curatedTags.take(limit.coerceAtLeast(1)).ifEmpty { throw error }
-        }
+    override suspend fun topTags(limit: Int): Result<List<Tag>> = delegate.topTags(limit).recoverCatching { error ->
+        curatedTags.take(limit.coerceAtLeast(1)).ifEmpty { throw error }
+    }
 
     /** As the [topStations] overload: a forced refresh is never answered from bundled genres. */
     override suspend fun topTags(limit: Int, forceRefresh: Boolean): Result<List<Tag>> =
@@ -74,9 +68,8 @@ class CuratedFallbackDirectory(
      * Only failures fall back. An empty *successful* response is a real answer ("no
      * such station") and must not be masked by curated content.
      */
-    private inline fun Result<List<Station>>.orCurated(
-        fallback: () -> List<Station>
-    ): Result<List<Station>> = recoverCatching { error ->
-        fallback().ifEmpty { throw error }
-    }
+    private inline fun Result<List<Station>>.orCurated(fallback: () -> List<Station>): Result<List<Station>> =
+        recoverCatching { error ->
+            fallback().ifEmpty { throw error }
+        }
 }

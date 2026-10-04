@@ -13,10 +13,7 @@ import kotlinx.coroutines.launch
  *
  * [setVolume] is called on [scope]'s dispatcher (the main thread, for ExoPlayer).
  */
-internal class VolumeFader(
-    private val scope: CoroutineScope,
-    private val setVolume: (Float) -> Unit,
-) {
+internal class VolumeFader(private val scope: CoroutineScope, private val setVolume: (Float) -> Unit) {
     private var job: Job? = null
 
     /** Playback stopped: zero the volume so the next start begins silent. */

@@ -3,13 +3,13 @@ package com.cascadiacollections.sir
 import android.util.Log
 import com.cascadiacollections.sir.core.playback.StreamEndpoint
 import com.cascadiacollections.sir.core.playback.StreamEndpoints
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.Buffer
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 /**
  * Follows a station URL that is itself a `.pls`/`.m3u` playlist to the stream it names.
@@ -27,10 +27,9 @@ class StationPlaylistFetcher(streamingClient: OkHttpClient, private val userAgen
         .build()
 
     /** The endpoint to play for playlist [url]; the original [url] whenever that fails. */
-    suspend fun resolve(url: String): StreamEndpoint =
-        StreamEndpoints.fromPlaylist(url, fetch(url)).also {
-            Log.d(TAG, "Resolved playlist $url -> ${it.url}${if (it.isHls) " (HLS)" else ""}")
-        }
+    suspend fun resolve(url: String): StreamEndpoint = StreamEndpoints.fromPlaylist(url, fetch(url)).also {
+        Log.d(TAG, "Resolved playlist $url -> ${it.url}${if (it.isHls) " (HLS)" else ""}")
+    }
 
     private suspend fun fetch(url: String): String? = runInterruptible(Dispatchers.IO) {
         try {

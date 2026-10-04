@@ -3,13 +3,13 @@ package com.cascadiacollections.sir
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import java.io.IOException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.IOException
 
 class StationPlayReporterTest {
 
@@ -61,7 +61,10 @@ class StationPlayReporterTest {
         val selections = MutableSharedFlow<Station>(extraBufferCapacity = 8)
         val directory = ClickDirectory()
         var settingReads = 0
-        StationPlayReporter(selections, { settingReads++; true }, { directory }).start(backgroundScope)
+        StationPlayReporter(selections, {
+            settingReads++
+            true
+        }, { directory }).start(backgroundScope)
 
         selections.emit(station("sir-default"))
         selections.emit(station("imported:https://example.com/s"))

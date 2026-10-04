@@ -3,6 +3,7 @@ package com.cascadiacollections.sir.core.persistence
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -10,7 +11,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
@@ -79,7 +79,9 @@ private val Context.dataStore: DataStore<Preferences> get() = SettingsDataStore[
 /**
  * Settings repository using DataStore for persistence.
  */
-class SettingsRepository(private val context: Context) : RecentShelfStore, SavedStationRefreshStore {
+class SettingsRepository(private val context: Context) :
+    RecentShelfStore,
+    SavedStationRefreshStore {
 
     private val streamQualityKey = intPreferencesKey("stream_quality")
     private val chromecastEnabledKey = booleanPreferencesKey("chromecast_enabled")
@@ -93,7 +95,8 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
     private val recentStationsKey = stringPreferencesKey("recent_stations")
     private val selectedStationKey = stringPreferencesKey("selected_station")
     private val stationPlayCountsKey = stringPreferencesKey("station_play_counts")
-    private val connectionPrewarmingEnabledKey = booleanPreferencesKey("connection_prewarming_enabled")
+    private val connectionPrewarmingEnabledKey =
+        booleanPreferencesKey("connection_prewarming_enabled")
     private val loopFinishedBroadcastsKey = booleanPreferencesKey("loop_finished_broadcasts")
     private val reportPlaysToDirectoryKey = booleanPreferencesKey("report_plays_to_directory")
     private val fetchAlbumArtworkKey = booleanPreferencesKey("fetch_album_artwork")
@@ -153,8 +156,11 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
      */
     suspend fun setSleepTimerFiresAt(epochMillis: Long) {
         context.dataStore.edit { prefs ->
-            if (epochMillis <= 0L) prefs.remove(sleepTimerFiresAtKey)
-            else prefs[sleepTimerFiresAtKey] = epochMillis
+            if (epochMillis <= 0L) {
+                prefs.remove(sleepTimerFiresAtKey)
+            } else {
+                prefs[sleepTimerFiresAtKey] = epochMillis
+            }
         }
     }
 
@@ -405,11 +411,17 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
             // to currently-saved stations: unsaving one drops its count on the next
             // selection instead of leaving the map to grow across every station ever played.
             val savedIds = StationCodec.decode(preferences[savedStationsKey]).map { it.id }.toSet()
-            val counts = decodePlayCounts(preferences[stationPlayCountsKey]).filterKeys { it in savedIds }
+            val counts = decodePlayCounts(preferences[stationPlayCountsKey]).filterKeys {
+                it in savedIds
+            }
             val updatedCounts = if (station.id in savedIds) {
-                counts + (station.id to (counts[station.id]?.let {
-                    if (it == Int.MAX_VALUE) it else it + 1
-                } ?: 1))
+                counts + (
+                    station.id to (
+                        counts[station.id]?.let {
+                            if (it == Int.MAX_VALUE) it else it + 1
+                        } ?: 1
+                        )
+                    )
             } else {
                 counts
             }
@@ -438,7 +450,10 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
     /** Removes one station from the recently played list (and its shelf-hidden flag). */
     suspend fun removeRecentStation(stationId: String) {
         context.dataStore.edit { preferences ->
-            val recents = StationCollections.removeRecent(StationCodec.decode(preferences[recentStationsKey]), stationId)
+            val recents = StationCollections.removeRecent(
+                StationCodec.decode(preferences[recentStationsKey]),
+                stationId
+            )
             preferences[recentStationsKey] = StationCodec.encode(recents)
             preferences.putHiddenRecentIds(preferences[hiddenRecentStationIdsKey].orEmpty() - stationId)
         }
@@ -502,10 +517,7 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
      * Read-modify-write inside a single DataStore transaction so concurrent edits
      * from the UI and the playback service cannot clobber each other.
      */
-    private suspend fun editStations(
-        key: Preferences.Key<String>,
-        transform: (List<Station>) -> List<Station>
-    ) {
+    private suspend fun editStations(key: Preferences.Key<String>, transform: (List<Station>) -> List<Station>) {
         context.dataStore.edit { preferences ->
             val updated = transform(StationCodec.decode(preferences[key]))
             preferences[key] = StationCodec.encode(updated)
@@ -513,8 +525,9 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
     }
 
     /** Decodes a JSON float list, discarding it entirely if it's unreadable. */
-    private fun decodeFloatList(raw: String?): List<Float> =
-        raw?.let { runCatching { Json.decodeFromString<List<Float>>(it) }.getOrNull() } ?: emptyList()
+    private fun decodeFloatList(raw: String?): List<Float> = raw?.let {
+        runCatching { Json.decodeFromString<List<Float>>(it) }.getOrNull()
+    } ?: emptyList()
 
     /** Play counts keyed by station id; unreadable or negative entries are discarded. */
     private fun decodePlayCounts(raw: String?): Map<String, Int> =

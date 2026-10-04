@@ -19,7 +19,7 @@ data class HeardTrack(
     val stationName: String = "",
     val timestampMillis: Long = 0L,
     /** Cover art found for the track (iTunes Search), when the lookup is enabled and found some. */
-    val artworkUrl: String? = null,
+    val artworkUrl: String? = null
 ) {
     /** "Title — Artist", or whichever of the two is known. */
     val copyText: String
@@ -57,11 +57,7 @@ object HeardTracks {
      * Like ShoutKit, a track needs a title *or* an artist, and a merge adopts newly found
      * artwork — cover art is looked up after the track starts, so it arrives as a repeat.
      */
-    fun record(
-        current: List<HeardTrack>,
-        track: HeardTrack,
-        limit: Int = LIMIT,
-    ): List<HeardTrack> {
+    fun record(current: List<HeardTrack>, track: HeardTrack, limit: Int = LIMIT): List<HeardTrack> {
         require(limit > 0) { "limit must be positive" }
         if (track.title.isBlank() && track.artist.isNullOrBlank()) return current
         val front = current.firstOrNull()
@@ -73,7 +69,7 @@ object HeardTracks {
             val merged = front.copy(
                 stationName = track.stationName,
                 timestampMillis = maxOf(front.timestampMillis, track.timestampMillis),
-                artworkUrl = track.artworkUrl ?: front.artworkUrl,
+                artworkUrl = track.artworkUrl ?: front.artworkUrl
             )
             return listOf(merged) + current.drop(1).take(limit - 1)
         }
@@ -95,7 +91,7 @@ object HeardTracks {
         title: String,
         artist: String?,
         stationId: String?,
-        artworkUrl: String,
+        artworkUrl: String
     ): List<HeardTrack> {
         val front = current.firstOrNull() ?: return current
         if (front.title != title || front.artist != artist || front.stationId != stationId) return current
@@ -114,7 +110,9 @@ object HeardTracks {
      */
     fun decode(raw: String?): List<HeardTrack> {
         if (raw.isNullOrBlank()) return emptyList()
-        return runCatching { json.decodeFromString<List<HeardTrack>>(raw) }.getOrDefault(emptyList())
+        return runCatching {
+            json.decodeFromString<List<HeardTrack>>(raw)
+        }.getOrDefault(emptyList())
     }
 
     fun encode(tracks: List<HeardTrack>): String = json.encodeToString(tracks)

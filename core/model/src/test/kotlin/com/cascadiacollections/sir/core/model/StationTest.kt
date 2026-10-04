@@ -1,11 +1,11 @@
 package com.cascadiacollections.sir.core.model
 
+import java.util.Locale
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Locale
 
 class StationTest {
 
@@ -73,7 +73,8 @@ class StationTest {
 
     @Test
     fun `stream url prefers the resolved url`() {
-        val station = Station(url = "http://example.com/listen.pls", urlResolved = "http://example.com:8000/stream")
+        val station =
+            Station(url = "http://example.com/listen.pls", urlResolved = "http://example.com:8000/stream")
 
         assertEquals("http://example.com:8000/stream", station.streamUrl)
     }
@@ -129,7 +130,8 @@ class StationTest {
 
     @Test
     fun `changing the url drops the directory's resolved url and hls flag`() {
-        val station = Station(url = "https://a.example/s", urlResolved = "https://a.example/r.m3u8", hls = 1)
+        val station =
+            Station(url = "https://a.example/s", urlResolved = "https://a.example/r.m3u8", hls = 1)
 
         val edited = station.withUrl("http://b.example/stream")
 

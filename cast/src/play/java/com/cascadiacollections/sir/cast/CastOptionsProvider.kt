@@ -34,8 +34,5 @@ class CastOptionsProvider : OptionsProvider {
             .build()
     }
 
-    override fun getAdditionalSessionProviders(context: Context): List<SessionProvider>? {
-        return null
-    }
+    override fun getAdditionalSessionProviders(context: Context): List<SessionProvider>? = null
 }
-

@@ -2,12 +2,12 @@ package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.IOException
 
 /** Records every call so decorator pass-through and caching can be asserted. */
 private class SpyDirectory : RadioDirectory {
@@ -172,8 +172,18 @@ class DirectoryDecoratorsTest {
         val directory = CuratedFallbackDirectory(spy, curated = curated)
         val gb = StationSearchFilters(countryCode = "GB")
 
-        assertEquals(listOf("a"), directory.search(StationQuery("jazz"), gb).getOrThrow().map { it.id })
-        assertEquals(listOf("a"), directory.stationsByTag("jazz", 10, gb).getOrThrow().map { it.id })
+        assertEquals(
+            listOf("a"),
+            directory.search(StationQuery("jazz"), gb).getOrThrow().map {
+                it.id
+            }
+        )
+        assertEquals(
+            listOf("a"),
+            directory.stationsByTag("jazz", 10, gb).getOrThrow().map {
+                it.id
+            }
+        )
     }
 
     @Test
@@ -191,7 +201,12 @@ class DirectoryDecoratorsTest {
         }
         val filters = StationSearchFilters(bitrateMinKbps = 128)
 
-        assertEquals(listOf("hi"), plain.search(StationQuery("x"), filters).getOrThrow().map { it.id })
+        assertEquals(
+            listOf("hi"),
+            plain.search(StationQuery("x"), filters).getOrThrow().map {
+                it.id
+            }
+        )
         assertEquals(listOf("hi"), plain.stationsByTag("x", 10, filters).getOrThrow().map { it.id })
         assertTrue(plain.reportClick(uuid).isSuccess)
         assertTrue(plain.topTags().getOrThrow().isEmpty())

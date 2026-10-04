@@ -74,7 +74,11 @@ object QuickPlayWidgetUpdater {
         val app = context.applicationContext
         val settings = SettingsRepository(app)
         job = scope.launch {
-            combine(settings.savedStations, settings.selectedStation, playing) { saved, selected, isPlaying ->
+            combine(settings.savedStations, settings.selectedStation, playing) {
+                    saved,
+                    selected,
+                    isPlaying
+                ->
                 Triple(saved, selected?.id, isPlaying)
             }
                 .distinctUntilChanged()

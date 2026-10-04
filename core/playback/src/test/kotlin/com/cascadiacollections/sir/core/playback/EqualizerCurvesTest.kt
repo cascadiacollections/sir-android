@@ -184,7 +184,12 @@ class EqualizerCurvesTest {
 
     @Test
     fun `normalizing an empty list produces flat gains at the requested count`() {
-        assertEquals(List(5) { 0f }, EqualizerCurves.normalizeCustomBands(emptyList(), bandCount = 5))
+        assertEquals(
+            List(5) {
+                0f
+            },
+            EqualizerCurves.normalizeCustomBands(emptyList(), bandCount = 5)
+        )
     }
 
     @Test
@@ -217,7 +222,12 @@ class EqualizerCurvesTest {
 
     @Test
     fun `normal preset displays as all-flat gains`() {
-        assertEquals(List(5) { 0f }, EqualizerCurves.displayGainsFor(EqualizerPreset.NORMAL, bandCount = 5))
+        assertEquals(
+            List(5) {
+                0f
+            },
+            EqualizerCurves.displayGainsFor(EqualizerPreset.NORMAL, bandCount = 5)
+        )
     }
 
     @Test
@@ -264,8 +274,18 @@ class EqualizerCurvesTest {
         val maxLevel = 400.toShort()
         EqualizerPreset.entries.forEach { preset ->
             val gains = EqualizerCurves.displayGainsFor(preset, bandCount = 5, minLevel = minLevel, maxLevel = maxLevel)
-            val appliedLevels = EqualizerCurves.levelsFor(preset, bandCount = 5, minLevel = minLevel, maxLevel = maxLevel)
-            val gainAsLevels = EqualizerCurves.levelsForCustomBands(gains, bandCount = 5, minLevel = minLevel, maxLevel = maxLevel)
+            val appliedLevels = EqualizerCurves.levelsFor(
+                preset,
+                bandCount = 5,
+                minLevel = minLevel,
+                maxLevel = maxLevel
+            )
+            val gainAsLevels = EqualizerCurves.levelsForCustomBands(
+                gains,
+                bandCount = 5,
+                minLevel = minLevel,
+                maxLevel = maxLevel
+            )
             // Small rounding slop from the two independent Short-narrowing paths.
             appliedLevels.zip(gainAsLevels).forEach { (applied, fromGain) ->
                 assertTrue(

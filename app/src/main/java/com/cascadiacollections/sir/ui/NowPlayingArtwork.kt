@@ -50,7 +50,7 @@ internal fun NowPlayingArtwork(
     stationName: String,
     size: Dp,
     shape: Shape,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.size(size).clip(shape)) {
         Crossfade(targetState = albumArtUrl, label = "nowPlayingArtwork") { url ->
@@ -63,7 +63,7 @@ internal fun NowPlayingArtwork(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     onError = { albumFailed = true },
-                    modifier = Modifier.size(size),
+                    modifier = Modifier.size(size)
                 )
             }
         }
@@ -76,19 +76,19 @@ internal fun NowPlayingArtwork(
  * own colour.
  */
 @Composable
-internal fun StationArtworkImage(
-    station: Station?,
-    stationName: String,
-    size: Dp,
-    modifier: Modifier = Modifier,
-) {
+internal fun StationArtworkImage(station: Station?, stationName: String, size: Dp, modifier: Modifier = Modifier) {
     val favicon = station?.favicon?.takeIf { it.isNotBlank() }
     var faviconFailed by remember(station?.id, favicon) { mutableStateOf(false) }
     if (favicon == null || faviconFailed) {
         StationMonogramTile(
-            monogram = StationMonogram.of(station?.id, station?.name?.takeIf { it.isNotBlank() } ?: stationName),
+            monogram = StationMonogram.of(
+                station?.id,
+                station?.name?.takeIf {
+                    it.isNotBlank()
+                } ?: stationName
+            ),
             size = size,
-            modifier = modifier,
+            modifier = modifier
         )
     } else {
         AsyncImage(
@@ -96,30 +96,26 @@ internal fun StationArtworkImage(
             contentDescription = null,
             contentScale = ContentScale.Crop,
             onError = { faviconFailed = true },
-            modifier = modifier.size(size),
+            modifier = modifier.size(size)
         )
     }
 }
 
 /** A generated placeholder: the station's initials on a colour derived from its identity. */
 @Composable
-internal fun StationMonogramTile(
-    monogram: StationMonogram,
-    size: Dp,
-    modifier: Modifier = Modifier,
-) {
+internal fun StationMonogramTile(monogram: StationMonogram, size: Dp, modifier: Modifier = Modifier) {
     BoxWithConstraints(
         modifier = modifier
             .size(size)
             .background(Color.hsl(monogram.hue, MONOGRAM_SATURATION, MONOGRAM_LIGHTNESS)),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = monogram.initials,
             color = Color.White,
             fontWeight = FontWeight.SemiBold,
             fontSize = (maxWidth.value * MONOGRAM_TEXT_SCALE).sp,
-            maxLines = 1,
+            maxLines = 1
         )
     }
 }
@@ -143,10 +139,13 @@ private const val MONOGRAM_TEXT_SCALE = 0.36f
 internal fun StreamFailure.displayMessageRes(short: Boolean): Int = when (this) {
     StreamFailure.NoNetwork ->
         if (short) R.string.failure_no_network_short else R.string.failure_no_network
+
     is StreamFailure.StationUnavailable ->
         if (short) R.string.failure_station_unavailable_short else R.string.failure_station_unavailable
+
     StreamFailure.Unplayable, StreamFailure.Transient ->
         if (short) R.string.failure_stream_error_short else R.string.failure_stream_error
+
     StreamFailure.Stalled ->
         if (short) R.string.failure_stalled_short else R.string.failure_stalled
 }

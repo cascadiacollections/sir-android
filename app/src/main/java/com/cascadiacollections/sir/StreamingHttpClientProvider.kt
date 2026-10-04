@@ -1,9 +1,9 @@
 package com.cascadiacollections.sir
 
 import com.cascadiacollections.sir.okhttp.streaming.StreamingHttpClientFactory
+import java.util.concurrent.TimeUnit
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 object StreamingHttpClientProvider {
     val client: OkHttpClient by lazy {

@@ -1,7 +1,5 @@
 package com.cascadiacollections.android.media3.timeshift
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue

@@ -15,12 +15,7 @@ object EqualizerCurves {
      * @param minLevel lowest supported band level, in millibels.
      * @param maxLevel highest supported band level, in millibels.
      */
-    fun levelsFor(
-        preset: EqualizerPreset,
-        bandCount: Int,
-        minLevel: Short,
-        maxLevel: Short
-    ): List<Short> {
+    fun levelsFor(preset: EqualizerPreset, bandCount: Int, minLevel: Short, maxLevel: Short): List<Short> {
         val curve = preset.curve ?: return List(bandCount.coerceAtLeast(0)) { 0.toShort() }
         return calculateEqualizerLevels(
             bandCount = bandCount,
@@ -43,13 +38,12 @@ object EqualizerCurves {
      * it scales against, so a full boost always reaches [maxLevel] and a full cut always
      * reaches [minLevel] even when the device's range is asymmetric around zero.
      */
-    fun levelsForCustomBands(
-        gains: List<Float>,
-        bandCount: Int,
-        minLevel: Short,
-        maxLevel: Short
-    ): List<Short> {
-        if (gains.isEmpty() || bandCount <= 0) return List(bandCount.coerceAtLeast(0)) { 0.toShort() }
+    fun levelsForCustomBands(gains: List<Float>, bandCount: Int, minLevel: Short, maxLevel: Short): List<Short> {
+        if (gains.isEmpty() || bandCount <= 0) {
+            return List(bandCount.coerceAtLeast(0)) {
+                0.toShort()
+            }
+        }
         return List(bandCount) { band ->
             val position = band.toFloat() / (bandCount - 1).coerceAtLeast(1)
             val gain = interpolate(gains, position).coerceIn(-1f, 1f)

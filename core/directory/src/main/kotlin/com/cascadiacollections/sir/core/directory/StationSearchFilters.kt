@@ -27,7 +27,9 @@ class StationSearchFilters(
         this.bitrateMinKbps?.let { min -> maxOf(min, max) } ?: max
     }
     val tag: String? = tag?.trim()?.takeIf { it.isNotEmpty() }
-    val countryCode: String? = countryCode?.trim()?.uppercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
+    val countryCode: String? = countryCode?.trim()?.uppercase(Locale.ROOT)?.takeIf {
+        it.isNotEmpty()
+    }
 
     /** Whether any filter is set. */
     val isActive: Boolean
@@ -35,13 +37,14 @@ class StationSearchFilters(
 
     /** Stable string used to key caches; equal filters produce equal keys. */
     val cacheKey: String
-        get() = "${bitrateMinKbps ?: ""}-${bitrateMaxKbps ?: ""}-${tag?.lowercase(Locale.ROOT) ?: ""}-${countryCode ?: ""}"
+        get() = "${bitrateMinKbps ?: ""}-${bitrateMaxKbps ?: ""}-${tag?.lowercase(
+            Locale.ROOT
+        ) ?: ""}-${countryCode ?: ""}"
 
     fun matches(station: Station): Boolean =
         matchesBitrate(station.bitrate) && matchesTag(station) && matchesCountry(station.countryCode)
 
-    fun applyTo(stations: List<Station>): List<Station> =
-        if (isActive) stations.filter(::matches) else stations
+    fun applyTo(stations: List<Station>): List<Station> = if (isActive) stations.filter(::matches) else stations
 
     /**
      * radio-browser query parameters for these filters. [includeTag] is false for genre
@@ -75,8 +78,7 @@ class StationSearchFilters(
         return actual.equals(wanted, ignoreCase = true)
     }
 
-    override fun equals(other: Any?): Boolean =
-        other is StationSearchFilters && other.cacheKey == cacheKey
+    override fun equals(other: Any?): Boolean = other is StationSearchFilters && other.cacheKey == cacheKey
 
     override fun hashCode(): Int = cacheKey.hashCode()
 

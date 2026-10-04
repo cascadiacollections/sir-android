@@ -12,7 +12,12 @@ class RecentShelfTest {
 
     @Test
     fun `the shelf is the newest five recents`() {
-        assertEquals(listOf("a", "b", "c", "d", "e"), StationCollections.recentShelf(recents, emptySet()).map { it.id })
+        assertEquals(
+            listOf("a", "b", "c", "d", "e"),
+            StationCollections.recentShelf(recents, emptySet()).map {
+                it.id
+            }
+        )
     }
 
     @Test

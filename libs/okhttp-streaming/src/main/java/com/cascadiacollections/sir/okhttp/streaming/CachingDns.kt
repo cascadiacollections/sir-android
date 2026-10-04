@@ -1,9 +1,9 @@
 package com.cascadiacollections.sir.okhttp.streaming
 
-import okhttp3.Dns
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
+import okhttp3.Dns
 
 /**
  * DNS resolver that caches lookups for [ttlMs] to avoid repeated resolution on reconnect.

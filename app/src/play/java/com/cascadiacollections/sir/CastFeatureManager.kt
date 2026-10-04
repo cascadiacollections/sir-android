@@ -37,7 +37,9 @@ class CastFeatureManager(context: Context) {
             SplitInstallSessionStatus.DOWNLOADING -> {
                 val progress = if (state.totalBytesToDownload() > 0) {
                     state.bytesDownloaded().toFloat() / state.totalBytesToDownload()
-                } else 0f
+                } else {
+                    0f
+                }
                 _moduleState.value = CastModuleState.Installing(progress)
             }
 
@@ -70,8 +72,7 @@ class CastFeatureManager(context: Context) {
     /**
      * Check if the cast module is already installed
      */
-    fun isModuleInstalled(): Boolean =
-        CAST_MODULE_NAME in splitInstallManager.installedModules
+    fun isModuleInstalled(): Boolean = CAST_MODULE_NAME in splitInstallManager.installedModules
 
     /**
      * Request installation of the cast module
@@ -120,4 +121,3 @@ class CastFeatureManager(context: Context) {
         const val CAST_MODULE_NAME = "cast"
     }
 }
-

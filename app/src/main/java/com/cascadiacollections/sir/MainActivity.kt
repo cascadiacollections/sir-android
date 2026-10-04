@@ -6,10 +6,10 @@ import android.Manifest
 import android.app.Application
 import android.app.SearchManager
 import android.content.Intent
-import android.provider.MediaStore
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,7 +39,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,6 +62,7 @@ class MainActivity : ComponentActivity() {
 
     private val castDeviceDetector by lazy { CastDeviceDetector(this) }
     private val castFeatureManager by lazy { CastFeatureManager(this) }
+
     // Application context: the repository is captured by long-lived DataStore collectors,
     // so holding the Activity here would leak it for the life of those collectors.
     private val settingsRepository by lazy { SettingsRepository(applicationContext) }
@@ -294,7 +294,9 @@ fun RadioScreen(
         .collectAsState<Boolean, Boolean?>(initial = null)
     val welcomeScope = rememberCoroutineScope()
     if (hasCompletedFirstRun == false && !showLicenses) {
-        FirstRunWelcome(onDone = { welcomeScope.launch { repository.setHasCompletedFirstRun(true) } })
+        FirstRunWelcome(onDone = {
+            welcomeScope.launch { repository.setHasCompletedFirstRun(true) }
+        })
     }
 
     // Metered network warning dialog (shown once per session on cellular)

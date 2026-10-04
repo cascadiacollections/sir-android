@@ -18,10 +18,8 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
  * simply has no replay buffer.
  */
 @UnstableApi
-class StreamMediaSourceFactory(
-    private val progressive: MediaSource.Factory,
-    private val hls: MediaSource.Factory,
-) : MediaSource.Factory {
+class StreamMediaSourceFactory(private val progressive: MediaSource.Factory, private val hls: MediaSource.Factory) :
+    MediaSource.Factory {
 
     override fun setDrmSessionManagerProvider(
         drmSessionManagerProvider: DrmSessionManagerProvider
@@ -30,12 +28,11 @@ class StreamMediaSourceFactory(
         hls.setDrmSessionManagerProvider(drmSessionManagerProvider)
     }
 
-    override fun setLoadErrorHandlingPolicy(
-        loadErrorHandlingPolicy: LoadErrorHandlingPolicy
-    ): MediaSource.Factory = apply {
-        progressive.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
-        hls.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
-    }
+    override fun setLoadErrorHandlingPolicy(loadErrorHandlingPolicy: LoadErrorHandlingPolicy): MediaSource.Factory =
+        apply {
+            progressive.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+            hls.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        }
 
     override fun getSupportedTypes(): IntArray =
         (progressive.supportedTypes + hls.supportedTypes).distinct().toIntArray()

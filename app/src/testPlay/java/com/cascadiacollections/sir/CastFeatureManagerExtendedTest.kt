@@ -1,12 +1,12 @@
 package com.cascadiacollections.sir
 
+import com.google.android.gms.tasks.Task as GmsTask
 import com.google.android.play.core.splitinstall.SplitInstallManager
 import com.google.android.play.core.splitinstall.SplitInstallManagerFactory
 import com.google.android.play.core.splitinstall.SplitInstallRequest
-import com.google.android.play.core.splitinstall.SplitInstallStateUpdatedListener
 import com.google.android.play.core.splitinstall.SplitInstallSessionState
+import com.google.android.play.core.splitinstall.SplitInstallStateUpdatedListener
 import com.google.android.play.core.splitinstall.model.SplitInstallSessionStatus
-import com.google.android.gms.tasks.Task as GmsTask
 import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.mockk

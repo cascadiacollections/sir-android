@@ -18,7 +18,7 @@ class AutoBrowseTreeTest {
     fun `root lists the three categories in tab order`() {
         assertEquals(
             listOf(Category.YOUR_STATIONS, Category.RECENTLY_PLAYED, Category.TOP_STATIONS),
-            AutoBrowseTree.rootCategories(childrenLimit = null),
+            AutoBrowseTree.rootCategories(childrenLimit = null)
         )
         assertEquals(3, AutoBrowseTree.rootCategories(childrenLimit = 4).size)
     }
@@ -33,7 +33,9 @@ class AutoBrowseTreeTest {
     @Test
     fun `category ids round-trip and never collide with the root or the SIR stream`() {
         Category.entries.forEach { assertEquals(it, Category.fromId(it.id)) }
-        val ids = Category.entries.map { it.id } + AutoBrowseTree.ROOT_ID + AutoBrowseTree.SIR_STREAM_ID
+        val ids = Category.entries.map {
+            it.id
+        } + AutoBrowseTree.ROOT_ID + AutoBrowseTree.SIR_STREAM_ID
         assertEquals(ids.size, ids.toSet().size)
         assertNull(Category.fromId("unknown"))
         assertNull(Category.fromId(AutoBrowseTree.ROOT_ID))
@@ -47,7 +49,7 @@ class AutoBrowseTreeTest {
         val recents = listOf(station("c"), station("a"), station("d"))
         assertEquals(
             listOf("b", "a", "c", "d"),
-            AutoBrowseTree.yourStations(saved, recents).map { it.id },
+            AutoBrowseTree.yourStations(saved, recents).map { it.id }
         )
     }
 
@@ -67,7 +69,9 @@ class AutoBrowseTreeTest {
         val recents = listOf(station("a"), station("b"), station("c"))
         assertEquals(
             listOf("a", "c"),
-            AutoBrowseTree.yourStations(saved, recents, hiddenRecentIds = setOf("a", "b")).map { it.id },
+            AutoBrowseTree.yourStations(saved, recents, hiddenRecentIds = setOf("a", "b")).map {
+                it.id
+            }
         )
     }
 
@@ -104,7 +108,7 @@ class AutoBrowseTreeTest {
         val remote = listOf(station("r1", name = "Jazz 24"), station("s1", name = "Jazz FM"))
         assertEquals(
             listOf("s1", "r1"),
-            AutoBrowseTree.searchResults("  jazz ", saved, remote).map { it.id },
+            AutoBrowseTree.searchResults("  jazz ", saved, remote).map { it.id }
         )
     }
 

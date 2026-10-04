@@ -87,12 +87,11 @@ internal fun RadioUiState.withPlayer(player: Player): RadioUiState = copy(
     isPlaying = player.isActuallyPlaying,
     isBuffering = player.playWhenReady && player.playbackState == Player.STATE_BUFFERING,
     isError = isError && player.playWhenReady && player.playbackState != Player.STATE_READY,
-    isPlayRequested = player.playWhenReady,
+    isPlayRequested = player.playWhenReady
 )
 
 /** A player error, surfaced only if the listener had asked to play. */
-internal fun RadioUiState.withPlayerError(playWhenReady: Boolean): RadioUiState =
-    copy(isError = playWhenReady)
+internal fun RadioUiState.withPlayerError(playWhenReady: Boolean): RadioUiState = copy(isError = playWhenReady)
 
 /** Applies the service's failure extras (see [PlaybackFailureExtras]). */
 internal fun RadioUiState.withSessionExtras(extras: Bundle?): RadioUiState {
@@ -102,7 +101,7 @@ internal fun RadioUiState.withSessionExtras(extras: Bundle?): RadioUiState {
         isReconnecting = PlaybackFailureExtras.isRetrying(extras),
         // The service clears its failure when the listener pauses or a stream recovers;
         // the untyped flag set by onPlayerError must not outlive it.
-        isError = isError && failure != null,
+        isError = isError && failure != null
     )
 }
 
@@ -117,7 +116,11 @@ internal fun RadioUiState.withMediaMetadata(metadata: MediaMetadata): RadioUiSta
     return copy(
         trackTitle = metadata.title?.toString()?.takeIf { resolved },
         artist = metadata.artist?.toString()?.takeIf { resolved },
-        albumArtUrl = extras?.getString(RadioPlaybackService.EXTRA_ALBUM_ART_URL)?.takeIf { resolved },
-        trackViewUrl = extras?.getString(RadioPlaybackService.EXTRA_TRACK_VIEW_URL)?.takeIf { resolved },
+        albumArtUrl = extras?.getString(RadioPlaybackService.EXTRA_ALBUM_ART_URL)?.takeIf {
+            resolved
+        },
+        trackViewUrl = extras?.getString(RadioPlaybackService.EXTRA_TRACK_VIEW_URL)?.takeIf {
+            resolved
+        }
     )
 }

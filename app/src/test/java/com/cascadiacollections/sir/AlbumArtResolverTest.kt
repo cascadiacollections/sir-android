@@ -29,7 +29,7 @@ class AlbumArtResolverTest {
             requests += artist to title
             answers.getOrPut(artist to title) { CompletableDeferred() }.await()
         },
-        onChanged = { changes++ },
+        onChanged = { changes++ }
     ).also { it.start() }
 
     private fun answer(artist: String, title: String, art: AlbumArt?) {

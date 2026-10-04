@@ -15,19 +15,13 @@ import kotlinx.coroutines.flow.first
  *
  * Never reports clicks: nothing here is a user starting a station.
  */
-class BackgroundRefresh(
-    private val directory: RadioDirectory,
-    private val favorites: SavedStationRefreshStore
-) {
+class BackgroundRefresh(private val directory: RadioDirectory, private val favorites: SavedStationRefreshStore) {
 
     /**
      * [favoritesUpdated] is null when there was nothing to refresh (no saved radio-browser
      * stations), a failure when the lookup failed, else how many saved stations changed.
      */
-    data class Outcome(
-        val discoveryRefreshed: Boolean,
-        val favoritesUpdated: Result<Int>?
-    ) {
+    data class Outcome(val discoveryRefreshed: Boolean, val favoritesUpdated: Result<Int>?) {
         /** Nothing that was attempted succeeded, so the pass is worth retrying. */
         val shouldRetry: Boolean
             get() = !discoveryRefreshed && (favoritesUpdated == null || favoritesUpdated.isFailure)
@@ -35,8 +29,12 @@ class BackgroundRefresh(
 
     suspend fun run(): Outcome = coroutineScope {
         // forceRefresh: past every cache, and a failure is not masked by bundled data.
-        val stations = async { directory.topStations(SearchViewModel.POPULAR_LIMIT, forceRefresh = true) }
-        val tags = async { directory.topTags(RadioDirectory.DEFAULT_TAG_LIMIT, forceRefresh = true) }
+        val stations = async {
+            directory.topStations(SearchViewModel.POPULAR_LIMIT, forceRefresh = true)
+        }
+        val tags = async {
+            directory.topTags(RadioDirectory.DEFAULT_TAG_LIMIT, forceRefresh = true)
+        }
         val favoritesUpdated = refreshFavorites()
         Outcome(
             discoveryRefreshed = stations.await().isSuccess || tags.await().isSuccess,
@@ -45,7 +43,9 @@ class BackgroundRefresh(
     }
 
     private suspend fun refreshFavorites(): Result<Int>? {
-        val ids = favorites.savedStations.first().map { it.id }.filter(StationIds::isRadioBrowserUuid)
+        val ids = favorites.savedStations.first().map {
+            it.id
+        }.filter(StationIds::isRadioBrowserUuid)
         if (ids.isEmpty()) return null
         return directory.getStations(ids).map { fetched -> favorites.refreshSavedStations(fetched) }
     }

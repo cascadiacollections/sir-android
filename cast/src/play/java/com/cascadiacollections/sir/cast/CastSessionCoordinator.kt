@@ -56,7 +56,8 @@ class CastSessionCoordinator(private val context: Context) {
     }
 
     private fun connect() {
-        val sessionToken = SessionToken(context, ComponentName(context, RadioPlaybackService::class.java))
+        val sessionToken =
+            SessionToken(context, ComponentName(context, RadioPlaybackService::class.java))
         scope.launch {
             try {
                 controller = MediaController.Builder(context, sessionToken).buildAsync().await()

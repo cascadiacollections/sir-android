@@ -32,10 +32,7 @@ object FavoritesBackupCodec {
     const val MIME_TYPE: String = "application/json"
 
     @Serializable
-    internal data class Document(
-        val favorites: List<Favorite> = emptyList(),
-        val schemaVersion: Int,
-    )
+    internal data class Document(val favorites: List<Favorite> = emptyList(), val schemaVersion: Int)
 
     @Serializable
     internal data class Favorite(
@@ -44,7 +41,7 @@ object FavoritesBackupCodec {
         val id: String,
         val name: String = "",
         val sortIndex: Int = 0,
-        val streamURL: String? = null,
+        val streamURL: String? = null
     )
 
     /** Why a document could not be imported. */
@@ -70,10 +67,10 @@ object FavoritesBackupCodec {
                     id = station.id,
                     name = station.name,
                     sortIndex = index,
-                    streamURL = station.streamUrl.takeIf { it.isNotBlank() },
+                    streamURL = station.streamUrl.takeIf { it.isNotBlank() }
                 )
             },
-            schemaVersion = SCHEMA_VERSION,
+            schemaVersion = SCHEMA_VERSION
         )
     )
 
@@ -101,10 +98,12 @@ object FavoritesBackupCodec {
             .map { favorite ->
                 Station(
                     id = favorite.id,
-                    name = favorite.name.ifBlank { favorite.streamURL?.takeIf { it.isNotBlank() } ?: favorite.id },
+                    name = favorite.name.ifBlank {
+                        favorite.streamURL?.takeIf { it.isNotBlank() } ?: favorite.id
+                    },
                     url = favorite.streamURL.orEmpty(),
                     favicon = favorite.artworkURL?.takeIf { it.isNotBlank() },
-                    tags = favorite.genre.trim(),
+                    tags = favorite.genre.trim()
                 )
             }
     }
@@ -115,7 +114,7 @@ object FavoritesBackupCodec {
      * extension is the fallback.
      */
     fun looksLikeBackup(text: String, fileName: String?): Boolean {
-        val firstChar = text.trimStart('﻿', ' ', '\t', '\r', '\n').firstOrNull()
+        val firstChar = text.trimStart('\uFEFF', ' ', '\t', '\r', '\n').firstOrNull()
         if (firstChar == '{') return true
         if (firstChar == '#' || firstChar == '[') return false
         return fileName?.endsWith(".json", ignoreCase = true) == true

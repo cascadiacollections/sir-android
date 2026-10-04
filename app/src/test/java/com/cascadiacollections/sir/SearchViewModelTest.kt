@@ -27,7 +27,9 @@ class SearchViewModelTest {
 
     private fun viewModel() = SearchViewModel(directory).also(coroutineRule::registerViewModel)
 
-    private fun test(block: suspend TestScope.() -> Unit) = runTest(coroutineRule.testDispatcher) { block() }
+    private fun test(block: suspend TestScope.() -> Unit) = runTest(coroutineRule.testDispatcher) {
+        block()
+    }
 
     private fun TestScope.settle() {
         advanceTimeBy(SearchViewModel.DEBOUNCE_MILLIS + 1)
@@ -288,8 +290,12 @@ class SearchViewModelTest {
         var lastLimit: Int? = null
         val gates = mutableMapOf<String, CompletableDeferred<Unit>>()
         var swallowCancellation = false
-        var searchResult: (String) -> Result<List<Station>> = { Result.success(listOf(station(it))) }
-        var tagResult: (String) -> Result<List<Station>> = { Result.success(listOf(station("tag $it"))) }
+        var searchResult: (String) -> Result<List<Station>> = {
+            Result.success(listOf(station(it)))
+        }
+        var tagResult: (String) -> Result<List<Station>> = {
+            Result.success(listOf(station("tag $it")))
+        }
         var topTagsResult: Result<List<Tag>> = Result.success(listOf(Tag("synthwave", 12)))
 
         override suspend fun search(query: StationQuery): Result<List<Station>> =

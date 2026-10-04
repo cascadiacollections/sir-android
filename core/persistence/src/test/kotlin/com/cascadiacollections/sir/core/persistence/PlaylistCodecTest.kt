@@ -20,7 +20,12 @@ class PlaylistCodecTest {
         val stations = PlaylistCodec.parseM3u(text)
 
         assertEquals(listOf("Station A", "Station B"), stations.map { it.name })
-        assertEquals(listOf("https://example.com/a", "https://example.com/b"), stations.map { it.url })
+        assertEquals(
+            listOf("https://example.com/a", "https://example.com/b"),
+            stations.map {
+                it.url
+            }
+        )
     }
 
     @Test
@@ -60,7 +65,12 @@ class PlaylistCodecTest {
         val stations = PlaylistCodec.parsePls(text)
 
         assertEquals(listOf("Station A", "Station B"), stations.map { it.name })
-        assertEquals(listOf("https://example.com/a", "https://example.com/b"), stations.map { it.url })
+        assertEquals(
+            listOf("https://example.com/a", "https://example.com/b"),
+            stations.map {
+                it.url
+            }
+        )
     }
 
     @Test

@@ -4,25 +4,12 @@ package com.cascadiacollections.sir.ui
 
 import android.content.res.Resources
 import android.widget.Toast
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.rememberCoroutineScope
-import com.cascadiacollections.sir.core.persistence.RecentShelfStore
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,6 +32,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -55,17 +49,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.material3.AssistChip
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -91,6 +89,8 @@ import com.cascadiacollections.sir.SearchViewModel
 import com.cascadiacollections.sir.core.directory.StationSearchFilters
 import com.cascadiacollections.sir.core.directory.Tag
 import com.cascadiacollections.sir.core.model.Station
+import com.cascadiacollections.sir.core.persistence.RecentShelfStore
+import kotlinx.coroutines.launch
 
 object BrowseScreenTestTags {
     const val SEARCH_FIELD = "browse_search_field"
@@ -334,7 +334,9 @@ private fun ListenNowContent(
             item(key = "genres_header", span = fullSpan) {
                 SectionHeader(stringResource(R.string.browse_genres_header), Modifier.bleed())
             }
-            item(key = "genres", span = fullSpan) { GenreChips(state, onSelectGenre, Modifier.bleed()) }
+            item(key = "genres", span = fullSpan) {
+                GenreChips(state, onSelectGenre, Modifier.bleed())
+            }
 
             if (state.showsPopularHeader) {
                 item(key = "popular_header", span = fullSpan) {
@@ -342,19 +344,25 @@ private fun ListenNowContent(
                 }
             }
             if (state.showsSavedStationsNotice) {
-                item(key = "saved_notice", span = fullSpan) { SavedStationsNotice(Modifier.bleed()) }
+                item(key = "saved_notice", span = fullSpan) {
+                    SavedStationsNotice(Modifier.bleed())
+                }
             }
 
             when {
                 state.popularStations.isEmpty() && (state.isLoadingPopular || state.isRefreshing) ->
                     item(key = "popular_loading", span = fullSpan) {
-                        MessageBlock(stringResource(R.string.tuning_in)) { CircularProgressIndicator() }
+                        MessageBlock(stringResource(R.string.tuning_in)) {
+                            CircularProgressIndicator()
+                        }
                     }
 
                 state.showsDirectoryUnavailable ->
                     item(key = "popular_failed", span = fullSpan) {
                         MessageBlock(stringResource(R.string.directory_unavailable)) {
-                            Button(onClick = onRetryPopular) { Text(stringResource(R.string.try_again)) }
+                            Button(onClick = onRetryPopular) {
+                                Text(stringResource(R.string.try_again))
+                            }
                         }
                     }
 
@@ -394,7 +402,9 @@ private fun Modifier.bleed(): Modifier = layout { measurable, constraints ->
             maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra else constraints.maxWidth
         )
     )
-    layout((placeable.width - extra).coerceAtLeast(0), placeable.height) { placeable.place(-extra / 2, 0) }
+    layout((placeable.width - extra).coerceAtLeast(0), placeable.height) {
+        placeable.place(-extra / 2, 0)
+    }
 }
 
 /** Typed search and genre browse results, with the genre chips kept while browsing a genre. */
@@ -412,7 +422,9 @@ private fun SearchResultsList(
     val resources = LocalResources.current
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         if (state.showsGenres) {
-            item(key = "genres_header") { SectionHeader(stringResource(R.string.browse_genres_header)) }
+            item(key = "genres_header") {
+                SectionHeader(stringResource(R.string.browse_genres_header))
+            }
             item(key = "genres") { GenreChips(state, onSelectGenre) }
         }
 
@@ -424,7 +436,9 @@ private fun SearchResultsList(
                     station = station,
                     isPlaying = station.id == selectedStationId,
                     onPlay = { onPlay(station) },
-                    subtitle = station.browseSubtitle { resources.getString(R.string.bitrate_kbps, it) },
+                    subtitle = station.browseSubtitle {
+                        resources.getString(R.string.bitrate_kbps, it)
+                    },
                     trailing = {
                         IconButton(onClick = { onToggleSaved(station, isSaved) }) {
                             if (isSaved) {
@@ -514,7 +528,8 @@ private fun GenreChips(state: SearchUiState, onSelectGenre: (Tag) -> Unit, modif
 
 @Composable
 private fun FilterButton(active: Boolean, onClick: () -> Unit) {
-    val description = stringResource(if (active) R.string.search_filters_active else R.string.search_filters)
+    val description =
+        stringResource(if (active) R.string.search_filters_active else R.string.search_filters)
     val modifier = Modifier.testTag(BrowseScreenTestTags.FILTER_BUTTON)
     if (active) {
         FilledTonalIconButton(onClick = onClick, modifier = modifier) {
@@ -576,11 +591,7 @@ private fun MessageBlock(title: String, content: @Composable () -> Unit) {
  * so typing a tag or country does not rerun the search on every keystroke.
  */
 @Composable
-private fun FilterSheet(
-    filters: StationSearchFilters,
-    onApply: (StationSearchFilters) -> Unit,
-    onDismiss: () -> Unit
-) {
+private fun FilterSheet(filters: StationSearchFilters, onApply: (StationSearchFilters) -> Unit, onDismiss: () -> Unit) {
     var minKbps by remember { mutableStateOf(filters.bitrateMinKbps) }
     var maxKbps by remember { mutableStateOf(filters.bitrateMaxKbps) }
     var tag by remember { mutableStateOf(filters.tag.orEmpty()) }
@@ -709,11 +720,10 @@ internal fun sanitizeCountryCode(input: String): String =
  * ShoutKit's row subtitle: "Genre · 128 kbps" — the first tag capitalized, the bitrate
  * only when the directory reported one. Empty when neither is known.
  */
-internal fun Station.browseSubtitle(kbpsLabel: (Int) -> String): String =
-    listOfNotNull(
-        tagList.firstOrNull()?.let { Tag(it).displayName },
-        bitrate.takeIf { it > 0 }?.let(kbpsLabel)
-    ).joinToString(" · ")
+internal fun Station.browseSubtitle(kbpsLabel: (Int) -> String): String = listOfNotNull(
+    tagList.firstOrNull()?.let { Tag(it).displayName },
+    bitrate.takeIf { it > 0 }?.let(kbpsLabel)
+).joinToString(" · ")
 
 /** "Filters: min 128 kbps, tag jazz, country US" for the empty state. */
 internal fun filterSummary(resources: Resources, filters: StationSearchFilters): String {

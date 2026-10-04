@@ -77,7 +77,8 @@ class RadioWidget : GlanceAppWidget() {
 
     companion object {
         /** Per-widget Glance state: the id of the saved station this widget plays. */
-        val PINNED_STATION_ID: Preferences.Key<String> = stringPreferencesKey("quick_play_station_id")
+        val PINNED_STATION_ID: Preferences.Key<String> =
+            stringPreferencesKey("quick_play_station_id")
 
         private val staticColors = ColorProviders(
             light = lightColorScheme(
@@ -94,15 +95,14 @@ class RadioWidget : GlanceAppWidget() {
 
         // Dynamic color depends on the runtime wallpaper, so it can't be a compile-time
         // constant like staticColors; fall back to the static brand palette below API 31.
-        private fun colorsFor(context: Context) =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                ColorProviders(
-                    light = dynamicLightColorScheme(context),
-                    dark = dynamicDarkColorScheme(context)
-                )
-            } else {
-                staticColors
-            }
+        private fun colorsFor(context: Context) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ColorProviders(
+                light = dynamicLightColorScheme(context),
+                dark = dynamicDarkColorScheme(context)
+            )
+        } else {
+            staticColors
+        }
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -181,7 +181,11 @@ class RadioWidget : GlanceAppWidget() {
 class TogglePlaybackAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val settings = SettingsRepository(context.applicationContext)
-        val pinnedId = getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)[RadioWidget.PINNED_STATION_ID]
+        val pinnedId = getAppWidgetState(
+            context,
+            PreferencesGlanceStateDefinition,
+            glanceId
+        )[RadioWidget.PINNED_STATION_ID]
         val station = QuickPlaySelection.resolveStation(settings.savedStations.first(), pinnedId)
         val isPlaying = QuickPlayWidgetUpdater.isPlaying.value
 
@@ -193,7 +197,9 @@ class TogglePlaybackAction : ActionCallback {
                 // explicit play starts audio.
                 if (!isPlaying) context.sendPlaybackCommand(RadioPlaybackService.ACTION_PLAY)
             }
+
             QuickPlaySelection.TapAction.Play -> context.sendPlaybackCommand(RadioPlaybackService.ACTION_PLAY)
+
             QuickPlaySelection.TapAction.Pause -> context.sendPlaybackCommand(RadioPlaybackService.ACTION_PAUSE)
         }
     }

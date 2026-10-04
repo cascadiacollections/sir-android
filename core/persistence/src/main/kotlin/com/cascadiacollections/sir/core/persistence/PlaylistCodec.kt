@@ -21,10 +21,15 @@ object PlaylistCodec {
             val line = rawLine.trim()
             when {
                 line.isEmpty() || line.equals("#EXTM3U", ignoreCase = true) -> Unit
+
                 line.startsWith("#EXTINF:", ignoreCase = true) -> {
-                    pendingName = line.substringAfter(',', missingDelimiterValue = "").trim().ifBlank { null }
+                    pendingName = line.substringAfter(',', missingDelimiterValue = "").trim().ifBlank {
+                        null
+                    }
                 }
+
                 line.startsWith("#") -> Unit
+
                 else -> {
                     stations += stationFor(url = line, name = pendingName)
                     pendingName = null
@@ -44,8 +49,11 @@ object PlaylistCodec {
             val match = entry.matchEntire(rawLine.trim()) ?: return@forEach
             val (key, index, value) = match.destructured
             val i = index.toIntOrNull() ?: return@forEach
-            if (key.equals("File", ignoreCase = true)) urlsByIndex[i] = value.trim()
-            else titlesByIndex[i] = value.trim()
+            if (key.equals("File", ignoreCase = true)) {
+                urlsByIndex[i] = value.trim()
+            } else {
+                titlesByIndex[i] = value.trim()
+            }
         }
 
         return urlsByIndex.toSortedMap().mapNotNull { (index, url) ->

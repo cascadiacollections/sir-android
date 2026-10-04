@@ -39,13 +39,22 @@ class StationNameFormatterTest {
 
     @Test
     fun `http favicons are upgraded and lose their port`() {
-        assertEquals("https://img.example/a.png", StationNameFormatter.normalizeFavicon("http://img.example:8080/a.png"))
-        assertEquals("https://img.example/a.png?x=1", StationNameFormatter.normalizeFavicon(" http://img.example/a.png?x=1 "))
+        assertEquals(
+            "https://img.example/a.png",
+            StationNameFormatter.normalizeFavicon("http://img.example:8080/a.png")
+        )
+        assertEquals(
+            "https://img.example/a.png?x=1",
+            StationNameFormatter.normalizeFavicon(" http://img.example/a.png?x=1 ")
+        )
     }
 
     @Test
     fun `https and unparseable favicons are left alone`() {
-        assertEquals("https://img.example:8443/a.png", StationNameFormatter.normalizeFavicon("https://img.example:8443/a.png"))
+        assertEquals(
+            "https://img.example:8443/a.png",
+            StationNameFormatter.normalizeFavicon("https://img.example:8443/a.png")
+        )
         assertEquals("data:image/png;base64,AAA", StationNameFormatter.normalizeFavicon("data:image/png;base64,AAA"))
     }
 

@@ -2,10 +2,10 @@ package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.Locale
 
 /**
  * In-memory, time-bounded cache in front of another [RadioDirectory].
@@ -31,15 +31,13 @@ class CachingRadioDirectory(
     private val mutex = Mutex()
     private val entries = LinkedHashMap<String, Entry>(0, 0.75f, true)
 
-    override suspend fun search(query: StationQuery): Result<List<Station>> =
-        search(query, StationSearchFilters.NONE)
+    override suspend fun search(query: StationQuery): Result<List<Station>> = search(query, StationSearchFilters.NONE)
 
-    override suspend fun search(query: StationQuery, filters: StationSearchFilters): Result<List<Station>> =
-        cached(
-            "search:${query.normalizedText.lowercase(Locale.ROOT)}:${query.effectiveLimit}:${filters.cacheKey}"
-        ) {
-            delegate.search(query, filters)
-        }
+    override suspend fun search(query: StationQuery, filters: StationSearchFilters): Result<List<Station>> = cached(
+        "search:${query.normalizedText.lowercase(Locale.ROOT)}:${query.effectiveLimit}:${filters.cacheKey}"
+    ) {
+        delegate.search(query, filters)
+    }
 
     override suspend fun topStations(limit: Int): Result<List<Station>> = topStations(limit, forceRefresh = false)
 
@@ -49,17 +47,15 @@ class CachingRadioDirectory(
      */
     override suspend fun topStations(limit: Int, forceRefresh: Boolean): Result<List<Station>> {
         val clamped = clampLimit(limit)
-        return cached("top:$clamped", bypass = forceRefresh) { delegate.topStations(clamped, forceRefresh) }
+        return cached("top:$clamped", bypass = forceRefresh) {
+            delegate.topStations(clamped, forceRefresh)
+        }
     }
 
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
         stationsByTag(tag, limit, StationSearchFilters.NONE)
 
-    override suspend fun stationsByTag(
-        tag: String,
-        limit: Int,
-        filters: StationSearchFilters
-    ): Result<List<Station>> {
+    override suspend fun stationsByTag(tag: String, limit: Int, filters: StationSearchFilters): Result<List<Station>> {
         val clamped = clampLimit(limit)
         return cached("tag:${tag.trim().lowercase(Locale.ROOT)}:$clamped:${filters.cacheKey}") {
             delegate.stationsByTag(tag, clamped, filters)
@@ -88,10 +84,9 @@ class CachingRadioDirectory(
     /** Never cached: every explicit play must reach radio-browser to be counted. */
     override suspend fun reportClick(stationId: String): Result<Unit> = delegate.reportClick(stationId)
 
-    override suspend fun getStation(id: String): Result<Station?> =
-        cached("byuuid:$id") {
-            delegate.getStation(id).map { station -> station?.let(::listOf) ?: emptyList() }
-        }.map { it.firstOrNull() }
+    override suspend fun getStation(id: String): Result<Station?> = cached("byuuid:$id") {
+        delegate.getStation(id).map { station -> station?.let(::listOf) ?: emptyList() }
+    }.map { it.firstOrNull() }
 
     /** Never cached: it exists to fetch what changed since the stations were saved. */
     override suspend fun getStations(ids: List<String>): Result<List<Station>> = delegate.getStations(ids)

@@ -5,9 +5,9 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -103,7 +103,9 @@ class ListenNowContentTest {
     fun `hiding from the shelf offers undo`() {
         setContent(SearchUiState(recentShelf = listOf(station("r"))))
 
-        composeRule.onNodeWithTag(ListenNowTestTags.recentTile("r")).performTouchInput { longClick() }
+        composeRule.onNodeWithTag(ListenNowTestTags.recentTile("r")).performTouchInput {
+            longClick()
+        }
         composeRule.onNodeWithText("Hide from Recently Played").performClick()
         assertEquals(listOf("r"), hidden)
 
@@ -137,9 +139,13 @@ class ListenNowContentTest {
     fun `the grid tile menu saves and unsaves`() {
         setContent(SearchUiState(popularStations = listOf(station("a"), station("b"))), saved = setOf("b"))
 
-        composeRule.onNodeWithTag(ListenNowTestTags.popularTile("a")).performTouchInput { longClick() }
+        composeRule.onNodeWithTag(ListenNowTestTags.popularTile("a")).performTouchInput {
+            longClick()
+        }
         composeRule.onNodeWithText("Add to My Stations").performClick()
-        composeRule.onNodeWithTag(ListenNowTestTags.popularTile("b")).performTouchInput { longClick() }
+        composeRule.onNodeWithTag(ListenNowTestTags.popularTile("b")).performTouchInput {
+            longClick()
+        }
         composeRule.onNodeWithText("Remove from My Stations").performClick()
 
         assertEquals(listOf("a" to false, "b" to true), toggled)

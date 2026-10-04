@@ -22,14 +22,26 @@ class FinishedBroadcastPolicyTest {
 
     @Test
     fun `a live stream that ends is rejoined whatever the setting`() {
-        assertEquals(EndOfStreamAction.REJOIN, FinishedBroadcastPolicy.onEnded(isFinite = false, loopFinishedBroadcasts = false))
-        assertEquals(EndOfStreamAction.REJOIN, FinishedBroadcastPolicy.onEnded(isFinite = false, loopFinishedBroadcasts = true))
+        assertEquals(
+            EndOfStreamAction.REJOIN,
+            FinishedBroadcastPolicy.onEnded(isFinite = false, loopFinishedBroadcasts = false)
+        )
+        assertEquals(
+            EndOfStreamAction.REJOIN,
+            FinishedBroadcastPolicy.onEnded(isFinite = false, loopFinishedBroadcasts = true)
+        )
     }
 
     @Test
     fun `a finished broadcast stops by default and loops when asked`() {
-        assertEquals(EndOfStreamAction.STOP, FinishedBroadcastPolicy.onEnded(isFinite = true, loopFinishedBroadcasts = false))
-        assertEquals(EndOfStreamAction.LOOP, FinishedBroadcastPolicy.onEnded(isFinite = true, loopFinishedBroadcasts = true))
+        assertEquals(
+            EndOfStreamAction.STOP,
+            FinishedBroadcastPolicy.onEnded(isFinite = true, loopFinishedBroadcasts = false)
+        )
+        assertEquals(
+            EndOfStreamAction.LOOP,
+            FinishedBroadcastPolicy.onEnded(isFinite = true, loopFinishedBroadcasts = true)
+        )
     }
 
     @Test

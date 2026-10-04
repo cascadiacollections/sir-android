@@ -75,9 +75,7 @@ class TimeShiftDataSource(
         return C.LENGTH_UNSET.toLong()
     }
 
-    override fun read(target: ByteArray, offset: Int, length: Int): Int {
-        return buffer.read(target, offset, length)
-    }
+    override fun read(target: ByteArray, offset: Int, length: Int): Int = buffer.read(target, offset, length)
 
     override fun getUri(): Uri? = upstream.uri
 

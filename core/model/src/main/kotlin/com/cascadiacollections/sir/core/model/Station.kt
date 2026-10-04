@@ -1,8 +1,8 @@
 package com.cascadiacollections.sir.core.model
 
+import java.util.Locale
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.util.Locale
 
 /**
  * Platform-neutral radio station.
@@ -72,6 +72,5 @@ data class Station(
      * view of the *old* URL, so they are dropped when it changes — otherwise an edited
      * station would keep playing the stream it was edited away from.
      */
-    fun withUrl(newUrl: String): Station =
-        if (newUrl == url) this else copy(url = newUrl, urlResolved = "", hls = 0)
+    fun withUrl(newUrl: String): Station = if (newUrl == url) this else copy(url = newUrl, urlResolved = "", hls = 0)
 }

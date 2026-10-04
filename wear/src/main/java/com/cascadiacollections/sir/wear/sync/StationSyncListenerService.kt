@@ -42,6 +42,7 @@ class StationSyncListenerService : WearableListenerService() {
                     store.save(raw)
                     changed = true
                 }
+
                 DataEvent.TYPE_DELETED -> {
                     store.clear()
                     changed = true

@@ -56,10 +56,12 @@ class WearPlaybackService : MediaSessionService() {
         val okHttpClient = StreamingHttpClientFactory.newBuilder().build()
 
         val httpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
-            .setDefaultRequestProperties(mapOf(
-                "Icy-MetaData" to "1",
-                "User-Agent" to "SIR Wear/${Build.VERSION.SDK_INT}"
-            ))
+            .setDefaultRequestProperties(
+                mapOf(
+                    "Icy-MetaData" to "1",
+                    "User-Agent" to "SIR Wear/${Build.VERSION.SDK_INT}"
+                )
+            )
 
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(httpDataSourceFactory)
@@ -112,15 +114,18 @@ class WearPlaybackService : MediaSessionService() {
                 stopPlayback()
                 return START_NOT_STICKY
             }
+
             ACTION_PLAY_STATION -> {
                 enterForeground()
                 val station = intent.getStringExtra(EXTRA_STATION)?.let(::decodeStation)
                 play(station?.takeIf { it.isPlayable } ?: defaultStation())
             }
+
             ACTION_PLAY_LAST -> {
                 enterForeground()
                 play(WatchStationStore.from(this).load().last ?: defaultStation())
             }
+
             // Started by startForegroundService() to resume: honour that contract again,
             // since a previous Stop may have left the foreground.
             null -> enterForeground()
@@ -170,7 +175,8 @@ class WearPlaybackService : MediaSessionService() {
     private fun buildNotification() = run {
         val session = requireNotNull(mediaSession)
         val openIntent = PendingIntent.getActivity(
-            this, 0,
+            this,
+            0,
             Intent(this, WearActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

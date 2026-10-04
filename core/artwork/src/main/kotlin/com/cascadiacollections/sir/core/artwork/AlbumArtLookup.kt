@@ -1,5 +1,8 @@
 package com.cascadiacollections.sir.core.artwork
 
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.SerializationException
 import okhttp3.Call
@@ -7,9 +10,6 @@ import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import java.io.IOException
-import java.util.concurrent.TimeUnit
-import kotlin.coroutines.resume
 
 /**
  * Finds cover art for a track through the iTunes Search API (ShoutKit's `AlbumArtLookup`).
@@ -22,7 +22,7 @@ import kotlin.coroutines.resume
 class AlbumArtLookup(
     private val client: OkHttpClient = defaultHttpClient(),
     private val userAgent: String = DEFAULT_USER_AGENT,
-    cacheSize: Int = DEFAULT_CACHE_SIZE,
+    cacheSize: Int = DEFAULT_CACHE_SIZE
 ) {
 
     /** A cached answer; [art] is null for a definitive "no artwork for this song". */
@@ -52,8 +52,7 @@ class AlbumArtLookup(
     }
 
     /** Whether an answer (hit or miss) for the pair is cached. Exposed for tests. */
-    fun isCached(artist: String?, title: String?): Boolean =
-        TrackKey.of(artist, title)?.let(cache::contains) == true
+    fun isCached(artist: String?, title: String?): Boolean = TrackKey.of(artist, title)?.let(cache::contains) == true
 
     /**
      * The response body of a successful call, or null on any failure. Enqueued rather than

@@ -7,20 +7,12 @@ package com.cascadiacollections.sir.core.playback
  * current track, and some emit nothing at all. Keeping the "is this real track info?"
  * decision here means it can be tested without a player.
  */
-data class StreamMetadata(
-    val trackTitle: String? = null,
-    val artist: String? = null,
-    val station: String? = null,
-)
+data class StreamMetadata(val trackTitle: String? = null, val artist: String? = null, val station: String? = null)
 
 /**
  * Raw ICY fields as reported by the player, before interpretation.
  */
-data class RawStreamMetadata(
-    val title: String? = null,
-    val artist: String? = null,
-    val station: String? = null,
-)
+data class RawStreamMetadata(val title: String? = null, val artist: String? = null, val station: String? = null)
 
 /**
  * The outcome of folding a metadata update into the previous state.
@@ -28,10 +20,7 @@ data class RawStreamMetadata(
  * [notifyChanged] is false when nothing user-visible moved, so the service can skip
  * rebuilding the notification. Streams push metadata frequently, often unchanged.
  */
-data class StreamMetadataUpdate(
-    val metadata: StreamMetadata,
-    val notifyChanged: Boolean,
-)
+data class StreamMetadataUpdate(val metadata: StreamMetadata, val notifyChanged: Boolean)
 
 /**
  * Interprets ICY metadata updates.
@@ -47,7 +36,7 @@ data class StreamMetadataUpdate(
  */
 class StreamMetadataResolver(
     private val staticTitles: Set<String> = emptySet(),
-    private val staticArtists: Set<String> = emptySet(),
+    private val staticArtists: Set<String> = emptySet()
 ) {
 
     /**
@@ -55,18 +44,14 @@ class StreamMetadataResolver(
      *   title that is only the station plugging itself. Defaults to whatever the stream
      *   reports as its station.
      */
-    fun resolve(
-        previous: StreamMetadata,
-        raw: RawStreamMetadata,
-        stationName: String? = null,
-    ): StreamMetadataUpdate {
+    fun resolve(previous: StreamMetadata, raw: RawStreamMetadata, stationName: String? = null): StreamMetadataUpdate {
         val station = raw.station?.takeUnless { it.isBlank() } ?: previous.station
         val stationChanged = !raw.station.isNullOrBlank() && previous.station != raw.station
 
         /** Nothing usable in this update: keep the last known track, note only the station. */
         fun unchanged() = StreamMetadataUpdate(
             metadata = previous.copy(station = station),
-            notifyChanged = stationChanged,
+            notifyChanged = stationChanged
         )
 
         val isStaticTitle = raw.title.isNullOrBlank() || raw.title in staticTitles

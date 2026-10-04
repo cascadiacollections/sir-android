@@ -163,17 +163,11 @@ class CircularByteBuffer(val capacity: Int) {
     }
 
     /** Unlocked available — call only while holding [lock]. */
-    private fun availableInternal(): Int {
-        return (writeOffset - readOffset).coerceIn(0L, capacity.toLong()).toInt()
-    }
+    private fun availableInternal(): Int = (writeOffset - readOffset).coerceIn(0L, capacity.toLong()).toInt()
 
-    private fun oldestOffsetInternal(): Long {
-        return (writeOffset - capacity).coerceAtLeast(0L)
-    }
+    private fun oldestOffsetInternal(): Long = (writeOffset - capacity).coerceAtLeast(0L)
 
-    private fun indexFor(offset: Long): Int {
-        return (offset % capacity).toInt()
-    }
+    private fun indexFor(offset: Long): Int = (offset % capacity).toInt()
 
     companion object {
         /**

@@ -4,8 +4,8 @@ import com.cascadiacollections.sir.core.directory.CachingRadioDirectory
 import com.cascadiacollections.sir.core.directory.CuratedFallbackDirectory
 import com.cascadiacollections.sir.core.directory.DiscoverySnapshot
 import com.cascadiacollections.sir.core.directory.DiscoverySnapshotStore
-import com.cascadiacollections.sir.core.directory.SnapshotRadioDirectory
 import com.cascadiacollections.sir.core.directory.RadioDirectory
+import com.cascadiacollections.sir.core.directory.SnapshotRadioDirectory
 import com.cascadiacollections.sir.core.directory.Tag
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
@@ -42,7 +42,9 @@ class SearchViewModelListenNowTest {
     private fun viewModel(dir: RadioDirectory = directory) =
         SearchViewModel(dir, store).also(coroutineRule::registerViewModel)
 
-    private fun test(block: suspend TestScope.() -> Unit) = runTest(coroutineRule.testDispatcher) { block() }
+    private fun test(block: suspend TestScope.() -> Unit) = runTest(coroutineRule.testDispatcher) {
+        block()
+    }
 
     @Test
     fun `popular stations load the top 24`() = test {
@@ -204,8 +206,16 @@ class SearchViewModelListenNowTest {
     private fun TestScope.snapshotChain(ageMillis: Long): RadioDirectory {
         val now = 100 * HOUR
         val saved = DiscoverySnapshot(
-            topStations = DiscoverySnapshot.StationsSection(SearchViewModel.POPULAR_LIMIT, now - ageMillis, listOf(station("saved"))),
-            topTags = DiscoverySnapshot.TagsSection(RadioDirectory.DEFAULT_TAG_LIMIT, now - ageMillis, listOf(Tag("saved", 1)))
+            topStations = DiscoverySnapshot.StationsSection(
+                SearchViewModel.POPULAR_LIMIT,
+                now - ageMillis,
+                listOf(station("saved"))
+            ),
+            topTags = DiscoverySnapshot.TagsSection(
+                RadioDirectory.DEFAULT_TAG_LIMIT,
+                now - ageMillis,
+                listOf(Tag("saved", 1))
+            )
         )
         return CuratedFallbackDirectory(
             SnapshotRadioDirectory(
@@ -273,7 +283,12 @@ class SearchViewModelListenNowTest {
         val hidden get() = hiddenRecentStationIds
 
         override suspend fun hideRecentStation(stationId: String) {
-            if (recentStations.value.any { it.id == stationId }) hiddenRecentStationIds.value += stationId
+            if (recentStations.value.any {
+                    it.id == stationId
+                }
+            ) {
+                hiddenRecentStationIds.value += stationId
+            }
         }
 
         override suspend fun unhideRecentStation(stationId: String) {
@@ -282,7 +297,11 @@ class SearchViewModelListenNowTest {
 
         fun select(station: Station) {
             val updated = StationCollections.recordRecent(recentStations.value, station)
-            hiddenRecentStationIds.value = StationCollections.hiddenAfterPlay(hiddenRecentStationIds.value, updated, station)
+            hiddenRecentStationIds.value = StationCollections.hiddenAfterPlay(
+                hiddenRecentStationIds.value,
+                updated,
+                station
+            )
             recentStations.value = updated
         }
     }

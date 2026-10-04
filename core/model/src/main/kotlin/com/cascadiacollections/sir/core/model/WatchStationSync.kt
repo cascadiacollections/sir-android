@@ -12,10 +12,7 @@ import kotlinx.serialization.json.Json
  * field, or one this build doesn't know — still decodes.
  */
 @Serializable
-data class WatchStationPayload(
-    val last: Station? = null,
-    val recents: List<Station> = emptyList()
-)
+data class WatchStationPayload(val last: Station? = null, val recents: List<Station> = emptyList())
 
 /**
  * The phone→watch wire format, shared by the Data Layer publisher in `:app` (Play flavor)
@@ -38,11 +35,10 @@ object WatchStationSync {
     }
 
     /** Builds the payload: recents capped at [MAX_RECENTS], unplayable stations dropped. */
-    fun payload(last: Station?, recents: List<Station>): WatchStationPayload =
-        WatchStationPayload(
-            last = last?.takeIf { it.isPlayable },
-            recents = recents.filter { it.isPlayable }.distinctBy { it.id }.take(MAX_RECENTS)
-        )
+    fun payload(last: Station?, recents: List<Station>): WatchStationPayload = WatchStationPayload(
+        last = last?.takeIf { it.isPlayable },
+        recents = recents.filter { it.isPlayable }.distinctBy { it.id }.take(MAX_RECENTS)
+    )
 
     fun encode(payload: WatchStationPayload): String = json.encodeToString(payload)
 

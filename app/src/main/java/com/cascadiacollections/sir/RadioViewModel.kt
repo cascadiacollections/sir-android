@@ -1,8 +1,8 @@
 package com.cascadiacollections.sir
 
 import android.app.Application
-import android.content.Intent
 import android.content.ComponentName
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
@@ -69,13 +69,14 @@ data class RadioUiState(
      * until the controller says otherwise, so a state built without a player reads as before.
      * A failure or a buffering spell is only shown while this is true.
      */
-    val isPlayRequested: Boolean = true,
+    val isPlayRequested: Boolean = true
 )
 
 class RadioViewModel(
     application: Application,
     private val settingsRepository: SettingsRepository,
-    private val trackHistoryRepository: TrackHistoryRepository = TrackHistoryRepository(application),
+    private val trackHistoryRepository: TrackHistoryRepository =
+        TrackHistoryRepository(application)
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(RadioUiState())
@@ -94,7 +95,9 @@ class RadioViewModel(
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            _uiState.update { it.withPlayerError(playWhenReady = controller?.playWhenReady == true) }
+            _uiState.update {
+                it.withPlayerError(playWhenReady = controller?.playWhenReady == true)
+            }
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
@@ -121,7 +124,10 @@ class RadioViewModel(
 
     private fun observeStation() {
         viewModelScope.launch {
-            combine(settingsRepository.selectedStation, settingsRepository.savedStations) { station, saved ->
+            combine(settingsRepository.selectedStation, settingsRepository.savedStations) {
+                    station,
+                    saved
+                ->
                 station to (station != null && saved.any { it.id == station.id })
             }.collect { (station, isFavorite) ->
                 _uiState.update { it.copy(station = station, isFavorite = isFavorite) }
@@ -226,12 +232,14 @@ class RadioViewModel(
         }
         when (_uiState.value.transportAction) {
             TransportAction.PAUSE -> activeController.pause()
+
             // Pause first so the service treats it as the listener's choice (dismissing
             // the failure and skipping any scheduled reconnect), then drop the connection.
             TransportAction.CANCEL -> {
                 activeController.pause()
                 activeController.stop()
             }
+
             TransportAction.PLAY, TransportAction.RETRY -> {
                 // A failed, stalled or cancelled player is idle and must be re-prepared.
                 if (activeController.playbackState == Player.STATE_IDLE) activeController.prepare()
@@ -273,10 +281,8 @@ class RadioViewModel(
         controller = null
     }
 
-    class Factory(
-        private val application: Application,
-        private val settingsRepository: SettingsRepository
-    ) : ViewModelProvider.Factory {
+    class Factory(private val application: Application, private val settingsRepository: SettingsRepository) :
+        ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
             return RadioViewModel(application, settingsRepository) as T

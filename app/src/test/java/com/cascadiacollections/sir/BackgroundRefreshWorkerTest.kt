@@ -22,11 +22,15 @@ import org.robolectric.annotation.Config
 class BackgroundRefreshWorkerTest {
 
     private val directory = BackgroundRefreshTest.FakeDirectory()
-    private val favorites = BackgroundRefreshTest.FakeFavorites(listOf(BackgroundRefreshTest.station(BackgroundRefreshTest.UUID_A)))
+    private val favorites = BackgroundRefreshTest.FakeFavorites(
+        listOf(BackgroundRefreshTest.station(BackgroundRefreshTest.UUID_A))
+    )
 
     private val factory = object : WorkerFactory() {
         override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters) =
-            BackgroundRefreshWorker(appContext, workerParameters) { BackgroundRefresh(directory, favorites) }
+            BackgroundRefreshWorker(appContext, workerParameters) {
+                BackgroundRefresh(directory, favorites)
+            }
     }
 
     private fun worker(runAttemptCount: Int = 0) =

@@ -31,20 +31,27 @@ class TopTracksTest {
         val history = listOf(
             heard("A", at = now - 3).copy(artworkUrl = "https://art/old"),
             heard("A", at = now - 2).copy(artworkUrl = "https://art/new"),
-            heard("A", at = now - 1),
+            heard("A", at = now - 1)
         )
         assertEquals("https://art/new", rank(history).single().artworkUrl)
     }
 
     @Test
     fun `ties break by most recently heard`() {
-        val history = listOf(heard("A", at = now - 10), heard("A", at = now - 9), heard("B", at = now - 5), heard("B", at = now - 8))
+        val history = listOf(
+            heard("A", at = now - 10),
+            heard("A", at = now - 9),
+            heard("B", at = now - 5),
+            heard("B", at = now - 8)
+        )
         assertEquals(listOf("B", "A"), rank(history).map { it.title })
     }
 
     @Test
     fun `matches case-insensitively and shows the newest spelling`() {
-        val top = rank(listOf(heard("song", artist = "band", at = now - 2), heard("Song", artist = "Band", at = now - 1)))
+        val top = rank(
+            listOf(heard("song", artist = "band", at = now - 2), heard("Song", artist = "Band", at = now - 1))
+        )
         assertEquals(1, top.size)
         assertEquals("Song", top.single().title)
         assertEquals("Band", top.single().artist)
@@ -58,7 +65,8 @@ class TopTracksTest {
 
     @Test
     fun `week only counts the last seven days`() {
-        val history = listOf(heard("A", at = now - 8 * day), heard("A", at = now - 1 * day), heard("A", at = now))
+        val history =
+            listOf(heard("A", at = now - 8 * day), heard("A", at = now - 1 * day), heard("A", at = now))
         assertEquals(2, rank(history, TopTracksTimeframe.WEEK).single().playCount)
         assertEquals(3, rank(history, TopTracksTimeframe.ALL_TIME).single().playCount)
     }
@@ -67,7 +75,12 @@ class TopTracksTest {
     fun `month is a calendar month back`() {
         // Feb 28 12:00 is inside "a month back from Mar 31 12:00"; Feb 28 11:59 is not.
         val feb28Noon = now - 31 * day
-        val history = listOf(heard("A", at = feb28Noon), heard("A", at = now), heard("B", at = feb28Noon - 60_000), heard("B", at = now))
+        val history = listOf(
+            heard("A", at = feb28Noon),
+            heard("A", at = now),
+            heard("B", at = feb28Noon - 60_000),
+            heard("B", at = now)
+        )
         val top = rank(history, TopTracksTimeframe.MONTH)
         assertEquals(listOf("A" to 2, "B" to 1), top.map { it.title to it.playCount })
     }

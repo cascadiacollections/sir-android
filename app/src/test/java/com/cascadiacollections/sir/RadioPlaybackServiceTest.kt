@@ -74,12 +74,17 @@ class RadioPlaybackServiceTest {
             RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES,
             RadioPlaybackService.EXTRA_EQUALIZER_PRESET
         )
-        assertTrue("Actions and extras must not share identical strings", actions.none { it in extras })
+        assertTrue(
+            "Actions and extras must not share identical strings",
+            actions.none {
+                it in extras
+            }
+        )
     }
 
     @Test
     fun `REPLAY_BUFFER_SIZE holds at least 30 seconds at 64kbps`() {
-        val bytesFor30Seconds = 30 * 8_000  // 64kbps = 8KB/s
+        val bytesFor30Seconds = 30 * 8_000 // 64kbps = 8KB/s
         assertTrue(
             "Buffer (${ RadioPlaybackService.REPLAY_BUFFER_SIZE }) must hold >= 30s ($bytesFor30Seconds bytes)",
             RadioPlaybackService.REPLAY_BUFFER_SIZE >= bytesFor30Seconds

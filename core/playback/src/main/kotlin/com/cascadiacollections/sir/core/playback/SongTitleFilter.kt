@@ -23,7 +23,7 @@ object SongTitleFilter {
         "now playing", "listen live", "on air", "follow us", "like us",
         "text the word", "text to win", "call now", "visit us", "check us out",
         "download our app", "commercial break", "stay tuned", "coming up next",
-        "back after this", "brought to you by",
+        "back after this", "brought to you by"
     )
 
     /**
@@ -31,7 +31,12 @@ object SongTitleFilter {
      * from a legitimately one-word song title.
      */
     private val junkSingleWords = setOf(
-        "unknown", "stream", "live", "offline", "test", "advertisement",
+        "unknown",
+        "stream",
+        "live",
+        "offline",
+        "test",
+        "advertisement"
     )
 
     private val knownTlds = listOf(".com", ".org", ".net", ".fm", ".io", ".co")
@@ -45,7 +50,12 @@ object SongTitleFilter {
         val candidates = listOfNotNull(title, track.artist)
 
         if (candidates.any(::looksLikeUrl)) return false
-        if (stationName != null && candidates.any { matchesStationName(it, stationName) }) return false
+        if (stationName != null && candidates.any {
+                matchesStationName(it, stationName)
+            }
+        ) {
+            return false
+        }
         if (candidates.any(::containsPromoPhrasing)) return false
         if (track.artist == null && isBareSingleWordId(title)) return false
         return true
@@ -76,8 +86,7 @@ object SongTitleFilter {
      * between a `StreamTitle` station plug and the canonical station name (e.g. "KEXP 90.3
      * FM" vs "KEXP903FM") don't defeat the match.
      */
-    private fun normalizeForComparison(text: String): String =
-        text.lowercase().filter(Char::isLetterOrDigit)
+    private fun normalizeForComparison(text: String): String = text.lowercase().filter(Char::isLetterOrDigit)
 
     private fun containsPromoPhrasing(text: String): Boolean {
         val lowercased = text.lowercase()

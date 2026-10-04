@@ -66,8 +66,14 @@ class FavoritesBackupCodecTest {
     fun `encode writes the ShoutKit schema with first tag as genre and sortIndex as position`() {
         val text = FavoritesBackupCodec.encode(
             listOf(
-                Station(id = "a", name = "A", url = "https://a/stream", favicon = "https://a/icon.png", tags = "rock, indie"),
-                Station(id = "b", name = "B", url = "https://b/stream"),
+                Station(
+                    id = "a",
+                    name = "A",
+                    url = "https://a/stream",
+                    favicon = "https://a/icon.png",
+                    tags = "rock, indie"
+                ),
+                Station(id = "b", name = "B", url = "https://b/stream")
             )
         )
         val root = Json.parseToJsonElement(text).jsonObject
@@ -111,7 +117,7 @@ class FavoritesBackupCodecTest {
     fun `round trip preserves order and mapped fields`() {
         val stations = listOf(
             Station(id = "x", name = "X", url = "https://x/s", favicon = "https://x/f", tags = "jazz"),
-            Station(id = "y", name = "Y", url = "https://y/s"),
+            Station(id = "y", name = "Y", url = "https://y/s")
         )
         assertEquals(stations, FavoritesBackupCodec.decode(FavoritesBackupCodec.encode(stations)))
     }
@@ -141,7 +147,9 @@ class FavoritesBackupCodecTest {
 
     @Test
     fun `non-backup text fails to decode`() {
-        assertThrows(SerializationException::class.java) { FavoritesBackupCodec.decode("#EXTM3U\nhttps://a") }
+        assertThrows(SerializationException::class.java) {
+            FavoritesBackupCodec.decode("#EXTM3U\nhttps://a")
+        }
     }
 
     @Test

@@ -36,9 +36,7 @@ private const val RESOURCES_VERSION = "1"
  */
 class RadioTileService : TileService() {
 
-    override fun onTileRequest(
-        requestParams: RequestBuilders.TileRequest
-    ): ListenableFuture<TileBuilders.Tile> {
+    override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> {
         val token = SessionToken(this, ComponentName(this, WearPlaybackService::class.java))
         val controllerFuture = MediaController.Builder(this, token).buildAsync()
 

@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
+import java.io.File
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -8,7 +9,6 @@ import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 class FileDiscoverySnapshotStoreTest {
 
@@ -19,7 +19,9 @@ class FileDiscoverySnapshotStoreTest {
         topStations = DiscoverySnapshot.StationsSection(
             limit = 24,
             savedAtMillis = 1_000L,
-            stations = listOf(Station(id = "a", name = "A", url = "https://a.example", urlResolved = "https://a.example/r", hls = 1))
+            stations = listOf(
+                Station(id = "a", name = "A", url = "https://a.example", urlResolved = "https://a.example/r", hls = 1)
+            )
         ),
         topTags = DiscoverySnapshot.TagsSection(limit = 48, savedAtMillis = 2_000L, tags = listOf(Tag("jazz", 7)))
     )
@@ -51,7 +53,9 @@ class FileDiscoverySnapshotStoreTest {
 
     @Test
     fun `a corrupt file reads as absent`() = runTest {
-        val file = temp.newFile("snapshot.json").apply { writeText("""{"schemaVersion":1,"topStations":{"limit":"x"""") }
+        val file = temp.newFile(
+            "snapshot.json"
+        ).apply { writeText("""{"schemaVersion":1,"topStations":{"limit":"x"""") }
         assertNull(store(file).read())
     }
 

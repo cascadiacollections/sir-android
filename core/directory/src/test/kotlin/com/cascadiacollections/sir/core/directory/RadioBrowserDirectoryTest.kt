@@ -1,6 +1,9 @@
 package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.StationQuery
+import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -10,9 +13,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.IOException
-import java.net.ConnectException
-import java.net.SocketTimeoutException
 
 class RadioBrowserDirectoryTest {
 

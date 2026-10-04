@@ -9,14 +9,16 @@ class StreamRecoveryTest {
 
     @Test
     fun `a transient failure reconnects three times at 2, 4 and 8 seconds, then fails`() {
-        val decisions = List(4) { recovery.onFailure(StreamFailure.NoNetwork, playbackWanted = true) }
+        val decisions = List(4) {
+            recovery.onFailure(StreamFailure.NoNetwork, playbackWanted = true)
+        }
 
         assertEquals(
             listOf(
                 RecoveryDecision.Reconnect(2_000L),
                 RecoveryDecision.Reconnect(4_000L),
                 RecoveryDecision.Reconnect(8_000L),
-                RecoveryDecision.Fail(StreamFailure.NoNetwork),
+                RecoveryDecision.Fail(StreamFailure.NoNetwork)
             ),
             decisions
         )
@@ -37,7 +39,7 @@ class StreamRecoveryTest {
         listOf(
             StreamFailure.StationUnavailable(404),
             StreamFailure.Unplayable,
-            StreamFailure.Stalled,
+            StreamFailure.Stalled
         ).forEach { failure ->
             assertEquals(RecoveryDecision.Fail(failure), recovery.onFailure(failure, playbackWanted = true))
         }

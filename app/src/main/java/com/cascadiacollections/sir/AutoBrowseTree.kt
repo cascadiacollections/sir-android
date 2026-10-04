@@ -62,21 +62,20 @@ internal object AutoBrowseTree {
         saved: List<Station>,
         recents: List<Station>,
         hiddenRecentIds: Set<String> = emptySet(),
-        limit: Int = YOUR_STATIONS_LIMIT,
+        limit: Int = YOUR_STATIONS_LIMIT
     ): List<Station> = distinctPlayable(
         saved + recents.filterNot { it.id in hiddenRecentIds },
-        limit,
+        limit
     )
 
     /** Recently played stations, newest first, minus the hidden ones. */
     fun recentlyPlayed(
         recents: List<Station>,
         hiddenRecentIds: Set<String> = emptySet(),
-        limit: Int = RECENTLY_PLAYED_LIMIT,
+        limit: Int = RECENTLY_PLAYED_LIMIT
     ): List<Station> = distinctPlayable(recents.filterNot { it.id in hiddenRecentIds }, limit)
 
-    fun topStations(top: List<Station>, limit: Int = TOP_STATIONS_LIMIT): List<Station> =
-        distinctPlayable(top, limit)
+    fun topStations(top: List<Station>, limit: Int = TOP_STATIONS_LIMIT): List<Station> = distinctPlayable(top, limit)
 
     /**
      * Search results: saved stations whose name matches [query] first — they are what the
@@ -86,7 +85,7 @@ internal object AutoBrowseTree {
         query: String,
         saved: List<Station>,
         directoryResults: List<Station>,
-        limit: Int = SEARCH_LIMIT,
+        limit: Int = SEARCH_LIMIT
     ): List<Station> {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return emptyList()
@@ -112,10 +111,9 @@ internal object AutoBrowseTree {
         return items.subList(start.toInt(), end.toInt())
     }
 
-    private fun distinctPlayable(stations: List<Station>, limit: Int): List<Station> =
-        stations.asSequence()
-            .filter { it.isPlayable && it.id.isNotBlank() }
-            .distinctBy { it.id }
-            .take(limit.coerceAtLeast(0))
-            .toList()
+    private fun distinctPlayable(stations: List<Station>, limit: Int): List<Station> = stations.asSequence()
+        .filter { it.isPlayable && it.id.isNotBlank() }
+        .distinctBy { it.id }
+        .take(limit.coerceAtLeast(0))
+        .toList()
 }

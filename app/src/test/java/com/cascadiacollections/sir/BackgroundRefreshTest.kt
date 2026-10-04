@@ -6,6 +6,7 @@ import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
 import com.cascadiacollections.sir.core.persistence.SavedStationRefresh
 import com.cascadiacollections.sir.core.persistence.SavedStationRefreshStore
+import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -13,7 +14,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.IOException
 
 /** One background refresh pass, against fakes (no WorkManager, no DataStore). */
 class BackgroundRefreshTest {
@@ -87,7 +87,10 @@ class BackgroundRefreshTest {
 
     @Test
     fun `no saved radio-browser stations makes no lookup`() = runTest {
-        val outcome = BackgroundRefresh(directory, FakeFavorites(listOf(Station(id = "sir-default", url = "https://s")))).run()
+        val outcome = BackgroundRefresh(
+            directory,
+            FakeFavorites(listOf(Station(id = "sir-default", url = "https://s")))
+        ).run()
 
         assertTrue(directory.lookups.isEmpty())
         assertNull(outcome.favoritesUpdated)

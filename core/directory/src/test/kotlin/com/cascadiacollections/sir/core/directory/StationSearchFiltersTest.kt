@@ -21,7 +21,8 @@ class StationSearchFiltersTest {
 
     @Test
     fun `values are normalized`() {
-        val filters = StationSearchFilters(bitrateMinKbps = 0, bitrateMaxKbps = -1, tag = "  ", countryCode = " de ")
+        val filters =
+            StationSearchFilters(bitrateMinKbps = 0, bitrateMaxKbps = -1, tag = "  ", countryCode = " de ")
 
         assertNull(filters.bitrateMinKbps)
         assertNull(filters.bitrateMaxKbps)
@@ -89,12 +90,18 @@ class StationSearchFiltersTest {
 
     @Test
     fun `equal filters share a cache key and different ones do not`() {
-        assertEquals(StationSearchFilters(tag = "Jazz", countryCode = "gb"), StationSearchFilters(tag = "jazz ", countryCode = "GB"))
+        assertEquals(
+            StationSearchFilters(tag = "Jazz", countryCode = "gb"),
+            StationSearchFilters(tag = "jazz ", countryCode = "GB")
+        )
         assertEquals(
             StationSearchFilters(tag = "Jazz").cacheKey,
             StationSearchFilters(tag = "jazz").cacheKey
         )
-        assertNotEquals(StationSearchFilters(bitrateMinKbps = 64).cacheKey, StationSearchFilters(bitrateMaxKbps = 64).cacheKey)
+        assertNotEquals(
+            StationSearchFilters(bitrateMinKbps = 64).cacheKey,
+            StationSearchFilters(bitrateMaxKbps = 64).cacheKey
+        )
         assertNotEquals(StationSearchFilters.NONE.cacheKey, StationSearchFilters(countryCode = "US").cacheKey)
     }
 }

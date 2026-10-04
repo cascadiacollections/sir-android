@@ -30,14 +30,14 @@ sealed interface NowPlayingAnnouncement {
         val trackOnStation: String,
         /** `%1$s` station. */
         val stationPlaying: String,
-        val nothingPlaying: String,
+        val nothingPlaying: String
     ) {
         companion object {
             fun from(context: Context) = Templates(
                 trackByArtistOnStation = context.getString(R.string.announce_track_by_artist_on_station),
                 trackOnStation = context.getString(R.string.announce_track_on_station),
                 stationPlaying = context.getString(R.string.announce_station_playing),
-                nothingPlaying = context.getString(R.string.announce_nothing_playing),
+                nothingPlaying = context.getString(R.string.announce_nothing_playing)
             )
         }
     }
@@ -48,7 +48,9 @@ sealed interface NowPlayingAnnouncement {
         } else {
             templates.trackOnStation.format(title, station)
         }
+
         is StationOnly -> templates.stationPlaying.format(station)
+
         NothingPlaying -> templates.nothingPlaying
     }
 
@@ -72,7 +74,7 @@ sealed interface NowPlayingAnnouncement {
             station: String?,
             hasResolvedTrack: Boolean,
             hasResolvedArtist: Boolean,
-            fallbackStation: String,
+            fallbackStation: String
         ): NowPlayingAnnouncement {
             if (!isPlaying) return NothingPlaying
             val stationName = station.clean() ?: fallbackStation
@@ -94,7 +96,7 @@ sealed interface NowPlayingAnnouncement {
                 station = extras?.getString(RadioPlaybackService.EXTRA_STATION_NAME),
                 hasResolvedTrack = extras?.getBoolean(RadioPlaybackService.EXTRA_HAS_RESOLVED_TRACK) == true,
                 hasResolvedArtist = extras?.getBoolean(RadioPlaybackService.EXTRA_HAS_RESOLVED_ARTIST) == true,
-                fallbackStation = fallbackStation,
+                fallbackStation = fallbackStation
             )
         }
 

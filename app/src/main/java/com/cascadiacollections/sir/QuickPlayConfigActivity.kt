@@ -89,8 +89,11 @@ class QuickPlayConfigActivity : ComponentActivity() {
             try {
                 val glanceId = GlanceAppWidgetManager(this@QuickPlayConfigActivity).getGlanceIdBy(appWidgetId)
                 updateAppWidgetState(this@QuickPlayConfigActivity, glanceId) { prefs ->
-                    if (stationId == null) prefs.remove(RadioWidget.PINNED_STATION_ID)
-                    else prefs[RadioWidget.PINNED_STATION_ID] = stationId
+                    if (stationId == null) {
+                        prefs.remove(RadioWidget.PINNED_STATION_ID)
+                    } else {
+                        prefs[RadioWidget.PINNED_STATION_ID] = stationId
+                    }
                 }
                 RadioWidget().update(this@QuickPlayConfigActivity, glanceId)
                 QuickPlayWidgetUpdater.start(this@QuickPlayConfigActivity)
@@ -103,17 +106,12 @@ class QuickPlayConfigActivity : ComponentActivity() {
         }
     }
 
-    private fun resultIntent(appWidgetId: Int) =
-        Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+    private fun resultIntent(appWidgetId: Int) = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QuickPlayPicker(
-    stations: List<Station>,
-    pinnedId: String?,
-    onPick: (Station?) -> Unit
-) {
+private fun QuickPlayPicker(stations: List<Station>, pinnedId: String?, onPick: (Station?) -> Unit) {
     // A pinned id that is no longer saved behaves like the default, so show it that way.
     val effectivePinned = pinnedId?.takeIf { id -> stations.any { it.id == id } }
     Scaffold(

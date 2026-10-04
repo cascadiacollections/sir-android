@@ -13,7 +13,7 @@ class StreamFailureCodesTest {
             StreamFailure.StationUnavailable(),
             StreamFailure.Unplayable,
             StreamFailure.Transient,
-            StreamFailure.Stalled,
+            StreamFailure.Stalled
         ).forEach { failure ->
             assertEquals(failure, StreamFailureCodes.decode(StreamFailureCodes.encode(failure)))
         }

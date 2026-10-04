@@ -72,7 +72,10 @@ class SavedStationRefreshTest {
 
         val result = SavedStationRefresh.merge(listOf(noArt, blankArt), listOf(fetched, fetched.copy(id = "b")))
 
-        assertEquals(listOf("https://cdn.example/new.png", "https://cdn.example/new.png"), result.stations.map { it.favicon })
+        assertEquals(
+            listOf("https://cdn.example/new.png", "https://cdn.example/new.png"),
+            result.stations.map { it.favicon }
+        )
     }
 
     @Test

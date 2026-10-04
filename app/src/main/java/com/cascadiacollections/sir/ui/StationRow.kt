@@ -53,7 +53,9 @@ fun StationRow(
             isPlaying -> {
                 { Text(stringResource(R.string.station_now_playing)) }
             }
+
             subtitle.isNullOrEmpty() -> null
+
             else -> {
                 { Text(subtitle) }
             }
@@ -75,11 +77,7 @@ fun StationRow(
  * for a favicon URL that fails to load (dead link, unsupported format, offline).
  */
 @Composable
-private fun StationArtwork(
-    station: Station,
-    isPlaying: Boolean,
-    modifier: Modifier = Modifier
-) {
+private fun StationArtwork(station: Station, isPlaying: Boolean, modifier: Modifier = Modifier) {
     // Keyed to station.id (not just favicon): some call sites (e.g. BrowseScreen's
     // search results) render StationRow in a LazyColumn without an item key, so Compose
     // can reuse this composition slot for a different station at the same list

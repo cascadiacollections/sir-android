@@ -12,7 +12,9 @@ class StationCollectionsTest {
 
     @Test
     fun `recents keep ShoutKit's twenty-five and remove one by id`() {
-        val recents = (1..30).fold(emptyList<Station>()) { acc, i -> StationCollections.recordRecent(acc, station("s$i")) }
+        val recents = (1..30).fold(
+            emptyList<Station>()
+        ) { acc, i -> StationCollections.recordRecent(acc, station("s$i")) }
         assertEquals(25, recents.size)
         assertEquals("s30", recents.first().id)
 
@@ -43,7 +45,12 @@ class StationCollectionsTest {
     fun `removing a favorite leaves the rest in order`() {
         val current = listOf(station("a"), station("b"), station("c"))
 
-        assertEquals(listOf("a", "c"), StationCollections.removeFavorite(current, "b").map { it.id })
+        assertEquals(
+            listOf("a", "c"),
+            StationCollections.removeFavorite(current, "b").map {
+                it.id
+            }
+        )
     }
 
     @Test
@@ -110,7 +117,9 @@ class StationCollectionsTest {
     @Test
     fun `recents are capped at the limit dropping the oldest`() {
         var recents = emptyList<Station>()
-        repeat(5) { index -> recents = StationCollections.recordRecent(recents, station("s$index"), limit = 3) }
+        repeat(5) { index ->
+            recents = StationCollections.recordRecent(recents, station("s$index"), limit = 3)
+        }
 
         assertEquals(listOf("s4", "s3", "s2"), recents.map { it.id })
     }

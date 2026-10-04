@@ -1,14 +1,10 @@
 package com.cascadiacollections.sir
 
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -65,7 +61,5 @@ class CastDeviceDetectorTest {
         assertFalse(detector.castDevicesAvailable.value)
     }
 
-    private fun mockLifecycleOwner(): androidx.lifecycle.LifecycleOwner {
-        return io.mockk.mockk(relaxed = true)
-    }
+    private fun mockLifecycleOwner(): androidx.lifecycle.LifecycleOwner = io.mockk.mockk(relaxed = true)
 }

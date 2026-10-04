@@ -14,16 +14,17 @@ import androidx.annotation.StringRes
  * [NORMAL] has no curve: it means "flat", i.e. 0 mB on every band, which is not the
  * same as the midpoint of an asymmetric band level range.
  */
-enum class EqualizerPreset(
-    @StringRes val labelRes: Int,
-    val curve: ((Float) -> Float)?
-) {
+enum class EqualizerPreset(@StringRes val labelRes: Int, val curve: ((Float) -> Float)?) {
     NORMAL(R.string.equalizer_preset_normal, null),
     BASS_BOOST(R.string.equalizer_preset_bass_boost, { position -> (1f - position) * TILT }),
     VOCAL(R.string.equalizer_preset_vocal, { position ->
         when {
-            position < 0.3f -> 0.1f // cut bass
-            position < 0.7f -> 0.7f // boost mids
+            position < 0.3f -> 0.1f
+
+            // cut bass
+            position < 0.7f -> 0.7f
+
+            // boost mids
             else -> 0.4f // slight boost highs
         }
     }),

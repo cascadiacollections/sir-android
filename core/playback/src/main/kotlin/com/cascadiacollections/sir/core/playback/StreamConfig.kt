@@ -10,10 +10,7 @@ import androidx.annotation.StringRes
 object StreamConfig {
 
     /** A named stream preset offered in the debug stream override picker. */
-    data class PresetStream(
-        val name: String,
-        val url: String,
-    )
+    data class PresetStream(val name: String, val url: String)
 
     /** Default SHOUTcast stream URL for SIR radio. */
     const val DEFAULT_STREAM_URL: String =

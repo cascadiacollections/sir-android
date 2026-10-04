@@ -2,6 +2,8 @@ package com.cascadiacollections.sir.core.directory
 
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
+import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -11,8 +13,6 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.io.IOException
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Persists discovery ([topStations], [topTags]) across launches, as ShoutKit's
@@ -45,6 +45,7 @@ class SnapshotRadioDirectory(
 
     private val mutex = Mutex()
     private var snapshot: DiscoverySnapshot? = null
+
     /** Sections with a background refresh in flight; not mutex-guarded so `finally` can clear it when cancelled. */
     private val revalidating: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
@@ -53,7 +54,8 @@ class SnapshotRadioDirectory(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    override val discoveryUpdates: Flow<DiscoveryUpdate> = merge(updates.asSharedFlow(), delegate.discoveryUpdates)
+    override val discoveryUpdates: Flow<DiscoveryUpdate> =
+        merge(updates.asSharedFlow(), delegate.discoveryUpdates)
 
     override suspend fun topStations(limit: Int): Result<List<Station>> = topStations(limit, forceRefresh = false)
 
@@ -64,7 +66,9 @@ class SnapshotRadioDirectory(
         val section = current().topStations?.takeIf { it.limit == clamped }
             ?: return fetchTopStations(clamped, forceRefresh = false, announce = false)
         if (!isFresh(section.savedAtMillis)) {
-            revalidate("top:$clamped") { fetchTopStations(clamped, forceRefresh = false, announce = true) }
+            revalidate("top:$clamped") {
+                fetchTopStations(clamped, forceRefresh = false, announce = true)
+            }
         }
         return Result.success(section.stations)
     }
@@ -78,13 +82,14 @@ class SnapshotRadioDirectory(
         val section = current().topTags?.takeIf { it.limit == clamped }
             ?: return fetchTopTags(clamped, forceRefresh = false, announce = false)
         if (!isFresh(section.savedAtMillis)) {
-            revalidate("tags:$clamped") { fetchTopTags(clamped, forceRefresh = false, announce = true) }
+            revalidate("tags:$clamped") {
+                fetchTopTags(clamped, forceRefresh = false, announce = true)
+            }
         }
         return Result.success(section.tags)
     }
 
-    override suspend fun search(query: StationQuery): Result<List<Station>> =
-        search(query, StationSearchFilters.NONE)
+    override suspend fun search(query: StationQuery): Result<List<Station>> = search(query, StationSearchFilters.NONE)
 
     override suspend fun search(query: StationQuery, filters: StationSearchFilters): Result<List<Station>> =
         delegate.search(query, filters)
@@ -92,11 +97,8 @@ class SnapshotRadioDirectory(
     override suspend fun stationsByTag(tag: String, limit: Int): Result<List<Station>> =
         stationsByTag(tag, limit, StationSearchFilters.NONE)
 
-    override suspend fun stationsByTag(
-        tag: String,
-        limit: Int,
-        filters: StationSearchFilters
-    ): Result<List<Station>> = delegate.stationsByTag(tag, limit, filters)
+    override suspend fun stationsByTag(tag: String, limit: Int, filters: StationSearchFilters): Result<List<Station>> =
+        delegate.stationsByTag(tag, limit, filters)
 
     override suspend fun getStation(id: String): Result<Station?> = delegate.getStation(id)
 
@@ -110,7 +112,9 @@ class SnapshotRadioDirectory(
     private suspend fun fetchTopStations(limit: Int, forceRefresh: Boolean, announce: Boolean): Result<List<Station>> =
         delegate.topStations(limit, forceRefresh).onSuccess { stations ->
             if (stations.isEmpty()) return@onSuccess
-            persist { it.copy(topStations = DiscoverySnapshot.StationsSection(limit, clock(), stations)) }
+            persist {
+                it.copy(topStations = DiscoverySnapshot.StationsSection(limit, clock(), stations))
+            }
             if (announce) updates.tryEmit(DiscoveryUpdate.TopStations(limit, stations))
         }
 

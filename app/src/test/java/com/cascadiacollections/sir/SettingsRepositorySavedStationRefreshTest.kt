@@ -19,7 +19,8 @@ class SettingsRepositorySavedStationRefreshTest {
 
     private fun repo() = SettingsRepository(RuntimeEnvironment.getApplication())
 
-    private val a = Station(id = "a", name = "Mine", url = "https://a.example", urlResolved = "https://old.example")
+    private val a =
+        Station(id = "a", name = "Mine", url = "https://a.example", urlResolved = "https://old.example")
     private val b = Station(id = "b", name = "B", url = "https://b.example")
 
     @Before

@@ -94,6 +94,7 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
     private val selectedStationKey = stringPreferencesKey("selected_station")
     private val stationPlayCountsKey = stringPreferencesKey("station_play_counts")
     private val connectionPrewarmingEnabledKey = booleanPreferencesKey("connection_prewarming_enabled")
+    private val loopFinishedBroadcastsKey = booleanPreferencesKey("loop_finished_broadcasts")
     private val reportPlaysToDirectoryKey = booleanPreferencesKey("report_plays_to_directory")
     private val fetchAlbumArtworkKey = booleanPreferencesKey("fetch_album_artwork")
     private val hasCompletedFirstRunKey = booleanPreferencesKey("has_completed_first_run")
@@ -234,6 +235,20 @@ class SettingsRepository(private val context: Context) : RecentShelfStore, Saved
     suspend fun setConnectionPrewarmingEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[connectionPrewarmingEnabledKey] = enabled
+        }
+    }
+
+    /**
+     * Whether a broadcast that genuinely finishes (a finite file, not a live stream) plays
+     * again from the start rather than stopping. Off by default, matching ShoutKit.
+     */
+    val loopFinishedBroadcasts: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[loopFinishedBroadcastsKey] ?: false
+    }
+
+    suspend fun setLoopFinishedBroadcasts(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[loopFinishedBroadcastsKey] = enabled
         }
     }
 

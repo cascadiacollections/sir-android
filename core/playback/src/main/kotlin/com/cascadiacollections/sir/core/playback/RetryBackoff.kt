@@ -6,6 +6,10 @@ package com.cascadiacollections.sir.core.playback
  * Live radio drops are usually transient (a mirror restarting, a mobile handover), so
  * the first retries are fast; the cap stops a station that is genuinely offline from
  * holding a wake lock and hammering the server.
+ *
+ * The defaults are ShoutKit's bounded reconnect: three attempts, 2 s, 4 s, 8 s. This is
+ * the *only* retry layer — Media3's load-error retries are switched off (see
+ * [ReconnectBudget]) so the two never multiply.
  */
 class RetryBackoff(
     private val maxRetries: Int = DEFAULT_MAX_RETRIES,
@@ -66,8 +70,8 @@ class RetryBackoff(
     }
 
     companion object {
-        const val DEFAULT_MAX_RETRIES: Int = 5
+        const val DEFAULT_MAX_RETRIES: Int = ReconnectBudget.MAX_RECONNECTS
         const val DEFAULT_INITIAL_DELAY_MS: Long = 2_000L
-        const val DEFAULT_MAX_DELAY_MS: Long = 30_000L
+        const val DEFAULT_MAX_DELAY_MS: Long = 8_000L
     }
 }

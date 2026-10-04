@@ -177,6 +177,19 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun `settings screen shows the loop finished broadcasts toggle under playback`() {
+        composeRule.setContent {
+            SirTheme {
+                SettingsContent(
+                    settingsRepository = createSettingsRepo(),
+                    castFeatureManager = createMockCastManager()
+                )
+            }
+        }
+        composeRule.onNodeWithText("Loop finished broadcasts").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun `settings screen ends with an about section`() {
         composeRule.setContent {
             SirTheme {

@@ -200,6 +200,28 @@ setup, HTTP, wake locks, equalizer, sleep timer and media session in one class.
   session and a stall give-up is not a player error at all. `RadioViewModel` turns that
   into the status badge (Connecting… / Reconnecting… / Live / the failure's short text),
   ShoutKit's long error copy, and the play button's action (Play / Pause / Cancel / Retry).
+  Only playback the listener asked for is recovered or reported: a cold launch prepares the
+  last station paused, and offline that prepare fails — it is ignored (no reconnect, no
+  extras), and the UI likewise shows neither buffering nor a failure while `playWhenReady`
+  is false, so a paused, never-started stream reads as idle with a Play button.
+- `StreamRecovery` + `ReconnectBudget` are the one recovery layer, ShoutKit's
+  `PlaybackController+Recovery`: a retryable failure gets up to **3** reconnects at 2 s, 4 s
+  and 8 s (`RetryBackoff`), each shown as "Reconnecting…" with the last track kept on
+  screen, then the failed state with Retry (which starts a fresh budget). Permanent
+  failures fail at once. Media3's load-error retries are switched off
+  (`StreamLoadErrorHandlingPolicy`, `LOAD_RETRIES_PER_CONNECTION = 0`), so one drop costs
+  at most four connection attempts and 14 s of backoff instead of the two layers multiplying.
+- `StallCeiling` gives up on a stream stuck in `STATE_BUFFERING` for **30 s**: the player is
+  stopped (releasing its locks) and the failure is `Stalled`, offered as Retry.
+- `PausedRelease` drops the connection after **10 minutes** paused (including a cold-start
+  prepare nobody played): the service calls `stop()` keeping the item, so Media3 lets the
+  notification go idle, and the next play — from any controller — rejoins the live edge
+  fresh. Pure timer policy on an injected clock; playing again cancels it.
+- `FinishedBroadcastPolicy` tells a broadcast that genuinely finished (not live, not dynamic,
+  known duration — an hourly newscast file) from a live stream whose server hung up. A live
+  end is a drop and goes through the reconnect budget; a finished broadcast stops, paused at
+  the start so play replays it, or — with Settings → Playback → "Loop finished broadcasts"
+  (`SettingsRepository.loopFinishedBroadcasts`, default off) — repeats via `REPEAT_MODE_ONE`.
 - `AudioRoutePolicy` is the noisy/resume state machine. Pausing on
   `ACTION_AUDIO_BECOMING_NOISY` is mandatory; resuming when the route returns is only
   correct if *we* paused. The claim is released when playback **starts** again, from
@@ -208,7 +230,7 @@ setup, HTTP, wake locks, equalizer, sleep timer and media session in one class.
   transition instead would be self-defeating: the route-loss pause is itself a pause, so
   it would cancel the claim it exists to protect. An explicit stop clears it too, since
   stopping never produces a start event.
-- `RetryBackoff` holds the reconnect schedule (2s doubling, capped at 30s, 5 attempts).
+- `RetryBackoff` holds the reconnect schedule (2s doubling, capped at 8s, 3 attempts).
 - `PlaybackLocks` pairs the partial wake lock with the WiFi lock. Both acquires are
   idempotent — double-acquiring corrupts the refcount and leaks the lock past playback,
   which surfaces as battery drain rather than a crash.

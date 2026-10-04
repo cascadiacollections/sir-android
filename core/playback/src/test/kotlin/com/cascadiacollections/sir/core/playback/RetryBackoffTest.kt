@@ -8,8 +8,16 @@ import org.junit.Test
 class RetryBackoffTest {
 
     @Test
-    fun `delays double until the cap and then stop`() {
+    fun `the default schedule is ShoutKit's three reconnects at 2, 4 and 8 seconds`() {
         val backoff = RetryBackoff()
+
+        assertEquals(listOf(2_000L, 4_000L, 8_000L), backoff.drain())
+        assertNull(backoff.nextDelayMs())
+    }
+
+    @Test
+    fun `delays double until the cap and then stop`() {
+        val backoff = RetryBackoff(maxRetries = 5, maxDelayMs = 30_000L)
 
         // 2s, 4s, 8s, 16s, then 32s capped to the 30s ceiling.
         assertEquals(listOf(2_000L, 4_000L, 8_000L, 16_000L, 30_000L), backoff.drain())
@@ -33,7 +41,7 @@ class RetryBackoffTest {
         // its operand to six bits, so attempt 64 wrapped back to a single-step shift and
         // handed out 2s again after having reached the 30s cap; higher attempts overflowed
         // the multiplication outright and went negative, which the cap did not catch.
-        val delays = RetryBackoff(maxRetries = 70).drain()
+        val delays = RetryBackoff(maxRetries = 70, maxDelayMs = 30_000L).drain()
 
         assertEquals(70, delays.size)
         assertTrue("no delay may be negative", delays.all { it > 0 })

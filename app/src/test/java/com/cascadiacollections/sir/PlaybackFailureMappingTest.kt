@@ -158,12 +158,17 @@ class PlaybackFailureMappingTest {
     }
 
     @Test
-    fun `load policy retries transient errors twice with explicit delays`() {
+    fun `load policy leaves every retry to the service's reconnect budget`() {
         val policy = StreamLoadErrorHandlingPolicy()
 
-        assertEquals(2_000L, policy.getRetryDelayMsFor(loadError(IOException(), errorCount = 1)))
-        assertEquals(4_000L, policy.getRetryDelayMsFor(loadError(IOException(), errorCount = 2)))
-        assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(loadError(IOException(), errorCount = 3)))
+        // B4: a transient error is surfaced on its first occurrence, so the service's three
+        // reconnects are the whole budget instead of multiplying Media3's own retries.
+        assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(loadError(IOException(), errorCount = 1)))
+        assertEquals(
+            C.TIME_UNSET,
+            policy.getRetryDelayMsFor(loadError(invalidResponseCode(503), errorCount = 1))
+        )
+        assertEquals(0, policy.getMinimumLoadableRetryCount(C.DATA_TYPE_MEDIA))
     }
 
     @Test

@@ -83,7 +83,11 @@ Roughly 250 lines of Kotlin plus tests.
 
 ### A2. An unexpectedly ended live stream is not treated as a drop
 
-> **Landed.** `RadioPlaybackService.handleUnexpectedEnd()`.
+> **Landed.** `RadioPlaybackService.handleEnded()`, refined by `FinishedBroadcastPolicy`: only
+> live/dynamic/unknown-length media is rejoined; a finite broadcast stops (or loops, per the
+> "Loop finished broadcasts" setting). The rejoin also stops the ended player before
+> re-preparing — `prepare()` alone is a no-op outside `STATE_IDLE`, so the original branch
+> scheduled a reconnect that never happened.
 
 This was ShoutKit's hardest-won lesson (`DECISIONS.md`, 2026-07-24): AudioStreaming
 reports `.stopped` both for a requested stop and for its end-of-stream path, which a live
@@ -131,7 +135,10 @@ The localized strings for both already exist.
 
 ### A4. A stalled stream can rebuffer forever
 
-ShoutKit bounds this with a 90s stall ceiling: park the stream as `.paused` (not
+> **Landed.** `StallCeiling` (30 s, ShoutKit's current value): past it the stream is stopped
+> and reported as `StreamFailure.Stalled` with Retry, without spending further reconnects.
+
+ShoutKit originally bounded this with a 90s stall ceiling: park the stream as `.paused` (not
 `.failed` — a stall is not a user error, and paused keeps a working play button on the lock
 screen) after attempting a reconnect. `DefaultLoadControl` has no equivalent give-up
 behaviour, and with `WAKE_MODE_NETWORK` a stalled stream keeps the CPU and WiFi locks
@@ -194,6 +201,13 @@ cleanest synergy in the document: an entire hand-written iOS subsystem costs abo
 lines here.
 
 ### B4. Two retry layers stacked without a combined budget
+
+> **Resolved.** One layer owns recovery. `StreamLoadErrorHandlingPolicy` makes Media3 retry
+> nothing (`ReconnectBudget.LOAD_RETRIES_PER_CONNECTION = 0`), and `StreamRecovery` spends
+> ShoutKit's budget — 3 reconnects at 2 s, 4 s, 8 s — on retryable failures only. The worst
+> case is stated in `ReconnectBudget`: four connection attempts and 14 s of backoff per drop,
+> each reconnect visible as "Reconnecting…". The trade-off: a mid-stream blip that Media3
+> could have papered over from its buffer is now a short, visible reconnect, as on iOS.
 
 Media3 retries load errors *inside* the media source via `DefaultLoadErrorHandlingPolicy`
 before ever surfacing `onPlayerError`; `RetryBackoff` then adds five more attempts around
@@ -283,9 +297,9 @@ ship on reasoning alone.
 | 2 | A2 `STATE_ENDED` as a drop | Bug-shaped; the fix is a branch and a decision | landed |
 | 3 | A3 Typed failure classification | Unblocks B4 and improves the error copy | landed |
 | 4 | B3 `PlaybackStatsListener` | Cheap, and it is the measurement A4/B6 need | landed (logging only) |
-| 5 | A4 Stall ceiling | Battery, and reuses A3's plumbing | filed |
+| 5 | A4 Stall ceiling | Battery, and reuses A3's plumbing | landed (30 s) |
 | 6 | B1 / B2 Notification + locks | Deletion, but needs on-device verification | filed |
-| 7 | B4 / B5 / B6 | Each wants a measurement before it lands | filed |
+| 7 | B4 / B5 / B6 | Each wants a measurement before it lands | B4 resolved; B5/B6 filed |
 
 ## Verification notes
 

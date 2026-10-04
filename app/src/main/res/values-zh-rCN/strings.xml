@@ -92,6 +92,11 @@
     <string name="library_empty">你保存或播放过的电台会显示在这里。</string>
     <string name="browse_genres_header">按风格浏览</string>
     <string name="popular_stations">热门电台</string>
+    <string name="tv_stop">停止</string>
+    <string name="tv_pick_a_station">选择一个电台开始收听。</string>
+    <string name="tv_loading_stations">正在加载电台…</string>
+    <string name="tv_stations_unavailable">无法加载电台，请检查网络连接。</string>
+    <string name="tv_no_stations">未找到电台。</string>
     <string name="search_no_results">没有匹配的电台</string>
     <string name="search_unavailable">搜索暂不可用</string>
     <string name="retry">重试</string>

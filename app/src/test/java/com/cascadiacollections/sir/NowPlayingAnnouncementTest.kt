@@ -1,9 +1,10 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import com.cascadiacollections.sir.NowPlayingAnnouncement.NothingPlaying
 import com.cascadiacollections.sir.NowPlayingAnnouncement.StationOnly
 import com.cascadiacollections.sir.NowPlayingAnnouncement.Track
-import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class NowPlayingAnnouncementTest {
@@ -36,21 +37,21 @@ class NowPlayingAnnouncementTest {
     fun `a resolved track with an artist names all three`() {
         val announcement = announce()
 
-        assertEquals(Track("Dreams", "Fleetwood Mac", "KEXP"), announcement)
-        assertEquals("Now playing Dreams by Fleetwood Mac on KEXP", announcement.text(templates))
+        assertThat(announcement).isEqualTo(Track("Dreams", "Fleetwood Mac", "KEXP"))
+        assertThat(announcement.text(templates)).isEqualTo("Now playing Dreams by Fleetwood Mac on KEXP")
     }
 
     @Test
     fun `a resolved title without an artist leaves the artist out`() {
         val announcement = announce(artist = "Live stream", hasResolvedArtist = false)
 
-        assertEquals(Track("Dreams", null, "KEXP"), announcement)
-        assertEquals("Now playing Dreams on KEXP", announcement.text(templates))
+        assertThat(announcement).isEqualTo(Track("Dreams", null, "KEXP"))
+        assertThat(announcement.text(templates)).isEqualTo("Now playing Dreams on KEXP")
     }
 
     @Test
     fun `a blank resolved artist is treated as missing`() {
-        assertEquals("Now playing Dreams on KEXP", announce(artist = "  ").text(templates))
+        assertThat(announce(artist = "  ").text(templates)).isEqualTo("Now playing Dreams on KEXP")
     }
 
     @Test
@@ -63,34 +64,32 @@ class NowPlayingAnnouncementTest {
             hasResolvedArtist = false
         )
 
-        assertEquals(StationOnly("KEXP"), announcement)
-        assertEquals("KEXP is playing", announcement.text(templates))
+        assertThat(announcement).isEqualTo(StationOnly("KEXP"))
+        assertThat(announcement.text(templates)).isEqualTo("KEXP is playing")
     }
 
     @Test
     fun `a blank resolved title announces the station`() {
-        assertEquals(StationOnly("KEXP"), announce(title = " "))
+        assertThat(announce(title = " ")).isEqualTo(StationOnly("KEXP"))
     }
 
     @Test
     fun `a missing station name falls back to the app's stream`() {
-        assertEquals("Now playing Dreams by Fleetwood Mac on SIR", announce(station = null).text(templates))
-        assertEquals("SIR is playing", announce(station = "", hasResolvedTrack = false).text(templates))
+        assertThat(announce(station = null).text(templates)).isEqualTo("Now playing Dreams by Fleetwood Mac on SIR")
+        assertThat(announce(station = "", hasResolvedTrack = false).text(templates)).isEqualTo("SIR is playing")
     }
 
     @Test
     fun `nothing is playing when playback is not active`() {
         val announcement = announce(isPlaying = false)
 
-        assertEquals(NothingPlaying, announcement)
-        assertEquals("Nothing is playing", announcement.text(templates))
+        assertThat(announcement).isEqualTo(NothingPlaying)
+        assertThat(announcement.text(templates)).isEqualTo("Nothing is playing")
     }
 
     @Test
     fun `values are trimmed`() {
-        assertEquals(
-            Track("Dreams", "Fleetwood Mac", "KEXP"),
-            announce(title = " Dreams ", artist = "Fleetwood Mac ", station = " KEXP")
-        )
+        assertThat(announce(title = " Dreams ", artist = "Fleetwood Mac ", station = " KEXP"))
+            .isEqualTo(Track("Dreams", "Fleetwood Mac", "KEXP"))
     }
 }

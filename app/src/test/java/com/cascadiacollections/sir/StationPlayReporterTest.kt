@@ -1,5 +1,9 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
@@ -7,8 +11,6 @@ import java.io.IOException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StationPlayReporterTest {
@@ -40,7 +42,7 @@ class StationPlayReporterTest {
         selections.emit(station(uuid))
         runCurrent()
 
-        assertEquals(listOf(uuid, uuid), directory.clicks)
+        assertThat(directory.clicks).containsExactly(uuid, uuid)
         job.cancel()
     }
 
@@ -53,7 +55,7 @@ class StationPlayReporterTest {
         selections.emit(station(uuid))
         runCurrent()
 
-        assertTrue(directory.clicks.isEmpty())
+        assertThat(directory.clicks).isEmpty()
     }
 
     @Test
@@ -70,8 +72,8 @@ class StationPlayReporterTest {
         selections.emit(station("imported:https://example.com/s"))
         runCurrent()
 
-        assertTrue(directory.clicks.isEmpty())
-        assertEquals(0, settingReads)
+        assertThat(directory.clicks).isEmpty()
+        assertThat(settingReads).isEqualTo(0)
     }
 
     @Test
@@ -98,6 +100,6 @@ class StationPlayReporterTest {
         selections.emit(station(uuid))
         runCurrent()
 
-        assertEquals(listOf(uuid, uuid), directory.clicks)
+        assertThat(directory.clicks).containsExactly(uuid, uuid)
     }
 }

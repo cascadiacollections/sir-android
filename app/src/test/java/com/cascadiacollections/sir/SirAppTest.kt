@@ -1,6 +1,7 @@
 package com.cascadiacollections.sir
 
-import org.junit.Assert.assertNotNull
+import assertk.assertThat
+import assertk.assertions.isNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -17,24 +18,24 @@ class SirAppTest {
     @Test
     fun `application creates successfully`() {
         val app = RuntimeEnvironment.getApplication()
-        assertNotNull(app)
+        assertThat(app).isNotNull()
     }
 
     @Test
     fun `application is instance of SirApp`() {
         val app = RuntimeEnvironment.getApplication()
-        assertNotNull(app as? SirApp)
+        assertThat(app as? SirApp).isNotNull()
     }
 
     @Test
     fun `application context is available`() {
         val app = RuntimeEnvironment.getApplication()
-        assertNotNull(app.applicationContext)
+        assertThat(app.applicationContext).isNotNull()
     }
 
     @Test
     fun `application package name is correct`() {
         val app = RuntimeEnvironment.getApplication()
-        assertNotNull(app.packageName)
+        assertThat(app.packageName).isNotNull()
     }
 }

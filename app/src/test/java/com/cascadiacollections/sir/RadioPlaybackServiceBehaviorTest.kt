@@ -2,12 +2,16 @@ package com.cascadiacollections.sir
 
 import android.content.Intent
 import android.media.AudioManager
+import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isGreaterThanOrEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
+import assertk.assertions.startsWith
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.StreamConfig
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -31,24 +35,24 @@ class RadioPlaybackServiceBehaviorTest {
 
     @Test
     fun `SEEKBACK_ENABLED is false for initial release`() {
-        assertFalse(RadioPlaybackService.SEEKBACK_ENABLED)
+        assertThat(RadioPlaybackService.SEEKBACK_ENABLED).isFalse()
     }
 
     // ---- Intent action constants ----
 
     @Test
     fun `ACTION_PLAY is correctly namespaced`() {
-        assertTrue(RadioPlaybackService.ACTION_PLAY.startsWith("com.cascadiacollections.sir.action."))
+        assertThat(RadioPlaybackService.ACTION_PLAY).startsWith("com.cascadiacollections.sir.action.")
     }
 
     @Test
     fun `ACTION_SEEK_BACK is correctly namespaced`() {
-        assertTrue(RadioPlaybackService.ACTION_SEEK_BACK.startsWith("com.cascadiacollections.sir.action."))
+        assertThat(RadioPlaybackService.ACTION_SEEK_BACK).startsWith("com.cascadiacollections.sir.action.")
     }
 
     @Test
     fun `ACTION_GO_LIVE is correctly namespaced`() {
-        assertTrue(RadioPlaybackService.ACTION_GO_LIVE.startsWith("com.cascadiacollections.sir.action."))
+        assertThat(RadioPlaybackService.ACTION_GO_LIVE).startsWith("com.cascadiacollections.sir.action.")
     }
 
     @Test
@@ -61,7 +65,7 @@ class RadioPlaybackServiceBehaviorTest {
             RadioPlaybackService.ACTION_SET_EQUALIZER,
             RadioPlaybackService.ACTION_PLAY_FROM_SEARCH
         )
-        assertEquals(actions.size, actions.toSet().size)
+        assertThat(actions.toSet()).hasSize(actions.size)
     }
 
     @Test
@@ -72,7 +76,7 @@ class RadioPlaybackServiceBehaviorTest {
             RadioPlaybackService.EXTRA_SEARCH_QUERY,
             RadioPlaybackService.EXTRA_STREAM_URL
         )
-        assertEquals(extras.size, extras.toSet().size)
+        assertThat(extras.toSet()).hasSize(extras.size)
     }
 
     @Test
@@ -82,8 +86,8 @@ class RadioPlaybackServiceBehaviorTest {
             action = RadioPlaybackService.ACTION_PLAY_FROM_SEARCH
             putExtra(RadioPlaybackService.EXTRA_SEARCH_QUERY, "NPR")
         }
-        assertEquals(RadioPlaybackService.ACTION_PLAY_FROM_SEARCH, intent.action)
-        assertEquals("NPR", intent.getStringExtra(RadioPlaybackService.EXTRA_SEARCH_QUERY))
+        assertThat(intent.action).isEqualTo(RadioPlaybackService.ACTION_PLAY_FROM_SEARCH)
+        assertThat(intent.getStringExtra(RadioPlaybackService.EXTRA_SEARCH_QUERY)).isEqualTo("NPR")
     }
 
     // ---- Service creation ----
@@ -91,7 +95,7 @@ class RadioPlaybackServiceBehaviorTest {
     @Test
     fun `service can be instantiated`() {
         val service = RadioPlaybackService()
-        assertNotNull(service)
+        assertThat(service).isNotNull()
     }
 
     // ---- Sleep timer intent extras ----
@@ -103,8 +107,8 @@ class RadioPlaybackServiceBehaviorTest {
             action = RadioPlaybackService.ACTION_SET_SLEEP_TIMER
             putExtra(RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES, 30)
         }
-        assertEquals(RadioPlaybackService.ACTION_SET_SLEEP_TIMER, intent.action)
-        assertEquals(30, intent.getIntExtra(RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES, 0))
+        assertThat(intent.action).isEqualTo(RadioPlaybackService.ACTION_SET_SLEEP_TIMER)
+        assertThat(intent.getIntExtra(RadioPlaybackService.EXTRA_SLEEP_TIMER_MINUTES, 0)).isEqualTo(30)
     }
 
     @Test
@@ -114,11 +118,9 @@ class RadioPlaybackServiceBehaviorTest {
             action = RadioPlaybackService.ACTION_SET_EQUALIZER
             putExtra(RadioPlaybackService.EXTRA_EQUALIZER_PRESET, EqualizerPreset.BASS_BOOST.ordinal)
         }
-        assertEquals(RadioPlaybackService.ACTION_SET_EQUALIZER, intent.action)
-        assertEquals(
-            EqualizerPreset.BASS_BOOST.ordinal,
-            intent.getIntExtra(RadioPlaybackService.EXTRA_EQUALIZER_PRESET, 0)
-        )
+        assertThat(intent.action).isEqualTo(RadioPlaybackService.ACTION_SET_EQUALIZER)
+        assertThat(intent.getIntExtra(RadioPlaybackService.EXTRA_EQUALIZER_PRESET, 0))
+            .isEqualTo(EqualizerPreset.BASS_BOOST.ordinal)
     }
 
     // ---- Replay buffer sizing ----
@@ -126,38 +128,38 @@ class RadioPlaybackServiceBehaviorTest {
     @Test
     fun `REPLAY_BUFFER_SIZE holds at least 30 seconds at 64kbps`() {
         // 64kbps = 8000 bytes/sec, 30 sec = 240,000 bytes
-        assertTrue(RadioPlaybackService.REPLAY_BUFFER_SIZE >= 240_000)
+        assertThat(RadioPlaybackService.REPLAY_BUFFER_SIZE).isGreaterThanOrEqualTo(240_000)
     }
 
     @Test
     fun `REPLAY_BUFFER_SIZE holds at least 60 seconds at 64kbps`() {
         // 64kbps = 8000 bytes/sec, 60 sec = 480,000 bytes
-        assertTrue(RadioPlaybackService.REPLAY_BUFFER_SIZE >= 480_000)
+        assertThat(RadioPlaybackService.REPLAY_BUFFER_SIZE).isGreaterThanOrEqualTo(480_000)
     }
 
     // ---- Audio becoming noisy receiver ----
 
     @Test
     fun `ACTION_AUDIO_BECOMING_NOISY intent has correct action string`() {
-        assertEquals("android.media.AUDIO_BECOMING_NOISY", AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+        assertThat(AudioManager.ACTION_AUDIO_BECOMING_NOISY).isEqualTo("android.media.AUDIO_BECOMING_NOISY")
     }
 
     // ---- CAST_MODULE_NAME ----
 
     @Test
     fun `CAST_MODULE_NAME matches dynamic feature module name`() {
-        assertEquals("cast", CastFeatureManager.CAST_MODULE_NAME)
+        assertThat(CastFeatureManager.CAST_MODULE_NAME).isEqualTo("cast")
     }
 
     // ---- Default stream URL ----
 
     @Test
     fun `default stream URL is valid HTTPS`() {
-        assertTrue(StreamConfig.DEFAULT_STREAM_URL.startsWith("https://"))
+        assertThat(StreamConfig.DEFAULT_STREAM_URL).startsWith("https://")
     }
 
     @Test
     fun `default stream URL is not blank`() {
-        assertTrue(StreamConfig.DEFAULT_STREAM_URL.isNotBlank())
+        assertThat(StreamConfig.DEFAULT_STREAM_URL.isNotBlank()).isTrue()
     }
 }

@@ -4,9 +4,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import assertk.assertThat
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.persistence.HeardTrack
 import com.cascadiacollections.sir.ui.theme.SirTheme
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,6 +52,6 @@ class RecentlyHeardScreenTest {
         composeRule.onNodeWithText("Artist A • KEXP").assertIsDisplayed()
         composeRule.onNodeWithText("5 minutes ago").assertIsDisplayed()
         composeRule.onNodeWithText("Clear").performClick()
-        assertTrue(cleared)
+        assertThat(cleared).isTrue()
     }
 }

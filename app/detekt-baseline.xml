@@ -59,7 +59,6 @@
     <ID>MultipleEmitters:SettingsSections.kt:@Composable internal fun AboutSettingsSection</ID>
     <ID>MultipleEmitters:SettingsSections.kt:@Composable internal fun PlaybackSettingsSection</ID>
     <ID>MutableStateAutoboxing:RadioUi.kt:mutableStateOf(0f)</ID>
-    <ID>NoWildcardImports:ExampleInstrumentedTest.kt:import org.junit.Assert.*</ID>
     <ID>OutdatedDocumentation:NowPlayingAnnouncement.kt:NowPlayingAnnouncement.Companion$fun from: NowPlayingAnnouncement</ID>
     <ID>OutdatedDocumentation:RecentlyHeardScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun RecentlyHeardScreen</ID>
     <ID>ParameterNaming:BrowseScreen.kt:onToggleSaved: (Station, Boolean) -&gt; Unit</ID>
@@ -97,6 +96,5 @@
     <ID>ViewModelForwarding:SirAppShell.kt:LibraryScreen( viewModel = browserViewModel, onOpenRecentlyHeard = { showRecentlyHeard = true }, modifier = contentModifier )</ID>
     <ID>ViewModelInjection:MainActivity.kt:val browserViewModel: RadioBrowserViewModel = viewModel( factory = RadioBrowserViewModel.Factory( directory = AppDirectory.instance, settingsRepository = repository, trackHistoryRepository = TrackHistoryRepository(context.applicationContext) ) )</ID>
     <ID>ViewModelInjection:MainActivity.kt:val viewModel: RadioViewModel = viewModel( factory = RadioViewModel.Factory( application = context.applicationContext as Application, settingsRepository = repository ) )</ID>
-    <ID>WildcardImport:ExampleInstrumentedTest.kt:import org.junit.Assert.*</ID>
   </CurrentIssues>
 </SmellBaseline>

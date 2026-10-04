@@ -1,13 +1,16 @@
 package com.cascadiacollections.sir
 
 import android.app.Application
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isFalse
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -44,15 +47,15 @@ class RadioViewModelNowPlayingTest {
 
         settings.selectStation(station)
         waitUntil { vm.uiState.value.station == station }
-        assertEquals(false, vm.uiState.value.isFavorite)
+        assertThat(vm.uiState.value.isFavorite).isFalse()
 
         vm.toggleFavorite()
         waitUntil { vm.uiState.value.isFavorite }
-        assertEquals(listOf(station.id), settings.savedStations.first().map { it.id })
+        assertThat(settings.savedStations.first().map { it.id }).containsExactly(station.id)
 
         vm.toggleFavorite()
         waitUntil { !vm.uiState.value.isFavorite }
-        assertEquals(emptyList<Station>(), settings.savedStations.first())
+        assertThat(settings.savedStations.first()).isEmpty()
     }
 
     @Test
@@ -62,7 +65,7 @@ class RadioViewModelNowPlayingTest {
 
         vm.toggleFavorite()
         delay(100)
-        assertEquals(emptyList<Station>(), settings.savedStations.first())
+        assertThat(settings.savedStations.first()).isEmpty()
     }
 
     private suspend fun waitUntil(condition: () -> Boolean) {

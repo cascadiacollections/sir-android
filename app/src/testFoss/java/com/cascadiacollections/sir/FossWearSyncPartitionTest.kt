@@ -1,7 +1,9 @@
 package com.cascadiacollections.sir
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThrows
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
 import org.junit.Test
 
 /**
@@ -12,13 +14,13 @@ class FossWearSyncPartitionTest {
 
     @Test
     fun `watch sync is unsupported`() {
-        assertFalse(WearStationPublisher.isSupported)
+        assertThat(WearStationPublisher.isSupported).isFalse()
     }
 
     @Test
     fun `wearable client is not on the classpath`() {
-        assertThrows(ClassNotFoundException::class.java) {
+        assertFailure {
             Class.forName("com.google.android.gms.wearable.Wearable")
-        }
+        }.isInstanceOf<ClassNotFoundException>()
     }
 }

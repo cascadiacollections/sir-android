@@ -1,10 +1,11 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -22,9 +23,9 @@ class SettingsRepositoryFetchAlbumArtworkTest {
     fun `fetch album artwork persists changes and defaults on`() = runBlocking {
         val repo = repo()
         repo.setFetchAlbumArtwork(false)
-        assertFalse(repo().fetchAlbumArtwork.first())
+        assertThat(repo().fetchAlbumArtwork.first()).isFalse()
 
         repo.setFetchAlbumArtwork(true)
-        assertTrue(repo.fetchAlbumArtwork.first())
+        assertThat(repo.fetchAlbumArtwork.first()).isTrue()
     }
 }

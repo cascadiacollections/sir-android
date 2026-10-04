@@ -1,14 +1,15 @@
 package com.cascadiacollections.sir
 
 import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
 import com.cascadiacollections.sir.core.playback.SleepTimerDuration
 import com.cascadiacollections.sir.core.playback.StreamQuality
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -23,7 +24,7 @@ class FakeSettingsRepositoryTest {
     fun `streamQuality defaults to HIGH`() = runTest {
         val repo = createRepo()
         repo.streamQuality.test {
-            assertEquals(StreamQuality.HIGH, awaitItem())
+            assertThat(awaitItem()).isEqualTo(StreamQuality.HIGH)
         }
     }
 
@@ -31,9 +32,9 @@ class FakeSettingsRepositoryTest {
     fun `setStreamQuality emits updated value`() = runTest {
         val repo = createRepo()
         repo.streamQuality.test {
-            assertEquals(StreamQuality.HIGH, awaitItem())
+            assertThat(awaitItem()).isEqualTo(StreamQuality.HIGH)
             repo.setStreamQuality(StreamQuality.LOW)
-            assertEquals(StreamQuality.LOW, awaitItem())
+            assertThat(awaitItem()).isEqualTo(StreamQuality.LOW)
         }
     }
 
@@ -41,7 +42,7 @@ class FakeSettingsRepositoryTest {
     fun `chromecastEnabled defaults to false`() = runTest {
         val repo = createRepo()
         repo.chromecastEnabled.test {
-            assertFalse(awaitItem())
+            assertThat(awaitItem()).isFalse()
         }
     }
 
@@ -49,9 +50,9 @@ class FakeSettingsRepositoryTest {
     fun `setChromecastEnabled emits true`() = runTest {
         val repo = createRepo()
         repo.chromecastEnabled.test {
-            assertFalse(awaitItem())
+            assertThat(awaitItem()).isFalse()
             repo.setChromecastEnabled(true)
-            assertTrue(awaitItem())
+            assertThat(awaitItem()).isTrue()
         }
     }
 
@@ -59,7 +60,7 @@ class FakeSettingsRepositoryTest {
     fun `sleepTimerDuration defaults to OFF`() = runTest {
         val repo = createRepo()
         repo.sleepTimerDuration.test {
-            assertEquals(SleepTimerDuration.OFF, awaitItem())
+            assertThat(awaitItem()).isEqualTo(SleepTimerDuration.OFF)
         }
     }
 
@@ -67,9 +68,9 @@ class FakeSettingsRepositoryTest {
     fun `setSleepTimerDuration emits updated value`() = runTest {
         val repo = createRepo()
         repo.sleepTimerDuration.test {
-            assertEquals(SleepTimerDuration.OFF, awaitItem())
+            assertThat(awaitItem()).isEqualTo(SleepTimerDuration.OFF)
             repo.setSleepTimerDuration(SleepTimerDuration.SIXTY)
-            assertEquals(SleepTimerDuration.SIXTY, awaitItem())
+            assertThat(awaitItem()).isEqualTo(SleepTimerDuration.SIXTY)
         }
     }
 
@@ -77,7 +78,7 @@ class FakeSettingsRepositoryTest {
     fun `sleepTimerFiresAt defaults to 0`() = runTest {
         val repo = createRepo()
         repo.sleepTimerFiresAt.test {
-            assertEquals(0L, awaitItem())
+            assertThat(awaitItem()).isEqualTo(0L)
         }
     }
 
@@ -85,9 +86,9 @@ class FakeSettingsRepositoryTest {
     fun `setSleepTimerFiresAt with positive value persists it`() = runTest {
         val repo = createRepo()
         repo.sleepTimerFiresAt.test {
-            assertEquals(0L, awaitItem())
+            assertThat(awaitItem()).isEqualTo(0L)
             repo.setSleepTimerFiresAt(999L)
-            assertEquals(999L, awaitItem())
+            assertThat(awaitItem()).isEqualTo(999L)
         }
     }
 
@@ -95,11 +96,11 @@ class FakeSettingsRepositoryTest {
     fun `setSleepTimerFiresAt with 0 or negative clears to 0`() = runTest {
         val repo = createRepo()
         repo.sleepTimerFiresAt.test {
-            assertEquals(0L, awaitItem())
+            assertThat(awaitItem()).isEqualTo(0L)
             repo.setSleepTimerFiresAt(500L)
-            assertEquals(500L, awaitItem())
+            assertThat(awaitItem()).isEqualTo(500L)
             repo.setSleepTimerFiresAt(0L)
-            assertEquals(0L, awaitItem())
+            assertThat(awaitItem()).isEqualTo(0L)
         }
     }
 
@@ -108,7 +109,7 @@ class FakeSettingsRepositoryTest {
         val repo = createRepo()
         repo.setSleepTimerFiresAt(-1L)
         repo.sleepTimerFiresAt.test {
-            assertEquals(0L, awaitItem())
+            assertThat(awaitItem()).isEqualTo(0L)
         }
     }
 
@@ -116,7 +117,7 @@ class FakeSettingsRepositoryTest {
     fun `equalizerPreset defaults to NORMAL`() = runTest {
         val repo = createRepo()
         repo.equalizerPreset.test {
-            assertEquals(EqualizerPreset.NORMAL, awaitItem())
+            assertThat(awaitItem()).isEqualTo(EqualizerPreset.NORMAL)
         }
     }
 
@@ -124,9 +125,9 @@ class FakeSettingsRepositoryTest {
     fun `setEqualizerPreset emits updated preset`() = runTest {
         val repo = createRepo()
         repo.equalizerPreset.test {
-            assertEquals(EqualizerPreset.NORMAL, awaitItem())
+            assertThat(awaitItem()).isEqualTo(EqualizerPreset.NORMAL)
             repo.setEqualizerPreset(EqualizerPreset.TREBLE)
-            assertEquals(EqualizerPreset.TREBLE, awaitItem())
+            assertThat(awaitItem()).isEqualTo(EqualizerPreset.TREBLE)
         }
     }
 
@@ -134,7 +135,7 @@ class FakeSettingsRepositoryTest {
     fun `customStreamUrl defaults to null`() = runTest {
         val repo = createRepo()
         repo.customStreamUrl.test {
-            assertNull(awaitItem())
+            assertThat(awaitItem()).isNull()
         }
     }
 
@@ -142,9 +143,9 @@ class FakeSettingsRepositoryTest {
     fun `setCustomStreamUrl with URL emits it`() = runTest {
         val repo = createRepo()
         repo.customStreamUrl.test {
-            assertNull(awaitItem())
+            assertThat(awaitItem()).isNull()
             repo.setCustomStreamUrl("https://example.com/stream")
-            assertEquals("https://example.com/stream", awaitItem())
+            assertThat(awaitItem()).isEqualTo("https://example.com/stream")
         }
     }
 
@@ -153,9 +154,9 @@ class FakeSettingsRepositoryTest {
         val repo = createRepo()
         repo.setCustomStreamUrl("https://example.com/test")
         repo.customStreamUrl.test {
-            assertEquals("https://example.com/test", awaitItem())
+            assertThat(awaitItem()).isEqualTo("https://example.com/test")
             repo.setCustomStreamUrl(null)
-            assertNull(awaitItem())
+            assertThat(awaitItem()).isNull()
         }
     }
 
@@ -164,9 +165,9 @@ class FakeSettingsRepositoryTest {
         val repo = createRepo()
         repo.setCustomStreamUrl("https://example.com/test")
         repo.customStreamUrl.test {
-            assertEquals("https://example.com/test", awaitItem())
+            assertThat(awaitItem()).isEqualTo("https://example.com/test")
             repo.setCustomStreamUrl("   ")
-            assertNull(awaitItem())
+            assertThat(awaitItem()).isNull()
         }
     }
 }

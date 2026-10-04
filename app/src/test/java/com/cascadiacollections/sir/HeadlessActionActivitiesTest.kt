@@ -1,12 +1,16 @@
 package com.cascadiacollections.sir
 
 import android.os.Looper
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,9 +54,10 @@ class HeadlessActionActivitiesTest {
 
         val activity = Robolectric.buildActivity(FavoriteCurrentStationActivity::class.java).setup().get()
 
-        assertEquals("Added KEXP to My Stations", awaitToast())
-        assertTrue(activity.isFinishing)
-        assertEquals(listOf("kexp"), runBlocking { repo().savedStations.first() }.map { it.id })
+        assertThat(awaitToast()).isEqualTo("Added KEXP to My Stations")
+        assertThat(activity.isFinishing).isTrue()
+        assertThat(runBlocking { repo().savedStations.first() }.map { it.id })
+            .containsExactly("kexp")
     }
 
     @Test
@@ -64,16 +69,17 @@ class HeadlessActionActivitiesTest {
 
         Robolectric.buildActivity(FavoriteCurrentStationActivity::class.java).setup()
 
-        assertEquals("KEXP is already in My Stations", awaitToast())
-        assertEquals(listOf("kexp"), runBlocking { repo().savedStations.first() }.map { it.id })
+        assertThat(awaitToast()).isEqualTo("KEXP is already in My Stations")
+        assertThat(runBlocking { repo().savedStations.first() }.map { it.id })
+            .containsExactly("kexp")
     }
 
     @Test
     fun `favorite shortcut on the default stream saves nothing`() {
         Robolectric.buildActivity(FavoriteCurrentStationActivity::class.java).setup()
 
-        assertEquals("SIR is always available and can't be added to My Stations", awaitToast())
-        assertTrue(runBlocking { repo().savedStations.first() }.isEmpty())
+        assertThat(awaitToast()).isEqualTo("SIR is always available and can't be added to My Stations")
+        assertThat(runBlocking { repo().savedStations.first() }).isEmpty()
     }
 
     @Test
@@ -83,7 +89,7 @@ class HeadlessActionActivitiesTest {
 
         Robolectric.buildActivity(NowPlayingAnnounceActivity::class.java).setup()
 
-        assertEquals("Nothing is playing", awaitToast())
-        assertEquals(null, shadowOf(app).nextStartedService)
+        assertThat(awaitToast()).isEqualTo("Nothing is playing")
+        assertThat(shadowOf(app).nextStartedService).isNull()
     }
 }

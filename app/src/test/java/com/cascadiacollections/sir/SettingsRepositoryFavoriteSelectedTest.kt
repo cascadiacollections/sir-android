@@ -1,11 +1,14 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.FavoriteCurrentStation.Outcome
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,8 +37,8 @@ class SettingsRepositoryFavoriteSelectedTest {
         val repo = repo()
         repo.selectStation(station("a"))
 
-        assertEquals(Outcome.Added(station("a")), repo.favoriteSelectedStation())
-        assertEquals(listOf("a"), repo.savedStations.first().map { it.id })
+        assertThat(repo.favoriteSelectedStation()).isEqualTo(Outcome.Added(station("a")))
+        assertThat(repo.savedStations.first().map { it.id }).containsExactly("a")
     }
 
     @Test
@@ -44,8 +47,8 @@ class SettingsRepositoryFavoriteSelectedTest {
         repo.saveStation(station("a"))
         repo.selectStation(station("a"))
 
-        assertEquals(Outcome.AlreadySaved(station("a")), repo.favoriteSelectedStation())
-        assertEquals(listOf("a"), repo.savedStations.first().map { it.id })
+        assertThat(repo.favoriteSelectedStation()).isEqualTo(Outcome.AlreadySaved(station("a")))
+        assertThat(repo.savedStations.first().map { it.id }).containsExactly("a")
     }
 
     @Test
@@ -55,8 +58,8 @@ class SettingsRepositoryFavoriteSelectedTest {
         repo.saveStation(station("b"))
         repo.selectStation(station("a"))
 
-        assertEquals(Outcome.Removed(station("a")), repo.favoriteSelectedStation(toggle = true))
-        assertEquals(listOf("b"), repo.savedStations.first().map { it.id })
+        assertThat(repo.favoriteSelectedStation(toggle = true)).isEqualTo(Outcome.Removed(station("a")))
+        assertThat(repo.savedStations.first().map { it.id }).containsExactly("b")
     }
 
     @Test
@@ -64,8 +67,8 @@ class SettingsRepositoryFavoriteSelectedTest {
         val repo = repo()
         repo.saveStation(station("a"))
 
-        assertEquals(Outcome.DefaultStream, repo.favoriteSelectedStation())
-        assertEquals(listOf("a"), repo.savedStations.first().map { it.id })
+        assertThat(repo.favoriteSelectedStation()).isEqualTo(Outcome.DefaultStream)
+        assertThat(repo.savedStations.first().map { it.id }).containsExactly("a")
     }
 
     @Test
@@ -73,7 +76,7 @@ class SettingsRepositoryFavoriteSelectedTest {
         val repo = repo()
         repo.selectStation(Station(id = "", name = "Broken", url = "https://example.com/x"))
 
-        assertEquals(Outcome.NothingSelected, repo.favoriteSelectedStation())
-        assertEquals(emptyList<Station>(), repo.savedStations.first())
+        assertThat(repo.favoriteSelectedStation()).isEqualTo(Outcome.NothingSelected)
+        assertThat(repo.savedStations.first()).isEmpty()
     }
 }

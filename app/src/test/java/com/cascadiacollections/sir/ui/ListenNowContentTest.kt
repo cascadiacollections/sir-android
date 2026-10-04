@@ -12,12 +12,15 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import assertk.assertions.isLessThan
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.SearchUiState
 import com.cascadiacollections.sir.core.directory.Tag
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.ui.theme.SirTheme
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -76,7 +79,8 @@ class ListenNowContentTest {
         val shelfTop = composeRule.onNodeWithText("Recently Played").fetchSemanticsNode().boundsInRoot.top
         val genresTop = composeRule.onNodeWithText("Browse by Genre").fetchSemanticsNode().boundsInRoot.top
         val popularTop = composeRule.onNodeWithText("Popular stations").fetchSemanticsNode().boundsInRoot.top
-        assertTrue(shelfTop < genresTop && genresTop < popularTop)
+        assertThat(shelfTop).isLessThan(genresTop)
+        assertThat(genresTop).isLessThan(popularTop)
         composeRule.onNodeWithText("Pop One").assertIsDisplayed()
     }
 
@@ -87,7 +91,7 @@ class ListenNowContentTest {
         composeRule.onNodeWithTag(ListenNowTestTags.recentTile("r")).performClick()
         composeRule.onNodeWithTag(ListenNowTestTags.popularTile("p")).performClick()
 
-        assertEquals(listOf("r", "p"), played)
+        assertThat(played).containsExactly("r", "p")
     }
 
     @Test
@@ -107,12 +111,12 @@ class ListenNowContentTest {
             longClick()
         }
         composeRule.onNodeWithText("Hide from Recently Played").performClick()
-        assertEquals(listOf("r"), hidden)
+        assertThat(hidden).containsExactly("r")
 
         composeRule.onNodeWithText("Removed").assertIsDisplayed()
         composeRule.onNodeWithText("Undo").performClick()
         composeRule.waitForIdle()
-        assertEquals(listOf("r"), undone)
+        assertThat(undone).containsExactly("r")
     }
 
     @Test
@@ -123,16 +127,16 @@ class ListenNowContentTest {
             composeRule.onNodeWithTag(tag).fetchSemanticsNode().config[SemanticsActions.CustomActions]
 
         val hide = actionsOf(ListenNowTestTags.recentTile("r")).single()
-        assertEquals("Hide from Recently Played", hide.label)
+        assertThat(hide.label).isEqualTo("Hide from Recently Played")
         val save = actionsOf(ListenNowTestTags.popularTile("p")).single()
-        assertEquals("Add to My Stations", save.label)
+        assertThat(save.label).isEqualTo("Add to My Stations")
 
         composeRule.runOnIdle {
             hide.action()
             save.action()
         }
-        assertEquals(listOf("r"), hidden)
-        assertEquals(listOf("p" to false), toggled)
+        assertThat(hidden).containsExactly("r")
+        assertThat(toggled).containsExactly("p" to false)
     }
 
     @Test
@@ -148,7 +152,7 @@ class ListenNowContentTest {
         }
         composeRule.onNodeWithText("Remove from My Stations").performClick()
 
-        assertEquals(listOf("a" to false, "b" to true), toggled)
+        assertThat(toggled).containsExactly("a" to false, "b" to true)
     }
 
     @Test
@@ -164,7 +168,7 @@ class ListenNowContentTest {
 
         composeRule.onNodeWithText("Directory unavailable").assertIsDisplayed()
         composeRule.onNodeWithText("Try again").performClick()
-        assertTrue(retriedPopular)
+        assertThat(retriedPopular).isTrue()
     }
 
     @Test

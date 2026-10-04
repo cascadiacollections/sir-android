@@ -1,5 +1,11 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.directory.StationSearchFilters
 import com.cascadiacollections.sir.core.directory.Tag
@@ -11,9 +17,6 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -42,10 +45,10 @@ class SearchViewModelTest {
         runCurrent()
 
         val state = vm.uiState.value
-        assertEquals(SearchPhase.Idle, state.phase)
-        assertEquals(listOf(POPULAR), state.popularStations)
-        assertEquals(listOf(Tag("synthwave", 12)), state.genres)
-        assertTrue(state.showsGenres)
+        assertThat(state.phase).isEqualTo(SearchPhase.Idle)
+        assertThat(state.popularStations).containsExactly(POPULAR)
+        assertThat(state.genres).containsExactly(Tag("synthwave", 12))
+        assertThat(state.showsGenres).isTrue()
     }
 
     @Test
@@ -54,7 +57,7 @@ class SearchViewModelTest {
         val vm = viewModel()
         runCurrent()
 
-        assertEquals(Tag.CURATED, vm.uiState.value.genres)
+        assertThat(vm.uiState.value.genres).isEqualTo(Tag.CURATED)
     }
 
     @Test
@@ -64,13 +67,13 @@ class SearchViewModelTest {
 
         advanceTimeBy(SearchViewModel.DEBOUNCE_MILLIS - 1)
         runCurrent()
-        assertEquals(emptyList<String>(), directory.calls)
-        assertEquals(SearchPhase.Searching, vm.uiState.value.phase)
+        assertThat(directory.calls).isEmpty()
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Searching)
 
         advanceTimeBy(2)
         runCurrent()
-        assertEquals(listOf("name:rock"), directory.calls)
-        assertEquals(SearchPhase.Results(listOf(station("rock"))), vm.uiState.value.phase)
+        assertThat(directory.calls).containsExactly("name:rock")
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Results(listOf(station("rock"))))
     }
 
     @Test
@@ -83,8 +86,8 @@ class SearchViewModelTest {
         vm.onQueryChange("roc")
         settle()
 
-        assertEquals(listOf("name:roc"), directory.calls)
-        assertEquals(SearchViewModel.SEARCH_LIMIT, directory.lastLimit)
+        assertThat(directory.calls).containsExactly("name:roc")
+        assertThat(directory.lastLimit).isEqualTo(SearchViewModel.SEARCH_LIMIT)
     }
 
     @Test
@@ -97,8 +100,8 @@ class SearchViewModelTest {
         vm.onQueryChange(" jazz ")
         settle()
 
-        assertEquals(listOf("name:jazz"), directory.calls)
-        assertEquals(" jazz ", vm.uiState.value.query)
+        assertThat(directory.calls).containsExactly("name:jazz")
+        assertThat(vm.uiState.value.query).isEqualTo(" jazz ")
     }
 
     @Test
@@ -109,10 +112,10 @@ class SearchViewModelTest {
         vm.onQueryChange("jazzy")
         vm.onQueryChange("")
 
-        assertEquals(SearchPhase.Idle, vm.uiState.value.phase)
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Idle)
         settle()
-        assertEquals(listOf("name:jazz"), directory.calls)
-        assertEquals(SearchPhase.Idle, vm.uiState.value.phase)
+        assertThat(directory.calls).containsExactly("name:jazz")
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Idle)
     }
 
     @Test
@@ -121,10 +124,10 @@ class SearchViewModelTest {
         vm.onQueryChange("news")
         vm.submit()
         runCurrent()
-        assertEquals(listOf("name:news"), directory.calls)
+        assertThat(directory.calls).containsExactly("name:news")
 
         settle()
-        assertEquals(listOf("name:news"), directory.calls)
+        assertThat(directory.calls).containsExactly("name:news")
     }
 
     @Test
@@ -134,11 +137,11 @@ class SearchViewModelTest {
         runCurrent()
 
         val state = vm.uiState.value
-        assertEquals(listOf("tag:hip hop"), directory.calls)
-        assertEquals("Hip Hop", state.query)
-        assertEquals(Tag("hip hop"), state.selectedGenre)
-        assertTrue(state.showsGenres)
-        assertEquals(SearchPhase.Results(listOf(station("tag hip hop"))), state.phase)
+        assertThat(directory.calls).containsExactly("tag:hip hop")
+        assertThat(state.query).isEqualTo("Hip Hop")
+        assertThat(state.selectedGenre).isEqualTo(Tag("hip hop"))
+        assertThat(state.showsGenres).isTrue()
+        assertThat(state.phase).isEqualTo(SearchPhase.Results(listOf(station("tag hip hop"))))
     }
 
     @Test
@@ -149,8 +152,8 @@ class SearchViewModelTest {
         vm.onQueryChange("Jazz FM")
         settle()
 
-        assertNull(vm.uiState.value.selectedGenre)
-        assertEquals(listOf("tag:jazz", "name:Jazz FM"), directory.calls)
+        assertThat(vm.uiState.value.selectedGenre).isNull()
+        assertThat(directory.calls).containsExactly("tag:jazz", "name:Jazz FM")
     }
 
     @Test
@@ -161,9 +164,9 @@ class SearchViewModelTest {
         vm.selectGenre(Tag("jazz", stationCount = 99))
 
         val state = vm.uiState.value
-        assertNull(state.selectedGenre)
-        assertEquals("", state.query)
-        assertEquals(SearchPhase.Idle, state.phase)
+        assertThat(state.selectedGenre).isNull()
+        assertThat(state.query).isEmpty()
+        assertThat(state.phase).isEqualTo(SearchPhase.Idle)
     }
 
     @Test
@@ -175,9 +178,9 @@ class SearchViewModelTest {
         vm.setFilters(filters)
         runCurrent()
 
-        assertEquals(listOf("tag:rock", "tag:rock"), directory.calls)
-        assertEquals(filters, directory.lastFilters)
-        assertEquals(filters, vm.uiState.value.filters)
+        assertThat(directory.calls).containsExactly("tag:rock", "tag:rock")
+        assertThat(directory.lastFilters).isEqualTo(filters)
+        assertThat(vm.uiState.value.filters).isEqualTo(filters)
     }
 
     @Test
@@ -190,8 +193,8 @@ class SearchViewModelTest {
         vm.clearFilters()
         runCurrent()
 
-        assertEquals(listOf("name:talk", "name:talk", "name:talk"), directory.calls)
-        assertEquals(StationSearchFilters.NONE, directory.lastFilters)
+        assertThat(directory.calls).containsExactly("name:talk", "name:talk", "name:talk")
+        assertThat(directory.lastFilters).isEqualTo(StationSearchFilters.NONE)
     }
 
     @Test
@@ -200,11 +203,11 @@ class SearchViewModelTest {
         val filters = StationSearchFilters(bitrateMaxKbps = 96)
         vm.setFilters(filters)
         runCurrent()
-        assertEquals(emptyList<String>(), directory.calls)
+        assertThat(directory.calls).isEmpty()
 
         vm.onQueryChange("lofi")
         settle()
-        assertEquals(filters, directory.lastFilters)
+        assertThat(directory.lastFilters).isEqualTo(filters)
     }
 
     @Test
@@ -214,7 +217,7 @@ class SearchViewModelTest {
         vm.onQueryChange("zzzz")
         settle()
 
-        assertEquals(SearchPhase.Empty, vm.uiState.value.phase)
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Empty)
     }
 
     @Test
@@ -223,15 +226,15 @@ class SearchViewModelTest {
         val vm = viewModel()
         vm.selectGenre(Tag("jazz"))
         runCurrent()
-        assertEquals(SearchPhase.Failed, vm.uiState.value.phase)
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Failed)
 
         directory.tagResult = { Result.success(listOf(station("tag $it"))) }
         vm.retry()
         runCurrent()
 
-        assertEquals(listOf("tag:jazz", "tag:jazz"), directory.calls)
-        assertEquals(Tag("jazz"), vm.uiState.value.selectedGenre)
-        assertEquals(SearchPhase.Results(listOf(station("tag jazz"))), vm.uiState.value.phase)
+        assertThat(directory.calls).containsExactly("tag:jazz", "tag:jazz")
+        assertThat(vm.uiState.value.selectedGenre).isEqualTo(Tag("jazz"))
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Results(listOf(station("tag jazz"))))
     }
 
     @Test
@@ -240,14 +243,14 @@ class SearchViewModelTest {
         val vm = viewModel()
         vm.onQueryChange("bbc")
         settle()
-        assertEquals(SearchPhase.Failed, vm.uiState.value.phase)
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Failed)
 
         directory.searchResult = { Result.success(listOf(station(it))) }
         vm.retry()
         runCurrent()
 
-        assertEquals(listOf("name:bbc", "name:bbc"), directory.calls)
-        assertEquals(SearchPhase.Results(listOf(station("bbc"))), vm.uiState.value.phase)
+        assertThat(directory.calls).containsExactly("name:bbc", "name:bbc")
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Results(listOf(station("bbc"))))
     }
 
     @Test
@@ -257,14 +260,14 @@ class SearchViewModelTest {
         val vm = viewModel()
         vm.onQueryChange("slow")
         settle()
-        assertEquals(SearchPhase.Searching, vm.uiState.value.phase)
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Searching)
 
         vm.onQueryChange("fast")
         settle()
         gate.complete(Unit)
         runCurrent()
 
-        assertEquals(SearchPhase.Results(listOf(station("fast"))), vm.uiState.value.phase)
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Results(listOf(station("fast"))))
     }
 
     @Test
@@ -281,7 +284,7 @@ class SearchViewModelTest {
         vm.onQueryChange("")
         runCurrent()
 
-        assertEquals(SearchPhase.Idle, vm.uiState.value.phase)
+        assertThat(vm.uiState.value.phase).isEqualTo(SearchPhase.Idle)
     }
 
     private class FakeDirectory : RadioDirectory {

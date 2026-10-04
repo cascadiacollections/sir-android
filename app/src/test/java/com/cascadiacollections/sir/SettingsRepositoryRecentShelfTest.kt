@@ -1,10 +1,13 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.containsOnly
+import assertk.assertions.isEmpty
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,8 +39,8 @@ class SettingsRepositoryRecentShelfTest {
 
         repo.hideRecentStation("a")
 
-        assertEquals(setOf("a"), repo.hiddenRecentStationIds.first())
-        assertEquals(listOf("b", "a"), repo.recentStations.first().map { it.id })
+        assertThat(repo.hiddenRecentStationIds.first()).containsOnly("a")
+        assertThat(repo.recentStations.first().map { it.id }).containsExactly("b", "a")
     }
 
     @Test
@@ -67,7 +70,7 @@ class SettingsRepositoryRecentShelfTest {
         val repo = repo()
         repo.hideRecentStation("nope")
 
-        assertEquals(emptySet<String>(), repo.hiddenRecentStationIds.first())
+        assertThat(repo.hiddenRecentStationIds.first()).isEmpty()
     }
 
     @Test
@@ -78,7 +81,7 @@ class SettingsRepositoryRecentShelfTest {
 
         repo.unhideRecentStation("a")
 
-        assertEquals(emptySet<String>(), repo.hiddenRecentStationIds.first())
+        assertThat(repo.hiddenRecentStationIds.first()).isEmpty()
     }
 
     @Test
@@ -91,7 +94,7 @@ class SettingsRepositoryRecentShelfTest {
 
         repo.selectStation(station("a"))
 
-        assertEquals(setOf("b"), repo.hiddenRecentStationIds.first())
+        assertThat(repo.hiddenRecentStationIds.first()).containsOnly("b")
     }
 
     @Test
@@ -102,6 +105,6 @@ class SettingsRepositoryRecentShelfTest {
 
         repo.clearRecentStations()
 
-        assertEquals(emptySet<String>(), repo.hiddenRecentStationIds.first())
+        assertThat(repo.hiddenRecentStationIds.first()).isEmpty()
     }
 }

@@ -1,11 +1,13 @@
 package com.cascadiacollections.sir
 
 import android.app.Application
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -43,14 +45,14 @@ class RadioViewModelExtendedTest {
             trackTitle = "Test",
             artist = "Artist"
         )
-        assertTrue(updated.isConnected)
-        assertTrue(updated.isPlaying)
-        assertFalse(updated.isBuffering)
-        assertFalse(updated.isError)
-        assertEquals("Test", updated.trackTitle)
-        assertEquals("Artist", updated.artist)
-        assertNull(updated.sleepTimerLabel)
-        assertFalse(updated.showMeteredWarning)
+        assertThat(updated.isConnected).isTrue()
+        assertThat(updated.isPlaying).isTrue()
+        assertThat(updated.isBuffering).isFalse()
+        assertThat(updated.isError).isFalse()
+        assertThat(updated.trackTitle).isEqualTo("Test")
+        assertThat(updated.artist).isEqualTo("Artist")
+        assertThat(updated.sleepTimerLabel).isNull()
+        assertThat(updated.showMeteredWarning).isFalse()
     }
 
     @Test
@@ -65,27 +67,27 @@ class RadioViewModelExtendedTest {
             sleepTimerLabel = "5m",
             showMeteredWarning = true
         )
-        assertTrue(state.isConnected)
-        assertTrue(state.isPlaying)
-        assertTrue(state.isBuffering)
-        assertTrue(state.isError)
-        assertEquals("Song", state.trackTitle)
-        assertEquals("Band", state.artist)
-        assertEquals("5m", state.sleepTimerLabel)
-        assertTrue(state.showMeteredWarning)
+        assertThat(state.isConnected).isTrue()
+        assertThat(state.isPlaying).isTrue()
+        assertThat(state.isBuffering).isTrue()
+        assertThat(state.isError).isTrue()
+        assertThat(state.trackTitle).isEqualTo("Song")
+        assertThat(state.artist).isEqualTo("Band")
+        assertThat(state.sleepTimerLabel).isEqualTo("5m")
+        assertThat(state.showMeteredWarning).isTrue()
     }
 
     @Test
     fun `RadioUiState hashCode is consistent with equals`() {
         val a = RadioUiState(isPlaying = true, trackTitle = "Song")
         val b = RadioUiState(isPlaying = true, trackTitle = "Song")
-        assertEquals(a.hashCode(), b.hashCode())
+        assertThat(b.hashCode()).isEqualTo(a.hashCode())
     }
 
     @Test
     fun `RadioUiState toString contains field values`() {
         val state = RadioUiState(trackTitle = "MyTrack")
-        assertTrue(state.toString().contains("MyTrack"))
+        assertThat(state.toString()).contains("MyTrack")
     }
 
     // ---- ViewModel state ----
@@ -95,7 +97,7 @@ class RadioViewModelExtendedTest {
         val vm = createViewModel()
         vm.dismissMeteredWarning()
         vm.dismissMeteredWarning()
-        assertFalse(vm.uiState.value.showMeteredWarning)
+        assertThat(vm.uiState.value.showMeteredWarning).isFalse()
     }
 
     @Test
@@ -111,11 +113,11 @@ class RadioViewModelExtendedTest {
     fun `uiState flow initial value has default fields`() {
         val vm = createViewModel()
         val state = vm.uiState.value
-        assertFalse(state.isPlaying)
-        assertFalse(state.isBuffering)
-        assertFalse(state.isError)
-        assertNull(state.trackTitle)
-        assertNull(state.artist)
+        assertThat(state.isPlaying).isFalse()
+        assertThat(state.isBuffering).isFalse()
+        assertThat(state.isError).isFalse()
+        assertThat(state.trackTitle).isNull()
+        assertThat(state.artist).isNull()
     }
 
     // ---- Factory ----
@@ -127,7 +129,7 @@ class RadioViewModelExtendedTest {
         val vm = factory.create(RadioViewModel::class.java).also {
             coroutineRule.registerViewModel(it)
         }
-        assertEquals(RadioViewModel::class.java, vm::class.java)
+        assertThat(vm::class.java).isEqualTo(RadioViewModel::class.java)
     }
 
     @Test
@@ -138,6 +140,6 @@ class RadioViewModelExtendedTest {
         shadowApp.setSystemService(android.content.Context.CONNECTIVITY_SERVICE, null)
         // Should not crash
         val vm = createViewModel()
-        assertFalse(vm.uiState.value.showMeteredWarning)
+        assertThat(vm.uiState.value.showMeteredWarning).isFalse()
     }
 }

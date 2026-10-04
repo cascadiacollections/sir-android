@@ -1,5 +1,11 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isLessThan
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.StationQuery
@@ -8,8 +14,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -56,7 +60,7 @@ class RadioBrowserViewModelPlaylistTest {
             result = it
             latch.countDown()
         }
-        assertTrue("import did not complete in time", latch.await(5, TimeUnit.SECONDS))
+        assertThat(latch.await(5, TimeUnit.SECONDS), name = "import did not complete in time").isTrue()
         return result!!
     }
 
@@ -68,7 +72,8 @@ class RadioBrowserViewModelPlaylistTest {
     private fun RadioBrowserViewModel.awaitSavedStationsSize(expectedSize: Int) {
         val deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(5)
         while (uiState.value.savedStations.size != expectedSize) {
-            assertTrue("saved stations never reached size $expectedSize", System.currentTimeMillis() < deadline)
+            assertThat(System.currentTimeMillis(), name = "saved stations never reached size $expectedSize")
+                .isLessThan(deadline)
             Thread.sleep(10)
         }
     }
@@ -89,11 +94,9 @@ class RadioBrowserViewModelPlaylistTest {
             isPls = false
         )
 
-        assertEquals(PlaylistImportResult.Imported(added = 2, skipped = 0), result)
-        assertEquals(
-            listOf("Station A", "Station B"),
-            runBlocking { repo.savedStations.first() }.map { it.name }
-        )
+        assertThat(result).isEqualTo(PlaylistImportResult.Imported(added = 2, skipped = 0))
+        assertThat(runBlocking { repo.savedStations.first() }.map { it.name })
+            .containsExactly("Station A", "Station B")
     }
 
     @Test
@@ -106,7 +109,7 @@ class RadioBrowserViewModelPlaylistTest {
             isPls = true
         )
 
-        assertEquals(PlaylistImportResult.Imported(added = 1, skipped = 0), result)
+        assertThat(result).isEqualTo(PlaylistImportResult.Imported(added = 1, skipped = 0))
     }
 
     @Test
@@ -120,8 +123,8 @@ class RadioBrowserViewModelPlaylistTest {
 
         val result = vm.importAndAwait(text = "https://example.com/a", isPls = false)
 
-        assertEquals(PlaylistImportResult.Imported(added = 0, skipped = 1), result)
-        assertEquals(1, runBlocking { repo.savedStations.first() }.size)
+        assertThat(result).isEqualTo(PlaylistImportResult.Imported(added = 0, skipped = 1))
+        assertThat(runBlocking { repo.savedStations.first() }).hasSize(1)
     }
 
     @Test
@@ -130,7 +133,7 @@ class RadioBrowserViewModelPlaylistTest {
 
         val result = vm.importAndAwait(text = "not a playlist", isPls = true)
 
-        assertEquals(PlaylistImportResult.Empty, result)
+        assertThat(result).isEqualTo(PlaylistImportResult.Empty)
     }
 
     @Test
@@ -144,7 +147,7 @@ class RadioBrowserViewModelPlaylistTest {
 
         val exported = vm.exportPlaylist()
 
-        assertEquals("#EXTM3U\n#EXTINF:-1,Station A\nhttps://example.com/a\n", exported)
+        assertThat(exported).isEqualTo("#EXTM3U\n#EXTINF:-1,Station A\nhttps://example.com/a\n")
     }
 
     private fun RadioBrowserViewModel.importStationsAndAwait(text: String, fileName: String?): PlaylistImportResult {
@@ -154,7 +157,7 @@ class RadioBrowserViewModelPlaylistTest {
             result = it
             latch.countDown()
         }
-        assertTrue("import did not complete in time", latch.await(5, TimeUnit.SECONDS))
+        assertThat(latch.await(5, TimeUnit.SECONDS), name = "import did not complete in time").isTrue()
         return result!!
     }
 
@@ -174,11 +177,11 @@ class RadioBrowserViewModelPlaylistTest {
             fileName = "favorites.txt"
         )
 
-        assertEquals(PlaylistImportResult.Imported(added = 1, skipped = 1), result)
+        assertThat(result).isEqualTo(PlaylistImportResult.Imported(added = 1, skipped = 1))
         val saved = runBlocking { repo.savedStations.first() }
-        assertEquals(listOf("b", "c"), saved.map { it.id })
-        assertEquals("Mine", saved[0].name)
-        assertEquals("Jazz", saved[1].tags)
+        assertThat(saved.map { it.id }).containsExactly("b", "c")
+        assertThat(saved[0].name).isEqualTo("Mine")
+        assertThat(saved[1].tags).isEqualTo("Jazz")
     }
 
     @Test
@@ -207,11 +210,11 @@ class RadioBrowserViewModelPlaylistTest {
             "shoutkit-favorites.json"
         )
 
-        assertEquals(PlaylistImportResult.Imported(added = 1, skipped = 1), result)
+        assertThat(result).isEqualTo(PlaylistImportResult.Imported(added = 1, skipped = 1))
         vm.awaitSavedStationsSize(1)
         val saved = vm.uiState.value.savedStations.single()
-        assertEquals("Jazz", saved.name)
-        assertEquals("https://x/stream", saved.streamUrl)
+        assertThat(saved.name).isEqualTo("Jazz")
+        assertThat(saved.streamUrl).isEqualTo("https://x/stream")
     }
 
     @Test
@@ -220,17 +223,15 @@ class RadioBrowserViewModelPlaylistTest {
 
         val result = vm.importStationsAndAwait("""{"schemaVersion":99,"favorites":[]}""", "x.json")
 
-        assertEquals(PlaylistImportResult.Unreadable, result)
+        assertThat(result).isEqualTo(PlaylistImportResult.Unreadable)
     }
 
     @Test
     fun `a playlist picked through importStations still imports as M3U or PLS`() {
         val vm = viewModel(repo())
 
-        assertEquals(
-            PlaylistImportResult.Imported(added = 1, skipped = 0),
-            vm.importStationsAndAwait("[playlist]\nFile1=https://example.com/p\n", "list.pls")
-        )
+        assertThat(vm.importStationsAndAwait("[playlist]\nFile1=https://example.com/p\n", "list.pls"))
+            .isEqualTo(PlaylistImportResult.Imported(added = 1, skipped = 0))
     }
 
     @Test
@@ -248,10 +249,10 @@ class RadioBrowserViewModelPlaylistTest {
         vm.awaitSavedStationsSize(0)
         val result = vm.importStationsAndAwait(backup, "shoutkit-favorites.json")
 
-        assertEquals(PlaylistImportResult.Imported(added = 2, skipped = 0), result)
+        assertThat(result).isEqualTo(PlaylistImportResult.Imported(added = 2, skipped = 0))
         val saved = runBlocking { repo.savedStations.first() }
-        assertEquals(listOf("a", "b"), saved.map { it.id })
-        assertEquals("rock", saved[0].tags)
+        assertThat(saved.map { it.id }).containsExactly("a", "b")
+        assertThat(saved[0].tags).isEqualTo("rock")
     }
 }
 

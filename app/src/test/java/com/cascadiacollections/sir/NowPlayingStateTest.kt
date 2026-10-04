@@ -3,13 +3,14 @@ package com.cascadiacollections.sir
 import android.os.Bundle
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import java.util.Locale
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -37,20 +38,20 @@ class NowPlayingStateTest {
             StreamFailure.Stalled
         ).forEach { failure ->
             val state = connected.withSessionExtras(PlaybackFailureExtras.bundle(failure, retrying = false))
-            assertEquals(failure, state.failure)
-            assertEquals(failure, state.displayedFailure)
-            assertFalse(state.isReconnecting)
-            assertEquals(PlaybackStatus.FAILED, state.status)
-            assertEquals(TransportAction.RETRY, state.transportAction)
+            assertThat(state.failure).isEqualTo(failure)
+            assertThat(state.displayedFailure).isEqualTo(failure)
+            assertThat(state.isReconnecting).isFalse()
+            assertThat(state.status).isEqualTo(PlaybackStatus.FAILED)
+            assertThat(state.transportAction).isEqualTo(TransportAction.RETRY)
         }
     }
 
     @Test
     fun `a failure being retried shows reconnecting and offers cancel`() {
         val state = connected.withSessionExtras(PlaybackFailureExtras.bundle(StreamFailure.NoNetwork, retrying = true))
-        assertTrue(state.isReconnecting)
-        assertEquals(PlaybackStatus.RECONNECTING, state.status)
-        assertEquals(TransportAction.CANCEL, state.transportAction)
+        assertThat(state.isReconnecting).isTrue()
+        assertThat(state.status).isEqualTo(PlaybackStatus.RECONNECTING)
+        assertThat(state.transportAction).isEqualTo(TransportAction.CANCEL)
     }
 
     @Test
@@ -58,43 +59,43 @@ class NowPlayingStateTest {
         val failed = connected.copy(isError = true)
             .withSessionExtras(PlaybackFailureExtras.bundle(StreamFailure.Transient, retrying = false))
         val cleared = failed.withSessionExtras(Bundle())
-        assertNull(cleared.failure)
-        assertFalse(cleared.isError)
-        assertFalse(cleared.isReconnecting)
-        assertEquals(PlaybackStatus.IDLE, cleared.status)
+        assertThat(cleared.failure).isNull()
+        assertThat(cleared.isError).isFalse()
+        assertThat(cleared.isReconnecting).isFalse()
+        assertThat(cleared.status).isEqualTo(PlaybackStatus.IDLE)
     }
 
     @Test
     fun `retrying without a failure is not reconnecting`() {
         val extras = Bundle().apply { putBoolean(PlaybackFailureExtras.KEY_RETRYING, true) }
-        assertFalse(connected.withSessionExtras(extras).isReconnecting)
+        assertThat(connected.withSessionExtras(extras).isReconnecting).isFalse()
     }
 
     @Test
     fun `an untyped player error is shown as the generic stream error`() {
         val state = connected.copy(isError = true)
-        assertEquals(StreamFailure.Transient, state.displayedFailure)
-        assertEquals(PlaybackStatus.FAILED, state.status)
-        assertEquals(PlaybackStatus.RECONNECTING, state.copy(isBuffering = true).status)
+        assertThat(state.displayedFailure).isEqualTo(StreamFailure.Transient)
+        assertThat(state.status).isEqualTo(PlaybackStatus.FAILED)
+        assertThat(state.copy(isBuffering = true).status).isEqualTo(PlaybackStatus.RECONNECTING)
     }
 
     // ---- Status and transport action without a failure ----
 
     @Test
     fun `status and action follow the transport`() {
-        assertEquals(PlaybackStatus.CONNECTING, RadioUiState().status)
-        assertEquals(TransportAction.PLAY, RadioUiState().transportAction)
+        assertThat(RadioUiState().status).isEqualTo(PlaybackStatus.CONNECTING)
+        assertThat(RadioUiState().transportAction).isEqualTo(TransportAction.PLAY)
 
         val buffering = connected.copy(isBuffering = true)
-        assertEquals(PlaybackStatus.CONNECTING, buffering.status)
-        assertEquals(TransportAction.CANCEL, buffering.transportAction)
+        assertThat(buffering.status).isEqualTo(PlaybackStatus.CONNECTING)
+        assertThat(buffering.transportAction).isEqualTo(TransportAction.CANCEL)
 
         val playing = connected.copy(isPlaying = true)
-        assertEquals(PlaybackStatus.LIVE, playing.status)
-        assertEquals(TransportAction.PAUSE, playing.transportAction)
+        assertThat(playing.status).isEqualTo(PlaybackStatus.LIVE)
+        assertThat(playing.transportAction).isEqualTo(TransportAction.PAUSE)
 
-        assertEquals(PlaybackStatus.IDLE, connected.status)
-        assertEquals(TransportAction.PLAY, connected.transportAction)
+        assertThat(connected.status).isEqualTo(PlaybackStatus.IDLE)
+        assertThat(connected.transportAction).isEqualTo(TransportAction.PLAY)
     }
 
     // ---- A paused stream nobody asked to play (offline cold-start regression) ----
@@ -105,10 +106,10 @@ class NowPlayingStateTest {
 
         val state = connected.withPlayer(player)
 
-        assertFalse(state.isBuffering)
-        assertFalse(state.isPlayRequested)
-        assertEquals(PlaybackStatus.IDLE, state.status)
-        assertEquals(TransportAction.PLAY, state.transportAction)
+        assertThat(state.isBuffering).isFalse()
+        assertThat(state.isPlayRequested).isFalse()
+        assertThat(state.status).isEqualTo(PlaybackStatus.IDLE)
+        assertThat(state.transportAction).isEqualTo(TransportAction.PLAY)
     }
 
     @Test
@@ -123,10 +124,10 @@ class NowPlayingStateTest {
             .withPlayerError(playWhenReady = false)
             .withSessionExtras(PlaybackFailureExtras.bundle(StreamFailure.NoNetwork, retrying = true))
 
-        assertFalse(state.isError)
-        assertNull(state.displayedFailure)
-        assertEquals(PlaybackStatus.IDLE, state.status)
-        assertEquals(TransportAction.PLAY, state.transportAction)
+        assertThat(state.isError).isFalse()
+        assertThat(state.displayedFailure).isNull()
+        assertThat(state.status).isEqualTo(PlaybackStatus.IDLE)
+        assertThat(state.transportAction).isEqualTo(TransportAction.PLAY)
     }
 
     @Test
@@ -135,27 +136,27 @@ class NowPlayingStateTest {
 
         val reconnecting = connected.withPlayer(requested)
             .withSessionExtras(PlaybackFailureExtras.bundle(StreamFailure.NoNetwork, retrying = true))
-        assertEquals(PlaybackStatus.RECONNECTING, reconnecting.status)
-        assertEquals(TransportAction.CANCEL, reconnecting.transportAction)
+        assertThat(reconnecting.status).isEqualTo(PlaybackStatus.RECONNECTING)
+        assertThat(reconnecting.transportAction).isEqualTo(TransportAction.CANCEL)
 
         val failed = reconnecting
             .withPlayer(PlayerTestHelper.createMockPlayer(playWhenReady = true, playbackState = Player.STATE_IDLE))
             .withPlayerError(playWhenReady = true)
             .withSessionExtras(PlaybackFailureExtras.bundle(StreamFailure.NoNetwork, retrying = false))
-        assertEquals(StreamFailure.NoNetwork, failed.displayedFailure)
-        assertEquals(PlaybackStatus.FAILED, failed.status)
-        assertEquals(TransportAction.RETRY, failed.transportAction)
+        assertThat(failed.displayedFailure).isEqualTo(StreamFailure.NoNetwork)
+        assertThat(failed.status).isEqualTo(PlaybackStatus.FAILED)
+        assertThat(failed.transportAction).isEqualTo(TransportAction.RETRY)
     }
 
     @Test
     fun `pausing a failed stream drops the untyped error`() {
         val failed = connected.withPlayerError(playWhenReady = true)
-        assertTrue(failed.isError)
+        assertThat(failed.isError).isTrue()
 
         val paused = failed.withPlayer(PlayerTestHelper.createMockPlayer(playWhenReady = false))
 
-        assertFalse(paused.isError)
-        assertEquals(PlaybackStatus.IDLE, paused.status)
+        assertThat(paused.isError).isFalse()
+        assertThat(paused.status).isEqualTo(PlaybackStatus.IDLE)
     }
 
     @Test
@@ -169,8 +170,8 @@ class NowPlayingStateTest {
                 )
             )
 
-        assertFalse(playing.isError)
-        assertEquals(PlaybackStatus.LIVE, playing.status)
+        assertThat(playing.isError).isFalse()
+        assertThat(playing.status).isEqualTo(PlaybackStatus.LIVE)
     }
 
     // ---- Metadata → UiState ----
@@ -182,9 +183,9 @@ class NowPlayingStateTest {
             .setArtist("Live stream")
             .build()
         val state = connected.withMediaMetadata(metadata)
-        assertNull(state.trackTitle)
-        assertNull(state.artist)
-        assertNull(state.albumArtUrl)
+        assertThat(state.trackTitle).isNull()
+        assertThat(state.artist).isNull()
+        assertThat(state.albumArtUrl).isNull()
     }
 
     @Test
@@ -201,10 +202,10 @@ class NowPlayingStateTest {
             )
             .build()
         val state = connected.withMediaMetadata(metadata)
-        assertEquals("Around the World", state.trackTitle)
-        assertEquals("Daft Punk", state.artist)
-        assertEquals("https://a/600x600bb.jpg", state.albumArtUrl)
-        assertEquals("https://music.apple.com/t", state.trackViewUrl)
+        assertThat(state.trackTitle).isEqualTo("Around the World")
+        assertThat(state.artist).isEqualTo("Daft Punk")
+        assertThat(state.albumArtUrl).isEqualTo("https://a/600x600bb.jpg")
+        assertThat(state.trackViewUrl).isEqualTo("https://music.apple.com/t")
     }
 
     // ---- Track line ----
@@ -213,17 +214,17 @@ class NowPlayingStateTest {
     fun `track line prefers title and artist, then genre`() {
         val station =
             Station(id = "s", name = "Station", url = "https://s", tags = "jazz, smooth jazz")
-        assertEquals("Title — Artist", connected.copy(trackTitle = "Title", artist = "Artist").trackLine())
-        assertEquals("Title", connected.copy(trackTitle = "Title", artist = " ").trackLine())
-        assertEquals("Jazz", connected.copy(station = station).trackLine(Locale.US))
-        assertNull(connected.trackLine())
-        assertNull(connected.copy(station = station.copy(tags = "")).trackLine())
+        assertThat(connected.copy(trackTitle = "Title", artist = "Artist").trackLine()).isEqualTo("Title — Artist")
+        assertThat(connected.copy(trackTitle = "Title", artist = " ").trackLine()).isEqualTo("Title")
+        assertThat(connected.copy(station = station).trackLine(Locale.US)).isEqualTo("Jazz")
+        assertThat(connected.trackLine()).isNull()
+        assertThat(connected.copy(station = station.copy(tags = "")).trackLine()).isNull()
     }
 
     @Test
     fun `only stations with an id can be favourited`() {
-        assertFalse(connected.canFavorite)
-        assertFalse(connected.copy(station = Station(name = "Imported", url = "https://i")).canFavorite)
-        assertTrue(connected.copy(station = Station(id = "x", name = "X", url = "https://x")).canFavorite)
+        assertThat(connected.canFavorite).isFalse()
+        assertThat(connected.copy(station = Station(name = "Imported", url = "https://i")).canFavorite).isFalse()
+        assertThat(connected.copy(station = Station(id = "x", name = "X", url = "https://x")).canFavorite).isTrue()
     }
 }

@@ -1,5 +1,10 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.model.WatchStationSync
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -7,8 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -33,8 +36,8 @@ class WatchStationSyncerTest {
         runCurrent()
 
         val payload = WatchStationSync.decode(published.single())
-        assertEquals("a", payload.last!!.id)
-        assertEquals(listOf("a"), payload.recents.map { it.id })
+        assertThat(payload.last!!.id).isEqualTo("a")
+        assertThat(payload.recents.map { it.id }).containsExactly("a")
     }
 
     @Test
@@ -52,8 +55,8 @@ class WatchStationSyncerTest {
         runCurrent()
 
         val payload = WatchStationSync.decode(published.single())
-        assertEquals("b", payload.last!!.id)
-        assertEquals(listOf("b"), payload.recents.map { it.id })
+        assertThat(payload.last!!.id).isEqualTo("b")
+        assertThat(payload.recents.map { it.id }).containsExactly("b")
     }
 
     @Test
@@ -67,7 +70,7 @@ class WatchStationSyncerTest {
         advanceTimeBy(501)
         runCurrent()
 
-        assertEquals(1, published.size)
+        assertThat(published).hasSize(1)
     }
 
     @Test
@@ -81,7 +84,7 @@ class WatchStationSyncerTest {
         advanceTimeBy(501)
         runCurrent()
 
-        assertNull(WatchStationSync.decode(published.last()).last)
+        assertThat(WatchStationSync.decode(published.last()).last).isNull()
     }
 
     @Test
@@ -99,7 +102,7 @@ class WatchStationSyncerTest {
         advanceTimeBy(501)
         runCurrent()
 
-        assertEquals(2, calls)
-        assertEquals("c", WatchStationSync.decode(published.single()).last!!.id)
+        assertThat(calls).isEqualTo(2)
+        assertThat(WatchStationSync.decode(published.single()).last!!.id).isEqualTo("c")
     }
 }

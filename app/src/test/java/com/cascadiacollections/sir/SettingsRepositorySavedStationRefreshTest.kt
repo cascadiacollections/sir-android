@@ -1,10 +1,12 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,16 +39,14 @@ class SettingsRepositorySavedStationRefreshTest {
             listOf(a.copy(name = "Directory", urlResolved = "https://new.example", bitrate = 96))
         )
 
-        assertEquals(1, updated)
-        assertEquals(
-            listOf(a.copy(urlResolved = "https://new.example", bitrate = 96), b),
-            repo().savedStations.first()
-        )
+        assertThat(updated).isEqualTo(1)
+        assertThat(repo().savedStations.first())
+            .containsExactly(a.copy(urlResolved = "https://new.example", bitrate = 96), b)
     }
 
     @Test
     fun `nothing to change writes nothing`() = runBlocking {
-        assertEquals(0, repo().refreshSavedStations(listOf(b)))
-        assertEquals(listOf(a, b), repo().savedStations.first())
+        assertThat(repo().refreshSavedStations(listOf(b))).isEqualTo(0)
+        assertThat(repo().savedStations.first()).containsExactly(a, b)
     }
 }

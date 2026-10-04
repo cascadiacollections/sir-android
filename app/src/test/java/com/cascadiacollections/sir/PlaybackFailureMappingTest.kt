@@ -11,11 +11,13 @@ import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNotEqualTo
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import java.io.IOException
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -52,17 +54,14 @@ class PlaybackFailureMappingTest {
         val failure = exception(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
             .toStreamFailure()
 
-        assertEquals(StreamFailure.NoNetwork, failure)
-        assertTrue(failure.isRetryable)
+        assertThat(failure).isEqualTo(StreamFailure.NoNetwork)
+        assertThat(failure.isRetryable).isTrue()
     }
 
     @Test
     fun `a timeout stays retryable`() {
-        assertTrue(
-            exception(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT)
-                .toStreamFailure()
-                .isRetryable
-        )
+        assertThat(exception(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT).toStreamFailure().isRetryable)
+            .isTrue()
     }
 
     @Test
@@ -72,8 +71,8 @@ class PlaybackFailureMappingTest {
             cause = invalidResponseCode(404)
         ).toStreamFailure()
 
-        assertEquals(StreamFailure.StationUnavailable(404), failure)
-        assertFalse(failure.isRetryable)
+        assertThat(failure).isEqualTo(StreamFailure.StationUnavailable(404))
+        assertThat(failure.isRetryable).isFalse()
     }
 
     @Test
@@ -84,7 +83,7 @@ class PlaybackFailureMappingTest {
         val failure = exception(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, cause = nested)
             .toStreamFailure()
 
-        assertEquals(StreamFailure.Transient, failure)
+        assertThat(failure).isEqualTo(StreamFailure.Transient)
     }
 
     @Test
@@ -95,54 +94,41 @@ class PlaybackFailureMappingTest {
             IOException("wrapper $depth", cause)
         }
 
-        assertEquals(
-            StreamFailure.Transient,
-            exception(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, cause = deep).toStreamFailure()
-        )
+        assertThat(exception(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, cause = deep).toStreamFailure())
+            .isEqualTo(StreamFailure.Transient)
     }
 
     @Test
     fun `a missing file maps to an unavailable station`() {
         val failure = exception(PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND).toStreamFailure()
 
-        assertEquals(StreamFailure.StationUnavailable(null), failure)
-        assertFalse(failure.isRetryable)
+        assertThat(failure).isEqualTo(StreamFailure.StationUnavailable(null))
+        assertThat(failure.isRetryable).isFalse()
     }
 
     @Test
     fun `a non-audio content type is not retried`() {
-        assertFalse(
-            exception(PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE)
-                .toStreamFailure()
-                .isRetryable
-        )
+        assertThat(exception(PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE).toStreamFailure().isRetryable)
+            .isFalse()
     }
 
     @Test
     fun `an unsupported codec and blocked cleartext are unplayable`() {
-        assertEquals(
-            StreamFailure.Unplayable,
-            exception(PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED).toStreamFailure()
-        )
-        assertEquals(
-            StreamFailure.Unplayable,
-            exception(PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED).toStreamFailure()
-        )
+        assertThat(exception(PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED).toStreamFailure())
+            .isEqualTo(StreamFailure.Unplayable)
+        assertThat(exception(PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED).toStreamFailure())
+            .isEqualTo(StreamFailure.Unplayable)
     }
 
     @Test
     fun `a decoder init failure stays retryable - a busy decoder frees up`() {
-        assertTrue(
-            exception(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED).toStreamFailure().isRetryable
-        )
+        assertThat(exception(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED).toStreamFailure().isRetryable).isTrue()
     }
 
     @Test
     fun `an unrecognized error code stays retryable`() {
-        assertEquals(
-            StreamFailure.Transient,
-            exception(PlaybackException.ERROR_CODE_UNSPECIFIED).toStreamFailure()
-        )
+        assertThat(exception(PlaybackException.ERROR_CODE_UNSPECIFIED).toStreamFailure())
+            .isEqualTo(StreamFailure.Transient)
     }
 
     @Test
@@ -154,7 +140,7 @@ class PlaybackFailureMappingTest {
             StreamFailure.Transient,
             StreamFailure.Stalled
         ).forEach { failure ->
-            assertTrue("no message for $failure", failure.messageRes() != 0)
+            assertThat(failure.messageRes(), name = "no message for $failure").isNotEqualTo(0)
         }
     }
 
@@ -164,22 +150,18 @@ class PlaybackFailureMappingTest {
 
         // B4: a transient error is surfaced on its first occurrence, so the service's three
         // reconnects are the whole budget instead of multiplying Media3's own retries.
-        assertEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(loadError(IOException(), errorCount = 1)))
-        assertEquals(
-            C.TIME_UNSET,
-            policy.getRetryDelayMsFor(loadError(invalidResponseCode(503), errorCount = 1))
-        )
-        assertEquals(0, policy.getMinimumLoadableRetryCount(C.DATA_TYPE_MEDIA))
+        assertThat(policy.getRetryDelayMsFor(loadError(IOException(), errorCount = 1))).isEqualTo(C.TIME_UNSET)
+        assertThat(policy.getRetryDelayMsFor(loadError(invalidResponseCode(503), errorCount = 1)))
+            .isEqualTo(C.TIME_UNSET)
+        assertThat(policy.getMinimumLoadableRetryCount(C.DATA_TYPE_MEDIA)).isEqualTo(0)
     }
 
     @Test
     fun `load policy does not retry unavailable stations`() {
         val policy = StreamLoadErrorHandlingPolicy()
 
-        assertEquals(
-            C.TIME_UNSET,
-            policy.getRetryDelayMsFor(loadError(invalidResponseCode(404), errorCount = 1))
-        )
+        assertThat(policy.getRetryDelayMsFor(loadError(invalidResponseCode(404), errorCount = 1)))
+            .isEqualTo(C.TIME_UNSET)
     }
 
     private fun loadError(exception: IOException, errorCount: Int) = LoadErrorHandlingPolicy.LoadErrorInfo(

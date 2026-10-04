@@ -1,7 +1,8 @@
 package com.cascadiacollections.sir
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -26,8 +27,8 @@ class FossCastPartitionTest {
 
         // Not NotInstalled: that would render a switch the user could toggle forever
         // without a module ever arriving.
-        assertEquals(CastModuleState.Unavailable, manager.moduleState.value)
-        assertFalse(manager.isModuleInstalled())
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Unavailable)
+        assertThat(manager.isModuleInstalled()).isFalse()
     }
 
     @Test
@@ -38,16 +39,16 @@ class FossCastPartitionTest {
         manager.retry()
 
         // No transition to Installing — there is nothing to install.
-        assertEquals(CastModuleState.Unavailable, manager.moduleState.value)
+        assertThat(manager.moduleState.value).isEqualTo(CastModuleState.Unavailable)
     }
 
     @Test
     fun `device detection never reports a receiver`() {
         val detector = CastDeviceDetector(RuntimeEnvironment.getApplication())
 
-        assertFalse(detector.castDevicesAvailable.value)
+        assertThat(detector.castDevicesAvailable.value).isFalse()
         detector.resetDetection()
-        assertFalse(detector.castDevicesAvailable.value)
+        assertThat(detector.castDevicesAvailable.value).isFalse()
         detector.release()
     }
 }

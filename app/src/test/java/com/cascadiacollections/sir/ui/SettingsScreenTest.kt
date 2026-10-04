@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import assertk.assertThat
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.BuildConfig
 import com.cascadiacollections.sir.CastFeatureManager
 import com.cascadiacollections.sir.CastModuleState
@@ -13,7 +15,6 @@ import com.cascadiacollections.sir.ui.theme.SirTheme
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -223,6 +224,6 @@ class SettingsScreenTest {
             }
         }
         composeRule.onNodeWithText("Open Source Licenses").performScrollTo().performClick()
-        assertTrue(opened)
+        assertThat(opened).isTrue()
     }
 }

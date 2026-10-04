@@ -1,10 +1,12 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,19 +35,19 @@ class SettingsRepositoryFavoritesOrderTest {
     @Test
     fun `moving a saved station persists the new order`() = runBlocking {
         repo().moveSavedStation(from = 2, to = 0)
-        assertEquals(listOf("c", "a", "b"), ids())
+        assertThat(ids()).containsExactly("c", "a", "b")
     }
 
     @Test
     fun `an out of range move is ignored`() = runBlocking {
         repo().moveSavedStation(from = 5, to = 0)
-        assertEquals(listOf("a", "b", "c"), ids())
+        assertThat(ids()).containsExactly("a", "b", "c")
     }
 
     @Test
     fun `reordering by id persists the dragged order`() = runBlocking {
         repo().reorderSavedStations(listOf("b", "c", "a"))
-        assertEquals(listOf("b", "c", "a"), ids())
+        assertThat(ids()).containsExactly("b", "c", "a")
     }
 
     @Test
@@ -53,14 +55,14 @@ class SettingsRepositoryFavoritesOrderTest {
         val repo = repo()
         repo.reorderSavedStations(listOf("c", "b", "a"))
         repo.saveStation(station("d"))
-        assertEquals(listOf("c", "b", "a", "d"), ids())
+        assertThat(ids()).containsExactly("c", "b", "a", "d")
     }
 
     @Test
     fun `importing merges by id and appends in one write`() = runBlocking {
         val result = repo().importSavedStations(listOf(station("b"), station("e"), station("d")))
-        assertEquals(2, result.added)
-        assertEquals(1, result.skipped)
-        assertEquals(listOf("a", "b", "c", "e", "d"), ids())
+        assertThat(result.added).isEqualTo(2)
+        assertThat(result.skipped).isEqualTo(1)
+        assertThat(ids()).containsExactly("a", "b", "c", "e", "d")
     }
 }

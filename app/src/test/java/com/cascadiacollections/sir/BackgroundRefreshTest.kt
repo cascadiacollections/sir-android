@@ -1,5 +1,13 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFailure
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.directory.RadioDirectory
 import com.cascadiacollections.sir.core.directory.Tag
 import com.cascadiacollections.sir.core.model.Station
@@ -9,10 +17,6 @@ import com.cascadiacollections.sir.core.persistence.SavedStationRefreshStore
 import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** One background refresh pass, against fakes (no WorkManager, no DataStore). */
@@ -65,8 +69,8 @@ class BackgroundRefreshTest {
     fun `refreshes discovery past every cache`() = runTest {
         BackgroundRefresh(directory, FakeFavorites(emptyList())).run()
 
-        assertEquals(listOf(SearchViewModel.POPULAR_LIMIT to true), directory.topCalls)
-        assertEquals(listOf(RadioDirectory.DEFAULT_TAG_LIMIT to true), directory.tagCalls)
+        assertThat(directory.topCalls).containsExactly(SearchViewModel.POPULAR_LIMIT to true)
+        assertThat(directory.tagCalls).containsExactly(RadioDirectory.DEFAULT_TAG_LIMIT to true)
     }
 
     @Test
@@ -77,12 +81,12 @@ class BackgroundRefreshTest {
 
         val outcome = BackgroundRefresh(directory, favorites).run()
 
-        assertEquals(listOf(listOf(UUID_A, UUID_B)), directory.lookups)
-        assertEquals(2, outcome.favoritesUpdated?.getOrThrow())
-        assertEquals("https://fresh.example/$UUID_A", favorites.savedStations.value.first().urlResolved)
-        assertEquals("My $UUID_A", favorites.savedStations.value.first().name)
-        assertTrue(directory.clicks.isEmpty())
-        assertFalse(outcome.shouldRetry)
+        assertThat(directory.lookups).containsExactly(listOf(UUID_A, UUID_B))
+        assertThat(outcome.favoritesUpdated?.getOrThrow()).isEqualTo(2)
+        assertThat(favorites.savedStations.value.first().urlResolved).isEqualTo("https://fresh.example/$UUID_A")
+        assertThat(favorites.savedStations.value.first().name).isEqualTo("My $UUID_A")
+        assertThat(directory.clicks).isEmpty()
+        assertThat(outcome.shouldRetry).isFalse()
     }
 
     @Test
@@ -92,8 +96,8 @@ class BackgroundRefreshTest {
             FakeFavorites(listOf(Station(id = "sir-default", url = "https://s")))
         ).run()
 
-        assertTrue(directory.lookups.isEmpty())
-        assertNull(outcome.favoritesUpdated)
+        assertThat(directory.lookups).isEmpty()
+        assertThat(outcome.favoritesUpdated).isNull()
     }
 
     @Test
@@ -104,9 +108,9 @@ class BackgroundRefreshTest {
 
         val outcome = BackgroundRefresh(directory, favorites).run()
 
-        assertTrue(outcome.favoritesUpdated!!.isFailure)
-        assertEquals(saved, favorites.savedStations.value)
-        assertFalse("discovery succeeded", outcome.shouldRetry)
+        assertThat(outcome.favoritesUpdated!!).isFailure()
+        assertThat(favorites.savedStations.value).isEqualTo(saved)
+        assertThat(outcome.shouldRetry, name = "discovery succeeded").isFalse()
     }
 
     @Test
@@ -115,8 +119,8 @@ class BackgroundRefreshTest {
         directory.tags = Result.failure(IOException("offline"))
         directory.lookup = Result.failure(IOException("offline"))
 
-        assertTrue(BackgroundRefresh(directory, FakeFavorites(listOf(station(UUID_A)))).run().shouldRetry)
-        assertTrue(BackgroundRefresh(directory, FakeFavorites(emptyList())).run().shouldRetry)
+        assertThat(BackgroundRefresh(directory, FakeFavorites(listOf(station(UUID_A)))).run().shouldRetry).isTrue()
+        assertThat(BackgroundRefresh(directory, FakeFavorites(emptyList())).run().shouldRetry).isTrue()
     }
 
     internal companion object {

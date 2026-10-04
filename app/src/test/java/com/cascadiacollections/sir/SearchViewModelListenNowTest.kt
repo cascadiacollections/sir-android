@@ -1,5 +1,13 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.containsOnly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.directory.CachingRadioDirectory
 import com.cascadiacollections.sir.core.directory.CuratedFallbackDirectory
 import com.cascadiacollections.sir.core.directory.DiscoverySnapshot
@@ -17,9 +25,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -51,9 +56,9 @@ class SearchViewModelListenNowTest {
         val vm = viewModel()
         runCurrent()
 
-        assertEquals(listOf(SearchViewModel.POPULAR_LIMIT), network.topLimits)
-        assertEquals(listOf(station("live")), vm.uiState.value.popularStations)
-        assertFalse(vm.uiState.value.showsSavedStationsNotice)
+        assertThat(network.topLimits).containsExactly(SearchViewModel.POPULAR_LIMIT)
+        assertThat(vm.uiState.value.popularStations).containsExactly(station("live"))
+        assertThat(vm.uiState.value.showsSavedStationsNotice).isFalse()
     }
 
     @Test
@@ -63,17 +68,17 @@ class SearchViewModelListenNowTest {
         // A second view model over the same chain is answered from the cache.
         viewModel()
         runCurrent()
-        assertEquals(1, network.topLimits.size)
-        assertEquals(1, network.tagCalls)
+        assertThat(network.topLimits).hasSize(1)
+        assertThat(network.tagCalls).isEqualTo(1)
 
         network.top = Result.success(listOf(station("fresh")))
         vm.refresh()
         runCurrent()
 
-        assertEquals(2, network.topLimits.size)
-        assertEquals(2, network.tagCalls)
-        assertEquals(listOf(station("fresh")), vm.uiState.value.popularStations)
-        assertFalse(vm.uiState.value.isRefreshing)
+        assertThat(network.topLimits).hasSize(2)
+        assertThat(network.tagCalls).isEqualTo(2)
+        assertThat(vm.uiState.value.popularStations).containsExactly(station("fresh"))
+        assertThat(vm.uiState.value.isRefreshing).isFalse()
     }
 
     @Test
@@ -87,17 +92,17 @@ class SearchViewModelListenNowTest {
         runCurrent()
 
         val state = vm.uiState.value
-        assertEquals(listOf(station("live")), state.popularStations)
-        assertEquals(listOf(Tag("live", 1)), state.genres)
-        assertTrue(state.showsSavedStationsNotice)
-        assertFalse(state.showsDirectoryUnavailable)
-        assertFalse(state.isRefreshing)
+        assertThat(state.popularStations).containsExactly(station("live"))
+        assertThat(state.genres).containsExactly(Tag("live", 1))
+        assertThat(state.showsSavedStationsNotice).isTrue()
+        assertThat(state.showsDirectoryUnavailable).isFalse()
+        assertThat(state.isRefreshing).isFalse()
 
         // A later successful refresh clears the notice.
         network.top = Result.success(listOf(station("back")))
         vm.refresh()
         runCurrent()
-        assertFalse(vm.uiState.value.showsSavedStationsNotice)
+        assertThat(vm.uiState.value.showsSavedStationsNotice).isFalse()
     }
 
     @Test
@@ -106,8 +111,8 @@ class SearchViewModelListenNowTest {
         val vm = viewModel()
         runCurrent()
 
-        assertEquals(listOf(CURATED), vm.uiState.value.popularStations)
-        assertFalse(vm.uiState.value.showsDirectoryUnavailable)
+        assertThat(vm.uiState.value.popularStations).containsExactly(CURATED)
+        assertThat(vm.uiState.value.showsDirectoryUnavailable).isFalse()
     }
 
     @Test
@@ -117,15 +122,15 @@ class SearchViewModelListenNowTest {
         val vm = viewModel(bare)
         runCurrent()
 
-        assertTrue(vm.uiState.value.showsDirectoryUnavailable)
-        assertFalse(vm.uiState.value.showsSavedStationsNotice)
+        assertThat(vm.uiState.value.showsDirectoryUnavailable).isTrue()
+        assertThat(vm.uiState.value.showsSavedStationsNotice).isFalse()
 
         network.top = Result.success(listOf(station("live")))
         vm.retryPopular()
         runCurrent()
 
-        assertFalse(vm.uiState.value.showsDirectoryUnavailable)
-        assertEquals(listOf(station("live")), vm.uiState.value.popularStations)
+        assertThat(vm.uiState.value.showsDirectoryUnavailable).isFalse()
+        assertThat(vm.uiState.value.popularStations).containsExactly(station("live"))
     }
 
     @Test
@@ -134,23 +139,23 @@ class SearchViewModelListenNowTest {
         val vm = viewModel()
         runCurrent()
 
-        assertEquals((1..5).map { "r$it" }, vm.uiState.value.recentShelf.map { it.id })
+        assertThat(vm.uiState.value.recentShelf.map { it.id }).isEqualTo((1..5).map { "r$it" })
     }
 
     @Test
     fun `the popular header shows only with the shelf`() = test {
         val vm = viewModel()
         runCurrent()
-        assertFalse(vm.uiState.value.showsPopularHeader)
+        assertThat(vm.uiState.value.showsPopularHeader).isFalse()
 
         store.recents.value = listOf(station("r1"))
         runCurrent()
-        assertTrue(vm.uiState.value.showsPopularHeader)
+        assertThat(vm.uiState.value.showsPopularHeader).isTrue()
 
         vm.hideFromRecentlyPlayed(station("r1"))
         runCurrent()
-        assertTrue(vm.uiState.value.recentShelf.isEmpty())
-        assertFalse(vm.uiState.value.showsPopularHeader)
+        assertThat(vm.uiState.value.recentShelf).isEmpty()
+        assertThat(vm.uiState.value.showsPopularHeader).isFalse()
     }
 
     @Test
@@ -162,9 +167,10 @@ class SearchViewModelListenNowTest {
         vm.hideFromRecentlyPlayed(station("r2"))
         runCurrent()
 
-        assertEquals(listOf("r1", "r3", "r4", "r5"), vm.uiState.value.recentShelf.map { it.id })
-        assertEquals(setOf("r2"), store.hidden.value)
-        assertEquals(6, store.recents.value.size)
+        assertThat(vm.uiState.value.recentShelf.map { it.id })
+            .containsExactly("r1", "r3", "r4", "r5")
+        assertThat(store.hidden.value).containsOnly("r2")
+        assertThat(store.recents.value).hasSize(6)
     }
 
     @Test
@@ -178,8 +184,8 @@ class SearchViewModelListenNowTest {
         vm.undoHideFromRecentlyPlayed(station("r1"))
         runCurrent()
 
-        assertEquals(listOf("r1", "r2"), vm.uiState.value.recentShelf.map { it.id })
-        assertTrue(store.hidden.value.isEmpty())
+        assertThat(vm.uiState.value.recentShelf.map { it.id }).containsExactly("r1", "r2")
+        assertThat(store.hidden.value).isEmpty()
     }
 
     @Test
@@ -193,7 +199,7 @@ class SearchViewModelListenNowTest {
         store.select(station("r2"))
         runCurrent()
 
-        assertEquals(listOf("r2", "r1"), vm.uiState.value.recentShelf.map { it.id })
+        assertThat(vm.uiState.value.recentShelf.map { it.id }).containsExactly("r2", "r1")
     }
 
     private class MemorySnapshotStore(var snapshot: DiscoverySnapshot?) : DiscoverySnapshotStore {
@@ -236,10 +242,10 @@ class SearchViewModelListenNowTest {
         val vm = viewModel(snapshotChain(ageMillis = 1 * HOUR))
         runCurrent()
 
-        assertEquals(listOf(station("saved")), vm.uiState.value.popularStations)
-        assertEquals(listOf(Tag("saved", 1)), vm.uiState.value.genres)
-        assertTrue(network.topLimits.isEmpty())
-        assertEquals(0, network.tagCalls)
+        assertThat(vm.uiState.value.popularStations).containsExactly(station("saved"))
+        assertThat(vm.uiState.value.genres).containsExactly(Tag("saved", 1))
+        assertThat(network.topLimits).isEmpty()
+        assertThat(network.tagCalls).isEqualTo(0)
     }
 
     @Test
@@ -249,10 +255,10 @@ class SearchViewModelListenNowTest {
         // Both the stale answer and the revalidation ran (the dispatcher is unconfined).
         runCurrent()
 
-        assertEquals(listOf(SearchViewModel.POPULAR_LIMIT), network.topLimits)
-        assertEquals(listOf(station("live")), vm.uiState.value.popularStations)
-        assertEquals(listOf(Tag("live", 1)), vm.uiState.value.genres)
-        assertFalse(vm.uiState.value.showsSavedStationsNotice)
+        assertThat(network.topLimits).containsExactly(SearchViewModel.POPULAR_LIMIT)
+        assertThat(vm.uiState.value.popularStations).containsExactly(station("live"))
+        assertThat(vm.uiState.value.genres).containsExactly(Tag("live", 1))
+        assertThat(vm.uiState.value.showsSavedStationsNotice).isFalse()
     }
 
     /** Counts what reaches "the network" beneath the cache. */

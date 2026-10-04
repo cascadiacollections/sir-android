@@ -6,11 +6,15 @@ import androidx.work.NetworkType
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -43,14 +47,12 @@ class BackgroundRefreshWorkerTest {
     fun `a run refreshes discovery and saved stations`() = runBlocking {
         val result = worker().doWork()
 
-        assertEquals(ListenableWorker.Result.success(), result)
-        assertEquals(1, directory.topCalls.size)
-        assertEquals(listOf(listOf(BackgroundRefreshTest.UUID_A)), directory.lookups)
-        assertEquals(
-            "https://fresh.example/${BackgroundRefreshTest.UUID_A}",
-            favorites.savedStations.value.single().urlResolved
-        )
-        assertTrue(directory.clicks.isEmpty())
+        assertThat(result).isEqualTo(ListenableWorker.Result.success())
+        assertThat(directory.topCalls).hasSize(1)
+        assertThat(directory.lookups).containsExactly(listOf(BackgroundRefreshTest.UUID_A))
+        assertThat(favorites.savedStations.value.single().urlResolved)
+            .isEqualTo("https://fresh.example/${BackgroundRefreshTest.UUID_A}")
+        assertThat(directory.clicks).isEmpty()
     }
 
     @Test
@@ -59,20 +61,18 @@ class BackgroundRefreshWorkerTest {
         directory.tags = Result.failure(IOException("offline"))
         directory.lookup = Result.failure(IOException("offline"))
 
-        assertEquals(ListenableWorker.Result.retry(), worker(runAttemptCount = 0).doWork())
-        assertEquals(
-            ListenableWorker.Result.success(),
-            worker(runAttemptCount = BackgroundRefreshWorker.MAX_RETRIES).doWork()
-        )
+        assertThat(worker(runAttemptCount = 0).doWork()).isEqualTo(ListenableWorker.Result.retry())
+        assertThat(worker(runAttemptCount = BackgroundRefreshWorker.MAX_RETRIES).doWork())
+            .isEqualTo(ListenableWorker.Result.success())
     }
 
     @Test
     fun `the periodic request runs every 4 hours on unmetered networks with battery not low`() {
         val spec = BackgroundRefreshWorker.request().workSpec
 
-        assertEquals(TimeUnit.HOURS.toMillis(4), spec.intervalDuration)
-        assertEquals(NetworkType.UNMETERED, spec.constraints.requiredNetworkType)
-        assertTrue(spec.constraints.requiresBatteryNotLow())
-        assertEquals(BackgroundRefreshWorker::class.java.name, spec.workerClassName)
+        assertThat(spec.intervalDuration).isEqualTo(TimeUnit.HOURS.toMillis(4))
+        assertThat(spec.constraints.requiredNetworkType).isEqualTo(NetworkType.UNMETERED)
+        assertThat(spec.constraints.requiresBatteryNotLow()).isTrue()
+        assertThat(spec.workerClassName).isEqualTo(BackgroundRefreshWorker::class.java.name)
     }
 }

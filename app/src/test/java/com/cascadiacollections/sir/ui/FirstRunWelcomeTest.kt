@@ -4,8 +4,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import com.cascadiacollections.sir.ui.theme.SirTheme
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,6 +31,6 @@ class FirstRunWelcomeTest {
         composeRule.onNodeWithText("No accounts, no tracking. Find a station and press play.").assertIsDisplayed()
         composeRule.onNodeWithText("Get started").performClick()
 
-        assertEquals(1, done)
+        assertThat(done).isEqualTo(1)
     }
 }

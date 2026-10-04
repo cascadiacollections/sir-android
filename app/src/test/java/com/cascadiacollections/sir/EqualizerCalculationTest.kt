@@ -1,8 +1,13 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isCloseTo
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThanOrEqualTo
+import assertk.assertions.isLessThanOrEqualTo
 import com.cascadiacollections.sir.core.playback.calculateEqualizerLevels
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EqualizerCalculationTest {
@@ -16,8 +21,8 @@ class EqualizerCalculationTest {
             range = 3000,
             curve = { 0.5f }
         )
-        assertEquals(1, levels.size)
-        assertEquals(0.toShort(), levels[0])
+        assertThat(levels).hasSize(1)
+        assertThat(levels[0]).isEqualTo(0.toShort())
     }
 
     @Test
@@ -29,7 +34,7 @@ class EqualizerCalculationTest {
             range = 100,
             curve = { 0.5f }
         )
-        assertEquals(5, levels.size)
+        assertThat(levels).hasSize(5)
     }
 
     @Test
@@ -44,8 +49,8 @@ class EqualizerCalculationTest {
             curve = { 2.0f } // Exceeds 1.0 multiplier — should be clamped
         )
         levels.forEach { level ->
-            assertTrue("Level $level should be >= $minLevel", level >= minLevel)
-            assertTrue("Level $level should be <= $maxLevel", level <= maxLevel)
+            assertThat(level, name = "Level $level should be >= $minLevel").isGreaterThanOrEqualTo(minLevel)
+            assertThat(level, name = "Level $level should be <= $maxLevel").isLessThanOrEqualTo(maxLevel)
         }
     }
 
@@ -59,10 +64,10 @@ class EqualizerCalculationTest {
             curve = { pos -> pos }
         )
         for (i in 1 until levels.size) {
-            assertTrue(
-                "Level at band $i (${levels[i]}) should be >= level at band ${i - 1} (${levels[i - 1]})",
-                levels[i] >= levels[i - 1]
-            )
+            assertThat(
+                levels[i],
+                name = "Level at band $i (${levels[i]}) should be >= level at band ${i - 1} (${levels[i - 1]})"
+            ).isGreaterThanOrEqualTo(levels[i - 1])
         }
     }
 
@@ -76,10 +81,10 @@ class EqualizerCalculationTest {
             curve = { pos -> 1.0f - pos }
         )
         for (i in 1 until levels.size) {
-            assertTrue(
-                "Level at band $i (${levels[i]}) should be <= level at band ${i - 1} (${levels[i - 1]})",
-                levels[i] <= levels[i - 1]
-            )
+            assertThat(
+                levels[i],
+                name = "Level at band $i (${levels[i]}) should be <= level at band ${i - 1} (${levels[i - 1]})"
+            ).isLessThanOrEqualTo(levels[i - 1])
         }
     }
 
@@ -94,7 +99,7 @@ class EqualizerCalculationTest {
         )
         val expected = levels[0]
         levels.forEach { level ->
-            assertEquals(expected, level)
+            assertThat(level).isEqualTo(expected)
         }
     }
 
@@ -108,7 +113,7 @@ class EqualizerCalculationTest {
             curve = { pos -> pos }
         )
         levels.forEach { level ->
-            assertEquals(500.toShort(), level)
+            assertThat(level).isEqualTo(500.toShort())
         }
     }
 
@@ -121,9 +126,9 @@ class EqualizerCalculationTest {
             range = 1000,
             curve = { pos -> pos }
         )
-        assertEquals(1, levels.size)
+        assertThat(levels).hasSize(1)
         // position should be 0f / coerceAtLeast(1) = 0f, so level = minLevel + 0 = 0
-        assertEquals(0.toShort(), levels[0])
+        assertThat(levels[0]).isEqualTo(0.toShort())
     }
 
     @Test
@@ -135,7 +140,7 @@ class EqualizerCalculationTest {
             range = 3000,
             curve = { 0.5f }
         )
-        assertTrue(levels.isEmpty())
+        assertThat(levels).isEmpty()
     }
 
     @Test
@@ -150,10 +155,10 @@ class EqualizerCalculationTest {
             range = 3000,
             curve = { pos -> pos }
         )
-        assertEquals(bandCount, levels.size)
+        assertThat(levels).hasSize(bandCount)
         levels.forEach { level ->
-            assertTrue("Level $level must be >= $minLevel", level >= minLevel)
-            assertTrue("Level $level must be <= $maxLevel", level <= maxLevel)
+            assertThat(level, name = "Level $level must be >= $minLevel").isGreaterThanOrEqualTo(minLevel)
+            assertThat(level, name = "Level $level must be <= $maxLevel").isLessThanOrEqualTo(maxLevel)
         }
     }
 
@@ -169,7 +174,7 @@ class EqualizerCalculationTest {
             curve = { -1.0f } // Negative multiplier should clamp to minLevel
         )
         levels.forEach { level ->
-            assertEquals("Negative curve should produce minLevel", minLevel, level)
+            assertThat(level, name = "Negative curve should produce minLevel").isEqualTo(minLevel)
         }
     }
 
@@ -185,8 +190,8 @@ class EqualizerCalculationTest {
             recordedPositions += pos
             0f
         }
-        assertEquals(5, recordedPositions.size)
-        assertEquals(0f, recordedPositions.first(), 0.001f)
-        assertEquals(1f, recordedPositions.last(), 0.001f)
+        assertThat(recordedPositions).hasSize(5)
+        assertThat(recordedPositions.first()).isCloseTo(0f, 0.001f)
+        assertThat(recordedPositions.last()).isCloseTo(1f, 0.001f)
     }
 }

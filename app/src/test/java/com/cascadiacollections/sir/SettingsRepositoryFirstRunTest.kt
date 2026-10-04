@@ -1,10 +1,11 @@
 package com.cascadiacollections.sir
 
+import assertk.assertThat
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import com.cascadiacollections.sir.core.persistence.SettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -22,33 +23,33 @@ class SettingsRepositoryFirstRunTest {
     fun `first run completion persists`() = runBlocking {
         val repo = repo()
         repo.setHasCompletedFirstRun(false)
-        assertFalse(repo.hasCompletedFirstRun.first())
+        assertThat(repo.hasCompletedFirstRun.first()).isFalse()
 
         repo.setHasCompletedFirstRun(true)
 
-        assertTrue(repo().hasCompletedFirstRun.first())
+        assertThat(repo().hasCompletedFirstRun.first()).isTrue()
     }
 
     @Test
     fun `connection prewarming toggle persists`() = runBlocking {
         val repo = repo()
         repo.setConnectionPrewarmingEnabled(true)
-        assertTrue(repo.connectionPrewarmingEnabled.first())
+        assertThat(repo.connectionPrewarmingEnabled.first()).isTrue()
 
         repo.setConnectionPrewarmingEnabled(false)
 
-        assertFalse(repo().connectionPrewarmingEnabled.first())
+        assertThat(repo().connectionPrewarmingEnabled.first()).isFalse()
     }
 
     @Test
     fun `loop finished broadcasts is off by default and persists`() = runBlocking {
         val repo = repo()
         repo.setLoopFinishedBroadcasts(false)
-        assertFalse(repo.loopFinishedBroadcasts.first())
+        assertThat(repo.loopFinishedBroadcasts.first()).isFalse()
 
         repo.setLoopFinishedBroadcasts(true)
 
-        assertTrue(repo().loopFinishedBroadcasts.first())
+        assertThat(repo().loopFinishedBroadcasts.first()).isTrue()
         repo.setLoopFinishedBroadcasts(false)
     }
 }

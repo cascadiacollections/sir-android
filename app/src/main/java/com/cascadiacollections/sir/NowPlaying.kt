@@ -2,6 +2,7 @@ package com.cascadiacollections.sir
 
 import android.os.Bundle
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import java.util.Locale
@@ -21,16 +22,22 @@ enum class TransportAction { PLAY, PAUSE, CANCEL, RETRY }
  * shown as the generic stream error rather than not at all.
  */
 val RadioUiState.displayedFailure: StreamFailure?
-    get() = failure ?: StreamFailure.Transient.takeIf { isError }
+    get() = (failure ?: StreamFailure.Transient.takeIf { isError })?.takeIf { isPlayRequested }
 
+/**
+ * A paused stream the listener hasn't asked to play is idle whatever the player is doing
+ * underneath — a cold start prepares the last station paused, and offline that prepare
+ * buffers and then fails. Neither is the listener's business until they press play.
+ */
 val RadioUiState.status: PlaybackStatus
     get() {
         val failed = displayedFailure != null
+        val buffering = isBuffering && isPlayRequested
         return when {
             !isConnected -> PlaybackStatus.CONNECTING
-            failed && (isReconnecting || isBuffering) -> PlaybackStatus.RECONNECTING
+            failed && (isReconnecting || buffering) -> PlaybackStatus.RECONNECTING
             failed -> PlaybackStatus.FAILED
-            isBuffering -> PlaybackStatus.CONNECTING
+            buffering -> PlaybackStatus.CONNECTING
             isPlaying -> PlaybackStatus.LIVE
             else -> PlaybackStatus.IDLE
         }
@@ -70,6 +77,22 @@ fun RadioUiState.trackLine(locale: Locale = Locale.getDefault()): String? {
 /** The station's first tag, capitalised — "jazz,smooth jazz" reads as "Jazz". */
 fun Station.genreLabel(locale: Locale = Locale.getDefault()): String? =
     tagList.firstOrNull()?.replaceFirstChar { it.titlecase(locale) }
+
+/**
+ * Applies the player's transport state. Buffering only counts while playback is requested,
+ * so the spinner and "Connecting…" never appear for a paused prepare; likewise a player
+ * error is dropped once nobody wants audio.
+ */
+internal fun RadioUiState.withPlayer(player: Player): RadioUiState = copy(
+    isPlaying = player.isActuallyPlaying,
+    isBuffering = player.playWhenReady && player.playbackState == Player.STATE_BUFFERING,
+    isError = isError && player.playWhenReady && player.playbackState != Player.STATE_READY,
+    isPlayRequested = player.playWhenReady,
+)
+
+/** A player error, surfaced only if the listener had asked to play. */
+internal fun RadioUiState.withPlayerError(playWhenReady: Boolean): RadioUiState =
+    copy(isError = playWhenReady)
 
 /** Applies the service's failure extras (see [PlaybackFailureExtras]). */
 internal fun RadioUiState.withSessionExtras(extras: Bundle?): RadioUiState {

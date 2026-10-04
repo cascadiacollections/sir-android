@@ -63,6 +63,12 @@ data class RadioUiState(
     val albumArtUrl: String? = null,
     /** The current track's Apple Music page, when the iTunes lookup found one. */
     val trackViewUrl: String? = null,
+    /**
+     * Whether the listener has asked to hear the stream (the player's `playWhenReady`). True
+     * until the controller says otherwise, so a state built without a player reads as before.
+     * A failure or a buffering spell is only shown while this is true.
+     */
+    val isPlayRequested: Boolean = true,
 )
 
 class RadioViewModel(
@@ -83,17 +89,11 @@ class RadioViewModel(
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
-            _uiState.update {
-                it.copy(
-                    isPlaying = player.isActuallyPlaying,
-                    isBuffering = player.playbackState == Player.STATE_BUFFERING,
-                    isError = if (player.playbackState == Player.STATE_READY) false else it.isError
-                )
-            }
+            _uiState.update { it.withPlayer(player) }
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            _uiState.update { it.copy(isError = true) }
+            _uiState.update { it.withPlayerError(playWhenReady = controller?.playWhenReady == true) }
         }
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
@@ -151,11 +151,8 @@ class RadioViewModel(
                 controller = newController
                 newController.addListener(listener)
                 _uiState.update {
-                    it.copy(
-                        isConnected = true,
-                        isPlaying = newController.isActuallyPlaying,
-                        isBuffering = newController.playbackState == Player.STATE_BUFFERING,
-                    )
+                    it.copy(isConnected = true)
+                        .withPlayer(newController)
                         .withMediaMetadata(newController.mediaMetadata)
                         .withSessionExtras(newController.sessionExtras)
                 }

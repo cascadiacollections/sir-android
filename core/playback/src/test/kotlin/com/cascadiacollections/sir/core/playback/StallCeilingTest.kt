@@ -46,8 +46,8 @@ class StallCeilingTest {
     }
 
     @Test
-    fun `the default timeout is 90 seconds`() {
-        assertEquals(90_000L, StallCeiling().timeoutDelayMs)
+    fun `the default timeout is ShoutKit's 30 seconds`() {
+        assertEquals(30_000L, StallCeiling().timeoutDelayMs)
     }
 
     @Test

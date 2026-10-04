@@ -16,6 +16,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
@@ -27,6 +28,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -56,11 +58,14 @@ import com.cascadiacollections.sir.core.persistence.TrackHistoryRepository
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.AudioRoutePolicy
 import com.cascadiacollections.sir.core.playback.EqualizerCurves
+import com.cascadiacollections.sir.core.playback.EndOfStreamAction
 import com.cascadiacollections.sir.core.playback.EqualizerPreset
+import com.cascadiacollections.sir.core.playback.FinishedBroadcastPolicy
+import com.cascadiacollections.sir.core.playback.PausedRelease
 import com.cascadiacollections.sir.core.playback.PlaybackBufferConfig
 import com.cascadiacollections.sir.core.playback.PlaybackLocks
 import com.cascadiacollections.sir.core.playback.RawStreamMetadata
-import com.cascadiacollections.sir.core.playback.RetryBackoff
+import com.cascadiacollections.sir.core.playback.RecoveryDecision
 import com.cascadiacollections.sir.core.playback.SleepTimerRestore
 import com.cascadiacollections.sir.core.playback.StallCeiling
 import com.cascadiacollections.sir.core.playback.StreamConfig
@@ -70,6 +75,7 @@ import com.cascadiacollections.sir.core.playback.StreamUrlKind
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import com.cascadiacollections.sir.core.playback.StreamMetadata
 import com.cascadiacollections.sir.core.playback.StreamMetadataResolver
+import com.cascadiacollections.sir.core.playback.StreamRecovery
 import com.cascadiacollections.sir.core.playback.StreamSource
 import com.cascadiacollections.sir.core.playback.StreamSourceResolver
 import com.cascadiacollections.sir.notificationcolors.NotificationAccentColor
@@ -96,11 +102,18 @@ class RadioPlaybackService : MediaLibraryService() {
     private var isNoisyReceiverRegistered = false
     private var isRouteReceiverRegistered = false
     private val audioRoutePolicy = AudioRoutePolicy()
-    // Each prepare makes three load attempts, so six total load attempts permit one re-prepare.
-    private val retryBackoff = RetryBackoff(
-        maxRetries = StreamLoadErrorHandlingPolicy.MAX_PREPARE_ATTEMPTS - 1
-    )
+    // The one reconnect budget (3 attempts: 2s, 4s, 8s). Media3 retries nothing underneath
+    // it — see StreamLoadErrorHandlingPolicy — so the two can no longer multiply.
+    private val recovery = StreamRecovery()
     private val stallCeiling = StallCeiling()
+    private var reconnectRunnable: Runnable? = null
+
+    // Drops the connection after ten minutes paused; play then rejoins the live stream fresh.
+    private val pausedRelease = PausedRelease(clock = SystemClock::elapsedRealtime)
+    private var pausedReleaseRunnable: Runnable? = null
+
+    // Settings → Playback → "Loop finished broadcasts" (finite media only; live streams rejoin).
+    private var loopFinishedBroadcasts = false
 
     // Locks to keep device active during playback
     private var playbackLocks: PlaybackLocks? = null
@@ -270,6 +283,13 @@ class RadioPlaybackService : MediaLibraryService() {
         }
 
         albumArt.start()
+
+        serviceScope.launch {
+            settingsRepository.loopFinishedBroadcasts.collect { enabled ->
+                loopFinishedBroadcasts = enabled
+                applyRepeatMode()
+            }
+        }
 
         // React to the user picking a different station while the service is alive
         serviceScope.launch {
@@ -570,9 +590,10 @@ class RadioPlaybackService : MediaLibraryService() {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
                     Player.STATE_READY -> {
-                        retryBackoff.reset()
+                        recovery.onRecovered()
                         stallCeiling.clear()
                         reportFailure(null)
+                        applyRepeatMode()
                         if (player?.playWhenReady == true) {
                             updateCustomLayout()
                         }
@@ -580,7 +601,7 @@ class RadioPlaybackService : MediaLibraryService() {
 
                     Player.STATE_ENDED -> {
                         stallCeiling.clear()
-                        handleUnexpectedEnd()
+                        handleEnded()
                     }
 
                     // Arm the stall ceiling only when we actually want audio: a manual
@@ -601,10 +622,33 @@ class RadioPlaybackService : MediaLibraryService() {
                 }
             }
 
-            // Pausing (or cancelling a connection attempt) dismisses a failure: the listener
-            // has acknowledged it, and the transport should offer Play again, not Retry.
+            // Whether the item is finite (and so may loop) is only known once its timeline is.
+            override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                applyRepeatMode()
+            }
+
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                if (!playWhenReady) reportFailure(null)
+                if (playWhenReady) {
+                    cancelPausedRelease()
+                    // Released after a long pause, or failed while nobody was listening: the
+                    // player is idle, so a play from any route (Bluetooth, Auto, a plain
+                    // play()) has to rejoin the stream rather than sit silent.
+                    if (player?.playbackState == Player.STATE_IDLE) {
+                        player?.seekToDefaultPosition()
+                        player?.prepare()
+                    } else if (player?.playbackState == Player.STATE_BUFFERING) {
+                        // prepare() then play() never re-enters BUFFERING, so the stall
+                        // ceiling would otherwise go unarmed for exactly this attempt.
+                        armStallCeiling()
+                    }
+                } else {
+                    // Pausing (or cancelling a connection attempt) dismisses a failure: the
+                    // listener has acknowledged it, and the transport should offer Play
+                    // again, not Retry. A reconnect waiting on its backoff is cancelled too.
+                    cancelReconnect()
+                    reportFailure(null)
+                    schedulePausedRelease()
+                }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -645,27 +689,15 @@ class RadioPlaybackService : MediaLibraryService() {
             override fun onPlayerError(error: PlaybackException) {
                 stallCeiling.clear()
                 val failure = error.toStreamFailure()
-                Log.e(TAG, "Player error (attempt ${retryBackoff.attemptLabel}, $failure)", error)
-                if (!failure.isRetryable) {
-                    // A station that answers 404, or sends a codec this device can't
-                    // decode, fails identically on every attempt. Spending the backoff on
-                    // it held a wake lock for about a minute to show the same message.
-                    retryBackoff.reset()
-                    reportFailure(failure)
-                    return
-                }
-                val delayMs = retryBackoff.nextDelayMs()
-                reportFailure(failure, retrying = delayMs != null)
-                if (delayMs != null) {
-                    sleepTimerHandler.postDelayed({ reconnectIfWanted() }, delayMs)
-                } else {
-                    Log.e(TAG, "Retries exhausted: $failure")
-                }
+                Log.e(TAG, "Player error (attempt ${recovery.attemptLabel}, $failure)", error)
+                recover(failure)
             }
         })
 
-        // Now prepare the player
+        // Now prepare the player. It is paused, so the paused-release clock starts too: a
+        // listener who opens the app and never presses play doesn't hold a connection open.
         player?.prepare()
+        schedulePausedRelease()
 
         // Initialize equalizer with the player's audio session
         initializeEqualizer()
@@ -790,6 +822,8 @@ class RadioPlaybackService : MediaLibraryService() {
         // Cancel pending callbacks
         seekBackRevealRunnable?.let { sleepTimerHandler.removeCallbacks(it) }
         cancelSleepTimer()
+        // Reconnects, stall checks and the paused release all post here; none may outlive us.
+        sleepTimerHandler.removeCallbacksAndMessages(null)
 
         // Release equalizer
         releaseEqualizer()
@@ -878,42 +912,86 @@ class RadioPlaybackService : MediaLibraryService() {
     }
 
     /**
-     * A live stream has no end, so `STATE_ENDED` means the server closed the connection.
+     * Spends the reconnect budget on [failure], or doesn't.
      *
-     * That arrives *without* an `onPlayerError`, so nothing else here would notice: the
-     * player sat ended, the notification kept claiming the station was on, and the reconnect
-     * backoff — which only ran from the error path — never saw it. Rejoin through the same
-     * bounded schedule a player error uses. (ShoutKit reached this from the other side: its
-     * engine reports an unrequested stop as a retryable failure. See
-     * `docs/audioplayer-dependency-synergies.md`.)
+     * Only playback someone asked for is recovered or reported. A cold launch prepares the
+     * last station paused; offline, that prepare fails, and reporting it as "retrying" put
+     * "Reconnecting…" and a Cancel button on a stream the listener had never started. Now
+     * such a failure is ignored: the player sits idle and the next play rejoins afresh,
+     * surfacing the failure then if it is still real.
      */
-    private fun handleUnexpectedEnd() {
-        // Only when audio was wanted. A deliberate stop leaves the player idle rather than
-        // ended, but a paused player must not be restarted by this either.
-        if (player?.playWhenReady != true) return
-
-        Log.w(TAG, "Live stream ended unexpectedly (attempt ${retryBackoff.attemptLabel})")
-        val delayMs = retryBackoff.nextDelayMs()
-        reportFailure(StreamFailure.Transient, retrying = delayMs != null)
-        if (delayMs != null) {
-            sleepTimerHandler.postDelayed({ reconnectIfWanted() }, delayMs)
-        } else {
-            Log.e(TAG, "Retries exhausted after unexpected end")
+    private fun recover(failure: StreamFailure) {
+        when (val decision = recovery.onFailure(failure, playbackWanted = player?.playWhenReady == true)) {
+            RecoveryDecision.Ignore -> Log.d(TAG, "Not recovering $failure: playback not requested")
+            is RecoveryDecision.Reconnect -> {
+                reportFailure(failure, retrying = true)
+                scheduleReconnect(decision.delayMs)
+            }
+            is RecoveryDecision.Fail -> {
+                cancelReconnect()
+                reportFailure(decision.failure)
+                Log.e(TAG, "Gave up: ${decision.failure}")
+            }
         }
     }
+
+    /**
+     * `STATE_ENDED`: either a live stream whose server closed the connection, or a finite
+     * broadcast (an hourly newscast file) that genuinely finished.
+     *
+     * A live end arrives *without* an `onPlayerError`, so it is routed through the same
+     * reconnect budget a player error uses. A finite end is not a failure at all: it stops,
+     * paused at the start so play replays it — or, with "Loop finished broadcasts" on, plays
+     * again (normally `REPEAT_MODE_ONE` means it never ends; this covers the setting being
+     * switched on mid-item). See `docs/audioplayer-dependency-synergies.md` A2.
+     */
+    private fun handleEnded() {
+        val p = player ?: return
+        // Only when audio was wanted. A deliberate stop leaves the player idle rather than
+        // ended, but a paused player must not be restarted by this either.
+        if (!p.playWhenReady) return
+
+        when (FinishedBroadcastPolicy.onEnded(isCurrentItemFinite(p), loopFinishedBroadcasts)) {
+            EndOfStreamAction.REJOIN -> {
+                Log.w(TAG, "Live stream ended unexpectedly (attempt ${recovery.attemptLabel})")
+                recover(StreamFailure.Transient)
+            }
+            EndOfStreamAction.LOOP -> p.seekToDefaultPosition()
+            EndOfStreamAction.STOP -> {
+                Log.d(TAG, "Broadcast finished")
+                p.pause()
+                p.seekToDefaultPosition()
+            }
+        }
+    }
+
+    /** Finite media (known duration, not live) may loop; a live stream never repeats. */
+    private fun applyRepeatMode() {
+        val p = player ?: return
+        val mode = if (FinishedBroadcastPolicy.repeatsCurrentItem(isCurrentItemFinite(p), loopFinishedBroadcasts)) {
+            Player.REPEAT_MODE_ONE
+        } else {
+            Player.REPEAT_MODE_OFF
+        }
+        if (p.repeatMode != mode) p.repeatMode = mode
+    }
+
+    private fun isCurrentItemFinite(p: Player): Boolean =
+        !p.currentTimeline.isEmpty && FinishedBroadcastPolicy.isFinite(
+            isLive = p.isCurrentMediaItemLive,
+            isDynamic = p.isCurrentMediaItemDynamic,
+            durationMs = p.duration.takeIf { it != C.TIME_UNSET },
+        )
 
     /**
      * Fires [StallCeiling.timeoutDelayMs] after [StallCeiling.arm]. If [token] is stale —
      * the stall cleared, or a new one was armed, before this ran — it is a no-op. Also
      * bails if audio is no longer wanted: a pause while still `STATE_BUFFERING` doesn't
-     * change [Player.getPlaybackState] and so wouldn't otherwise clear the ceiling, and a
-     * released player must never be spent a reconnect attempt on.
+     * change [Player.getPlaybackState] and so wouldn't otherwise clear the ceiling.
      *
-     * Spends one reconnect attempt through the existing [retryBackoff] budget; once that
-     * is exhausted, stops the player rather than keep looping on a connection that never
-     * recovers. Mirrors ShoutKit: the terminal state is a stop, not a reported failure, so
-     * the transport shows a play button rather than an error icon — [ACTION_PLAY] restarts
-     * the stream when it finds the player idle.
+     * Thirty seconds stuck buffering is ShoutKit's give-up point: the stream is stopped and
+     * reported as [StreamFailure.Stalled], which the transport offers to Retry. Stopping
+     * releases the connection and, with it, ExoPlayer's wake and WiFi locks.
      */
     private fun onStallCeilingExpired(token: Int) {
         if (!stallCeiling.isCurrent(token)) return
@@ -921,34 +999,81 @@ class RadioPlaybackService : MediaLibraryService() {
             stallCeiling.clear()
             return
         }
-        Log.w(TAG, "Stream stalled past the ceiling (attempt ${retryBackoff.attemptLabel})")
-        val delayMs = retryBackoff.nextDelayMs()
-        reportFailure(StreamFailure.Stalled, retrying = delayMs != null)
-        if (delayMs != null) {
-            // Re-arm explicitly rather than relying on a fresh STATE_BUFFERING callback:
-            // a player already sitting in STATE_BUFFERING may not emit one for prepare(),
-            // which would otherwise leave this reconnect attempt with no ceiling of its own.
-            sleepTimerHandler.postDelayed(
-                {
-                    reconnectIfWanted()
-                    armStallCeiling()
-                },
-                delayMs
-            )
-            return
-        }
-        retryBackoff.reset()
+        Log.w(TAG, "Stream stalled past the ceiling (attempt ${recovery.attemptLabel})")
+        cancelReconnect()
         player?.stop()
-        reportFailure(StreamFailure.Stalled)
-        Log.e(TAG, "Gave up: ${StreamFailure.Stalled}")
+        recover(StreamFailure.Stalled)
+    }
+
+    private fun scheduleReconnect(delayMs: Long) {
+        cancelReconnect()
+        val runnable = Runnable {
+            reconnectRunnable = null
+            reconnectIfWanted()
+        }
+        reconnectRunnable = runnable
+        sleepTimerHandler.postDelayed(runnable, delayMs)
+    }
+
+    private fun cancelReconnect() {
+        reconnectRunnable?.let { sleepTimerHandler.removeCallbacks(it) }
+        reconnectRunnable = null
     }
 
     /**
      * A scheduled reconnect, skipped when the listener paused or cancelled in the meantime —
      * otherwise "Cancel connection" would be undone by the backoff a few seconds later.
+     *
+     * An ended player ignores `prepare()`, so it is stopped first; either way the reconnect
+     * joins at the live edge rather than wherever the dropped connection left off. The item
+     * (and the last track shown on it) is kept throughout.
      */
     private fun reconnectIfWanted() {
-        if (player?.playWhenReady == true) player?.prepare()
+        val p = player ?: return
+        if (!p.playWhenReady) return
+        if (p.playbackState != Player.STATE_IDLE) p.stop()
+        p.seekToDefaultPosition()
+        p.prepare()
+    }
+
+    /** Starts (or continues) timing a pause; see [PausedRelease]. */
+    private fun schedulePausedRelease() {
+        pausedReleaseRunnable?.let { sleepTimerHandler.removeCallbacks(it) }
+        val runnable = Runnable {
+            pausedReleaseRunnable = null
+            onPausedReleaseDue()
+        }
+        pausedReleaseRunnable = runnable
+        sleepTimerHandler.postDelayed(runnable, pausedRelease.onPaused())
+    }
+
+    private fun cancelPausedRelease() {
+        pausedRelease.onPlay()
+        pausedReleaseRunnable?.let { sleepTimerHandler.removeCallbacks(it) }
+        pausedReleaseRunnable = null
+    }
+
+    /**
+     * Ten minutes paused: drop the connection and the decoder, keeping the item so the
+     * notification, Auto and the app still show the station. With the player idle, Media3
+     * lets the notification and foreground state go; the next play rejoins live from scratch
+     * (see `onPlayWhenReadyChanged`), not from a buffer that is ten minutes stale.
+     */
+    private fun onPausedReleaseDue() {
+        val p = player ?: return
+        if (p.playWhenReady) return
+        // Handler delays don't advance in deep sleep, so check the elapsed clock itself.
+        if (!pausedRelease.isDue()) {
+            if (pausedRelease.isArmed) schedulePausedRelease()
+            return
+        }
+        pausedRelease.onReleased()
+        cancelReconnect()
+        stallCeiling.clear()
+        if (p.playbackState != Player.STATE_IDLE) p.stop()
+        timeShift.reset()
+        playbackMode = PlaybackMode.Live
+        Log.d(TAG, "Released the stream after ${PausedRelease.DEFAULT_TIMEOUT_MS / 60_000} minutes paused")
     }
 
     /**
@@ -1281,7 +1406,10 @@ class RadioPlaybackService : MediaLibraryService() {
      */
     private suspend fun applyStreamSource(source: StreamSource, startPlayback: Boolean = false) {
         val item = adoptStreamSource(source) ?: return
-        // A new station starts with a clean slate; its own failures are reported afresh.
+        // A new station starts with a clean slate; its own failures are reported afresh,
+        // with the whole reconnect budget, and nothing scheduled for the old one survives.
+        cancelReconnect()
+        recovery.onRecovered()
         reportFailure(null)
         // Read after adopting: a playlist fetch may have suspended, and the old stream
         // keeps playing meanwhile.
@@ -1289,7 +1417,13 @@ class RadioPlaybackService : MediaLibraryService() {
         player?.stop()
         player?.setMediaItem(item)
         player?.prepare()
-        if (wasPlaying || startPlayback) player?.play()
+        if (wasPlaying || startPlayback) {
+            player?.play()
+        } else {
+            // Prepared but paused: a fresh pause as far as the release clock is concerned.
+            cancelPausedRelease()
+            schedulePausedRelease()
+        }
         Log.d(TAG, "Stream source changed to ${source.title ?: source.url}")
     }
 
@@ -1322,8 +1456,6 @@ class RadioPlaybackService : MediaLibraryService() {
         private const val BROWSE_ROOT_ID = "sir_root"
         private const val CHANNEL_ID = "radio_playback_channel"
         private const val NOTIFICATION_ID = 1001
-        // Error retry
-
         // Feature flags
         const val SEEKBACK_ENABLED = false
 

@@ -6,7 +6,8 @@ package com.cascadiacollections.sir.core.playback
  * `DefaultLoadControl` never gives up on a stalled live stream on its own, and
  * `WAKE_MODE_NETWORK` keeps a wake lock and a WiFi lock held for as long as it keeps
  * trying — so a mount that accepts the connection and then sends nothing can rebuffer
- * indefinitely on a phone in a pocket. Mirrors ShoutKit's 90s stall ceiling.
+ * indefinitely on a phone in a pocket. Mirrors ShoutKit's 30s stall ceiling: past it the
+ * stream is given up on (a `Stalled` failure with Retry) rather than reconnected again.
  *
  * Pure policy with no timer of its own: the caller arms this on entering
  * `STATE_BUFFERING` while `playWhenReady`, clears it on `STATE_READY`, and schedules
@@ -34,6 +35,6 @@ class StallCeiling(private val timeoutMs: Long = DEFAULT_TIMEOUT_MS) {
     fun isCurrent(token: Int): Boolean = token == generation
 
     companion object {
-        const val DEFAULT_TIMEOUT_MS: Long = 90_000L
+        const val DEFAULT_TIMEOUT_MS: Long = 30_000L
     }
 }

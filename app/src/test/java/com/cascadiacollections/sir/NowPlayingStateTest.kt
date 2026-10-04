@@ -2,6 +2,7 @@ package com.cascadiacollections.sir
 
 import android.os.Bundle
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.core.playback.StreamFailure
 import org.junit.Assert.assertEquals
@@ -94,6 +95,76 @@ class NowPlayingStateTest {
 
         assertEquals(PlaybackStatus.IDLE, connected.status)
         assertEquals(TransportAction.PLAY, connected.transportAction)
+    }
+
+    // ---- A paused stream nobody asked to play (offline cold-start regression) ----
+
+    @Test
+    fun `a paused prepare that is buffering shows play, not connecting`() {
+        val player = PlayerTestHelper.createMockPlayer(playWhenReady = false, playbackState = Player.STATE_BUFFERING)
+
+        val state = connected.withPlayer(player)
+
+        assertFalse(state.isBuffering)
+        assertFalse(state.isPlayRequested)
+        assertEquals(PlaybackStatus.IDLE, state.status)
+        assertEquals(TransportAction.PLAY, state.transportAction)
+    }
+
+    @Test
+    fun `offline cold launch with the last station paused shows play, not reconnecting`() {
+        // Observed on device: airplane mode, cold launch, last station paused. The service's
+        // paused prepare failed and published a retrying failure, so the Listen screen and
+        // mini player said "Reconnecting…" with a Cancel button while the session was PAUSED.
+        val paused = PlayerTestHelper.createMockPlayer(playWhenReady = false, playbackState = Player.STATE_IDLE)
+
+        val state = connected
+            .withPlayer(paused)
+            .withPlayerError(playWhenReady = false)
+            .withSessionExtras(PlaybackFailureExtras.bundle(StreamFailure.NoNetwork, retrying = true))
+
+        assertFalse(state.isError)
+        assertNull(state.displayedFailure)
+        assertEquals(PlaybackStatus.IDLE, state.status)
+        assertEquals(TransportAction.PLAY, state.transportAction)
+    }
+
+    @Test
+    fun `the failure surfaces once the listener asks to play`() {
+        val requested = PlayerTestHelper.createMockPlayer(playWhenReady = true, playbackState = Player.STATE_BUFFERING)
+
+        val reconnecting = connected.withPlayer(requested)
+            .withSessionExtras(PlaybackFailureExtras.bundle(StreamFailure.NoNetwork, retrying = true))
+        assertEquals(PlaybackStatus.RECONNECTING, reconnecting.status)
+        assertEquals(TransportAction.CANCEL, reconnecting.transportAction)
+
+        val failed = reconnecting
+            .withPlayer(PlayerTestHelper.createMockPlayer(playWhenReady = true, playbackState = Player.STATE_IDLE))
+            .withPlayerError(playWhenReady = true)
+            .withSessionExtras(PlaybackFailureExtras.bundle(StreamFailure.NoNetwork, retrying = false))
+        assertEquals(StreamFailure.NoNetwork, failed.displayedFailure)
+        assertEquals(PlaybackStatus.FAILED, failed.status)
+        assertEquals(TransportAction.RETRY, failed.transportAction)
+    }
+
+    @Test
+    fun `pausing a failed stream drops the untyped error`() {
+        val failed = connected.withPlayerError(playWhenReady = true)
+        assertTrue(failed.isError)
+
+        val paused = failed.withPlayer(PlayerTestHelper.createMockPlayer(playWhenReady = false))
+
+        assertFalse(paused.isError)
+        assertEquals(PlaybackStatus.IDLE, paused.status)
+    }
+
+    @Test
+    fun `a playing stream reads as live and its error clears once ready`() {
+        val playing = connected.withPlayerError(playWhenReady = true)
+            .withPlayer(PlayerTestHelper.createMockPlayer(isPlaying = true, playWhenReady = true, playbackState = Player.STATE_READY))
+
+        assertFalse(playing.isError)
+        assertEquals(PlaybackStatus.LIVE, playing.status)
     }
 
     // ---- Metadata → UiState ----

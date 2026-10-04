@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 internal fun PlaybackSettingsSection(settingsRepository: SettingsRepository) {
     val scope = rememberCoroutineScope()
     val prewarm by settingsRepository.connectionPrewarmingEnabled.collectAsState(initial = false)
+    val loopBroadcasts by settingsRepository.loopFinishedBroadcasts.collectAsState(initial = false)
 
     SettingsSectionHeading(stringResource(R.string.playback_heading))
     // Read once at launch by SirApp, so a change takes effect from the next launch.
@@ -43,6 +44,19 @@ internal fun PlaybackSettingsSection(settingsRepository: SettingsRepository) {
                 checked = prewarm,
                 onCheckedChange = { enabled ->
                     scope.launch { settingsRepository.setConnectionPrewarmingEnabled(enabled) }
+                }
+            )
+        }
+    )
+    // Read live by RadioPlaybackService, so a change applies to whatever is playing now.
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.loop_finished_broadcasts)) },
+        supportingContent = { Text(stringResource(R.string.loop_finished_broadcasts_summary)) },
+        trailingContent = {
+            Switch(
+                checked = loopBroadcasts,
+                onCheckedChange = { enabled ->
+                    scope.launch { settingsRepository.setLoopFinishedBroadcasts(enabled) }
                 }
             )
         }

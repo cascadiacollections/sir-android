@@ -27,6 +27,10 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                     sourceCompatibility = JavaVersion.VERSION_21
                     targetCompatibility = JavaVersion.VERSION_21
                 }
+
+                configureLint(lint, libs)
+                // The app's report also covers the :core and :libs modules it depends on.
+                lint.checkDependencies = true
             }
         }
     }

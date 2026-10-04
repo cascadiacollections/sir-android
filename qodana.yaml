@@ -1,0 +1,18 @@
+# Qodana: JetBrains' IDE inspections (the IntelliJ/Android Studio equivalent of ReSharper) run headless.
+# Workflow: .github/workflows/qodana.yml. Findings land in GitHub code scanning.
+# Local run: `just qodana` (needs podman/docker).
+version: "1.0"
+linter: jetbrains/qodana-jvm-android:2026.2
+profile:
+  name: qodana.recommended
+projectJDK: "21"
+bootstrap: |
+  set -e
+  if [ -n "$ANDROID_HOME" ] && [ ! -d "$ANDROID_HOME/platforms/android-37.0" ]; then
+    yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" > /dev/null
+  fi
+exclude:
+  - name: All
+    paths:
+      - app/src/main/baseline-prof.txt
+      - benchmark

@@ -16,3 +16,5 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
+
+# ktlint style is configured in config/detekt/detekt.yml (ktlint ruleset), run by ./gradlew detekt.

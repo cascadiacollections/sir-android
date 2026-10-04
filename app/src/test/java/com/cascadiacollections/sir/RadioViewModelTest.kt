@@ -96,15 +96,27 @@ class RadioViewModelTest {
 
     // ---- Metered network detection ----
 
+    /** A ConnectivityManager reporting [metered], with an internet connection unless [online] is false. */
+    private fun connectivity(metered: Boolean, online: Boolean = true): ConnectivityManager {
+        val network = mockk<android.net.Network>()
+        val capabilities = mockk<android.net.NetworkCapabilities> {
+            every { hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) } returns true
+        }
+        return mockk {
+            every { isActiveNetworkMetered } returns metered
+            every { activeNetwork } returns if (online) network else null
+            every { getNetworkCapabilities(network) } returns capabilities
+        }
+    }
+
+    private fun installConnectivity(cm: ConnectivityManager) {
+        @Suppress("DEPRECATION")
+        shadowOf(app).setSystemService(android.content.Context.CONNECTIVITY_SERVICE, cm)
+    }
+
     @Test
     fun `checkMeteredNetwork on unmetered does not set warning`() {
-        // Ensure unmetered network
-        val mockCm = mockk<ConnectivityManager> {
-            every { isActiveNetworkMetered } returns false
-        }
-        val shadowApp = shadowOf(app)
-        @Suppress("DEPRECATION")
-        shadowApp.setSystemService(android.content.Context.CONNECTIVITY_SERVICE, mockCm)
+        installConnectivity(connectivity(metered = false))
 
         val vm = createViewModel()
         assertFalse(vm.uiState.value.showMeteredWarning)
@@ -112,16 +124,19 @@ class RadioViewModelTest {
 
     @Test
     fun `checkMeteredNetwork on metered sets showMeteredWarning true`() {
-        // Mock the ConnectivityManager to report metered network
-        val mockCm = mockk<ConnectivityManager> {
-            every { isActiveNetworkMetered } returns true
-        }
-        val shadowApp = shadowOf(app)
-        @Suppress("DEPRECATION")
-        shadowApp.setSystemService(android.content.Context.CONNECTIVITY_SERVICE, mockCm)
+        installConnectivity(connectivity(metered = true))
 
         val vm = createViewModel()
         assertTrue(vm.uiState.value.showMeteredWarning)
+    }
+
+    @Test
+    fun `no mobile data warning when offline even though Android reports metered`() {
+        // isActiveNetworkMetered returns true with no network at all (airplane mode).
+        installConnectivity(connectivity(metered = true, online = false))
+
+        val vm = createViewModel()
+        assertFalse(vm.uiState.value.showMeteredWarning)
     }
 
     // ---- togglePlayback with null controller ----

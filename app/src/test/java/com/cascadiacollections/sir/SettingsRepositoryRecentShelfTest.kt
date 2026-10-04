@@ -51,8 +51,8 @@ class SettingsRepositoryRecentShelfTest {
 
         repo.removeRecentStation("b")
 
-        assertEquals(listOf("c", "a"), repo.recentStations.first().map { it.id })
-        assertEquals(emptySet<String>(), repo.hiddenRecentStationIds.first())
+        assertThat(repo.recentStations.first().map { it.id }).containsExactly("c", "a")
+        assertThat(repo.hiddenRecentStationIds.first()).isEmpty()
     }
 
     @Test
@@ -62,7 +62,7 @@ class SettingsRepositoryRecentShelfTest {
 
         repo.removeRecentStation("nope")
 
-        assertEquals(listOf("a"), repo.recentStations.first().map { it.id })
+        assertThat(repo.recentStations.first().map { it.id }).containsExactly("a")
     }
 
     @Test

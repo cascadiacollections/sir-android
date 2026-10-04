@@ -4,11 +4,12 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
 import com.cascadiacollections.sir.RadioUiState
 import com.cascadiacollections.sir.core.model.Station
 import com.cascadiacollections.sir.ui.theme.SirTheme
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -67,8 +68,8 @@ class TvHomeScreenTest {
         composeRule.onNodeWithText("Play").performClick()
         composeRule.onNodeWithText("Stop").performClick()
 
-        assertEquals(1, toggles)
-        assertEquals(1, stops)
+        assertThat(toggles).isEqualTo(1)
+        assertThat(stops).isEqualTo(1)
     }
 
     @Test
@@ -81,14 +82,14 @@ class TvHomeScreenTest {
         composeRule.onNodeWithText("Recent One").performClick()
         composeRule.onNodeWithText("Pop One").performClick()
 
-        assertEquals(listOf("r", "p"), selected)
+        assertThat(selected).containsExactly("r", "p")
     }
 
     @Test
     fun `no recents hides the shelf`() {
         setContent(popular = TvPopular.Loaded(listOf(station("p"))))
 
-        assertTrue(composeRule.onAllNodesWithTextCount("Recently Played") == 0)
+        assertThat(composeRule.onAllNodesWithTextCount("Recently Played")).isEqualTo(0)
     }
 
     @Test
@@ -98,7 +99,7 @@ class TvHomeScreenTest {
         composeRule.onNodeWithText("Couldn't load stations. Check the connection.").assertIsDisplayed()
         composeRule.onNodeWithText("Retry").performClick()
 
-        assertEquals(1, retries)
+        assertThat(retries).isEqualTo(1)
     }
 
     @Test

@@ -1,0 +1,23 @@
+SIR is a lightweight internet radio player for Android. Browse stations, start
+playback with one tap, and control audio from the notification, lock screen,
+Android Auto, or a Wear OS companion.
+
+Features:
+• Listen to internet radio stations with reliable background playback
+• Browse and search station directories, and save favorites
+• Use media controls from notifications, the lock screen, and Android Auto
+• Set a sleep timer and adjust the equalizer
+• See track information when a station provides it
+• Optional Chromecast support is available in the separate Play flavor; it is
+  not included in this FOSS build
+
+Privacy:
+• No account or sign-in is required
+• Preferences are stored on your device
+• The FOSS build does not include Firebase analytics or crash reporting
+• Network access is used for station directories, radio streams, and artwork
+
+SIR is free and open-source software, licensed under the MIT License. Source
+code: https://github.com/cascadiacollections/sir-android
+
+Privacy policy: https://cascadiacollections.github.io/sir-android/privacy/

@@ -1,0 +1,5 @@
+Initial F-Droid release.
+
+• Internet radio playback with background audio controls
+• Station search, favorites, sleep timer, and equalizer
+• Android Auto and Wear OS support
